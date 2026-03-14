@@ -1,10 +1,20 @@
 import { useState, useEffect } from "react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Dumbbell, Activity, Timer, Trophy, Heart, Zap, Flame, BicepsFlexed, MapPin } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Dumbbell, Activity, Timer, Trophy, Heart, Zap, Flame, BicepsFlexed } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, registerUserSchema, registerGymSchema } from "@/models/auth.model";
+import type { ApiErrorResponse, AuthResponse, LoginRequest, RegisterGymRequest, RegisterUserRequest } from "@/models/auth.model";
+import { getApiErrorMessage } from "@/api/client";
+import { googleOAuthStartUrl } from "@/config/api";
+import { useLogin, useRegisterUser, useRegisterGym, useAuthState } from "@/hooks/useAuth";
+import { authStore } from "@/store/auth.store";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 type Mode = "login" | "register";
 type UserType = "user" | "gym";
+const OAUTH_MESSAGE_TYPE = "FITPAL_OAUTH_RESULT";
 
 interface Props {
   initialMode?: Mode;
@@ -13,13 +23,117 @@ interface Props {
 const LoginRegister = ({ initialMode = "login" }: Props) => {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [userType, setUserType] = useState<UserType>("user");
-  const [regPassword, setRegPassword] = useState("");
-  const [regConfirmPassword, setRegConfirmPassword] = useState("");
-  const match = regConfirmPassword.length > 0 ? regConfirmPassword === regPassword : null;
+  const navigate = useNavigate();
+  const auth = useAuthState();
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
+
+  useEffect(() => {
+    if (auth.accessToken) {
+      navigate(auth.profileCompleted ? "/dashboard" : "/profile-setup");
+    }
+  }, [auth.accessToken, auth.profileCompleted, navigate]);
+
+  useEffect(() => {
+    const handleOAuthMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      const payload = event.data as {
+        type?: string;
+        auth?: AuthResponse | null;
+        error?: ApiErrorResponse | null;
+      };
+
+      if (payload?.type !== OAUTH_MESSAGE_TYPE) {
+        return;
+      }
+
+      if (payload.auth?.accessToken) {
+        authStore.setAuth(payload.auth);
+        toast.success(payload.auth.message || "Signed in successfully");
+        navigate(payload.auth.profileCompleted ? "/dashboard" : "/profile-setup");
+        return;
+      }
+
+      if (payload.error) {
+        const message = payload.error.details[0] || payload.error.message || "Google sign-in failed";
+        toast.error(message);
+        return;
+      }
+
+      toast.error("Invalid Google authentication response");
+    };
+
+    window.addEventListener("message", handleOAuthMessage);
+    return () => window.removeEventListener("message", handleOAuthMessage);
+  }, [navigate]);
+
+  // Mutations
+  const { mutate: login, isPending: isLoggingIn } = useLogin();
+  const { mutate: registerUser, isPending: isRegisteringUser } = useRegisterUser();
+  const { mutate: registerGym, isPending: isRegisteringGym } = useRegisterGym();
+
+  const isRegistering = isRegisteringUser || isRegisteringGym;
+
+  // Forms
+  const loginForm = useForm<LoginRequest>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const registerUserForm = useForm<RegisterUserRequest>({
+    resolver: zodResolver(registerUserSchema),
+    defaultValues: { email: "", password: "", confirmPassword: "", userName: "" },
+  });
+
+  const registerGymForm = useForm<RegisterGymRequest>({
+    resolver: zodResolver(registerGymSchema),
+    defaultValues: { email: "", password: "", confirmPassword: "", gymName: "" },
+  });
+
+  const onLoginSubmit = (data: LoginRequest) => {
+    login(data, {
+      onSuccess: () => toast.success("Welcome back!"),
+      onError: (error) => toast.error(getApiErrorMessage(error, "Failed to sign in")),
+    });
+  };
+
+  const onRegisterUserSubmit = (data: RegisterUserRequest) => {
+    registerUser(data, {
+      onSuccess: () => toast.success("Account created successfully!"),
+      onError: (error) => toast.error(getApiErrorMessage(error, "Registration failed")),
+    });
+  };
+
+  const onRegisterGymSubmit = (data: RegisterGymRequest) => {
+    registerGym(data, {
+      onSuccess: () => toast.success("Gym account created successfully!"),
+      onError: (error) => toast.error(getApiErrorMessage(error, "Registration failed")),
+    });
+  };
+
+  const handleGoogleLogin = () => {
+    const width = 520;
+    const height = 720;
+    const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2);
+    const popup = window.open(
+      googleOAuthStartUrl,
+      "fitpal-google-oauth",
+      `width=${width},height=${height},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`
+    );
+
+    if (!popup) {
+      window.location.assign(googleOAuthStartUrl);
+      return;
+    }
+
+    popup.focus();
+  };
 
   return (
     <main className="min-h-screen bg-background">
@@ -170,81 +284,116 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       <h3 className="text-2xl font-bold text-white mb-2">Create Account</h3>
                       <p className="text-muted-foreground text-sm">Join the FitPass Hub community today.</p>
                     </div>
-                    <div className="relative w-full rounded-full border border-[#2e2e2e] bg-transparent mb-4">
+                    <div className="mb-6 rounded-full border-2 border-[#FF6A00] bg-transparent relative flex w-full">
                       <div
-                        className="absolute left-1 top-1 bottom-1 w-[calc(50%-0.25rem)] rounded-full bg-gradient-to-r from-[#FACC15] to-[#FB923C] transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                        style={{ transform: userType === "gym" ? "translateX(100%)" : "translateX(0%)" }}
+                        className="absolute inset-y-0 left-0 w-1/2 bg-[#FF6A00] rounded-full transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                        style={{
+                          transform: `translateX(${userType === "gym" ? "100%" : "0%"})`
+                        }}
                       />
-                      <ToggleGroup
-                        type="single"
-                        value={userType}
-                        onValueChange={(val) => setUserType((val as UserType) || "user")}
-                        className="flex w-full gap-0 relative z-10"
+                      <button
+                        type="button"
+                        onClick={() => setUserType("user")}
+                        className={`relative z-10 w-1/2 py-2.5 text-sm font-semibold transition-colors duration-500 rounded-full ${
+                          userType === "user" ? "text-white" : "text-white/70 hover:text-white"
+                        }`}
                       >
-                        <ToggleGroupItem
-                          value="user"
-                          className="flex-1 rounded-full py-1.5 text-white transition-all font-medium bg-transparent data-[state=on]:font-bold data-[state=on]:text-white text-sm"
-                        >
-                          User
-                        </ToggleGroupItem>
-                        <ToggleGroupItem
-                          value="gym"
-                          className="flex-1 rounded-full py-1.5 text-white transition-all font-medium bg-transparent data-[state=on]:font-bold data-[state=on]:text-white text-sm"
-                        >
-                          Gym
-                        </ToggleGroupItem>
-                      </ToggleGroup>
+                        User
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUserType("gym")}
+                        className={`relative z-10 w-1/2 py-2.5 text-sm font-semibold transition-colors duration-500 rounded-full ${
+                          userType === "gym" ? "text-white" : "text-white/70 hover:text-white"
+                        }`}
+                      >
+                        Gym
+                      </button>
                     </div>
-                    <div className="space-y-3">
+                    
+                    <form 
+                      onSubmit={userType === "user" ? registerUserForm.handleSubmit(onRegisterUserSubmit) : registerGymForm.handleSubmit(onRegisterGymSubmit)}
+                      className="space-y-3"
+                    >
                       {userType === "user" ? (
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-medium text-foreground mb-1.5">First Name</label>
-                            <input type="text" className="w-full px-3 py-2 bg-input border border-border rounded-full text-foreground text-sm" placeholder="John" />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-foreground mb-1.5">Last Name</label>
-                            <input type="text" className="w-full px-3 py-2 bg-input border border-border rounded-full text-foreground text-sm" placeholder="Doe" />
-                          </div>
+                        <div>
+                          <label className="block text-xs font-medium text-foreground mb-1.5">Username</label>
+                          <input 
+                            {...registerUserForm.register("userName")}
+                            type="text" 
+                            className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${registerUserForm.formState.errors.userName ? "border-red-500" : "border-border"}`} 
+                            placeholder="johndoe123" 
+                          />
+                          {registerUserForm.formState.errors.userName && (
+                            <p className="text-[10px] text-red-500 mt-1 pl-3">{registerUserForm.formState.errors.userName.message}</p>
+                          )}
                         </div>
                       ) : (
                         <div>
                           <label className="block text-xs font-medium text-foreground mb-1.5">Gym Name</label>
-                          <input type="text" className="w-full px-3 py-2 bg-input border border-border rounded-full text-foreground text-sm" placeholder="FitZone Gym" />
+                          <input 
+                            {...registerGymForm.register("gymName")}
+                            type="text" 
+                            className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${registerGymForm.formState.errors.gymName ? "border-red-500" : "border-border"}`} 
+                            placeholder="FitZone Gym" 
+                          />
+                          {registerGymForm.formState.errors.gymName && (
+                            <p className="text-[10px] text-red-500 mt-1 pl-3">{registerGymForm.formState.errors.gymName.message}</p>
+                          )}
                         </div>
                       )}
+                      
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">Email</label>
-                        <input type="email" className="w-full px-3 py-2 bg-input border border-border rounded-full text-foreground text-sm" placeholder="you@example.com" />
+                        <input 
+                          {...(userType === "user" ? registerUserForm.register("email") : registerGymForm.register("email"))}
+                          type="email" 
+                          className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.email : registerGymForm.formState.errors.email) ? "border-red-500" : "border-border"}`} 
+                          placeholder="you@example.com" 
+                        />
+                        {(userType === "user" ? registerUserForm.formState.errors.email : registerGymForm.formState.errors.email) && (
+                           <p className="text-[10px] text-red-500 mt-1 pl-3">{(userType === "user" ? registerUserForm.formState.errors.email : registerGymForm.formState.errors.email)?.message}</p>
+                        )}
                       </div>
+                      
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">Password</label>
                         <input
+                          {...(userType === "user" ? registerUserForm.register("password") : registerGymForm.register("password"))}
                           type="password"
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          className="w-full px-3 py-2 bg-input border border-border rounded-full text-foreground text-sm"
+                          className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password) ? "border-red-500" : "border-border"}`} 
                           placeholder="••••••••"
                         />
+                        {(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password) && (
+                           <p className="text-[10px] text-red-500 mt-1 pl-3">{(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password)?.message}</p>
+                        )}
                       </div>
+                      
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">Confirm Password</label>
                         <input
+                          {...(userType === "user" ? registerUserForm.register("confirmPassword") : registerGymForm.register("confirmPassword"))}
                           type="password"
-                          value={regConfirmPassword}
-                          onChange={(e) => setRegConfirmPassword(e.target.value)}
-                          className="w-full px-3 py-2 bg-input border border-border rounded-full text-foreground text-sm"
+                          className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword) ? "border-red-500" : "border-border"}`} 
                           placeholder="••••••••"
                         />
-                        {match !== null && (
-                          <p className={match ? "text-[10px] mt-1 text-green-500" : "text-[10px] mt-1 text-red-500"}>
-                            {match ? "✓ Passwords match" : "✗ Passwords do not match"}
-                          </p>
+                        {(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword) && (
+                           <p className="text-[10px] text-red-500 mt-1 pl-3">{(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword)?.message}</p>
                         )}
                       </div>
-                      <button className="w-full py-2.5 px-6 bg-button-gradient text-white rounded-full font-bold transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-500/20 hover:scale-[1.02]">
-                        Create Account
+                      
+                      <button 
+                        type="submit"
+                        disabled={isRegistering}
+                        className="w-full py-2.5 px-6 bg-button-gradient text-white rounded-full font-bold transition-all duration-300 flex items-center justify-center gap-2 text-sm shadow-lg shadow-orange-500/20 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
+                      >
+                        {isRegistering ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>
+                        ) : (
+                          "Create Account"
+                        )}
                       </button>
+                      
                       <div className="relative my-4">
                         <div className="absolute inset-0 flex items-center">
                           <div className="w-full border-t border-border" />
@@ -253,23 +402,29 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                           <span className="px-4 bg-card text-muted-foreground">Or</span>
                         </div>
                       </div>
-                      <button className="w-full py-2.5 px-6 border border-[#FF6A00]/50 text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:bg-[#FF6A00]/10 text-sm">
+                      
+                      <button 
+                        type="button" 
+                        onClick={handleGoogleLogin}
+                        className="w-full py-2.5 px-6 border border-[#FF6A00]/50 text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:bg-[#FF6A00]/10 text-sm"
+                      >
                         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                           <path fill="#4285F4" d="M21.35 11.1c0-.72-.06-1.24-.19-1.78H12v3.22h5.32c-.11.9-.72 2.25-2.08 3.16l-.02.14 3.03 2.34.21.02c1.94-1.79 2.99-4.43 2.99-7.34z"/>
-                          <path fill="#34A853" d="M12 22c2.71 0 4.99-.89 6.65-2.43l-3.17-2.45c-.85.6-2 .99-3.48.99-2.67 0-4.94-1.79-5.74-4.2h-3.3l-.07.14C3.82 18.73 7.62 22 12 22z"/>
+                          <path fill="#34A853" d="M12 22c2.71 0 4.99-.89 6.65-2.43l-3.17-2.45c-.85.6-2 .99-3.48 .99-2.67 0-4.94-1.79-5.74-4.2h-3.3l-.07.14C3.82 18.73 7.62 22 12 22z"/>
                           <path fill="#FBBC05" d="M6.26 13.91c-.2-.6-.31-1.25-.31-1.91s.11-1.31.31-1.91v-.13H2.96C2.33 10.9 2 11.92 2 13s.33 2.1.96 2.95l3.3-2.04z"/>
-                          <path fill="#EA4335" d="M12 6.58c1.5 0 2.85.52 3.91 1.54l2.86-2.78C16.99 3.59 14.71 2.6 12 2.6 7.62 2.6 3.82 5.27 2.96 9.05l3.3 2.04c.8-2.41 3.07-4.51 5.74-4.51z"/>
+                          <path fill="#EA4335" d="M12 6.58c1.5 0 2.85 .52 3.91 1.54l2.86-2.78C16.99 3.59 14.71 2.6 12 2.6 7.62 2.6 3.82 5.27 2.96 9.05l3.3 2.04c.8-2.41 3.07-4.51 5.74-4.51z"/>
                         </svg>
                         Continue with Google
                       </button>
+                      
                       <p className="text-xs text-center text-muted-foreground mt-4">
                         Already have an account?{" "}
-                        <button onClick={() => setMode("login")} className="text-primary font-semibold hover:underline">Sign in</button>
+                        <button type="button" onClick={() => setMode("login")} className="text-primary font-semibold hover:underline">Sign in</button>
                       </p>
                       <p className="text-[10px] text-muted-foreground text-center mt-2">
                         By signing up, you agree to our <span className="text-primary cursor-pointer hover:underline">Terms</span> and <span className="text-primary cursor-pointer hover:underline">Privacy Policy</span>
                       </p>
-                    </div>
+                      </form>
                   </div>
                 )}
               </div>
@@ -281,7 +436,12 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       <h3 className="text-3xl font-bold text-foreground mb-2">Sign In</h3>
                       <p className="text-muted-foreground text-lg">Continue your fitness journey</p>
                     </div>
-                    <button className="w-full py-3 px-6 border-2 border-[#FF6A00] text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 mb-6 hover:bg-[#FF6A00]">
+                    
+                    <button 
+                      type="button"
+                      onClick={handleGoogleLogin} 
+                      className="w-full py-3 px-6 border-2 border-[#FF6A00] text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 mb-6 hover:bg-[#FF6A00]"
+                    >
                       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill="#4285F4" d="M21.35 11.1c0-.72-.06-1.24-.19-1.78H12v3.22h5.32c-.11.9-.72 2.25-2.08 3.16l-.02.14 3.03 2.34.21.02c1.94-1.79 2.99-4.43 2.99-7.34z"/>
                         <path fill="#34A853" d="M12 22c2.71 0 4.99-.89 6.65-2.43l-3.17-2.45c-.85.6-2 .99-3.48 .99-2.67 0-4.94-1.79-5.74-4.2h-3.3l-.07.14C3.82 18.73 7.62 22 12 22z"/>
@@ -290,6 +450,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       </svg>
                       Continue with Google
                     </button>
+                    
                     <div className="relative mb-6">
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-border" />
@@ -298,30 +459,58 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                         <span className="px-4 bg-card text-muted-foreground">Or continue with email</span>
                       </div>
                     </div>
-                    <div className="space-y-4">
+                    
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-                        <input type="email" className="w-full px-4 py-3 bg-input border border-border rounded-full text-foreground" placeholder="you@example.com" />
+                        <input 
+                          {...loginForm.register("email")}
+                          type="email" 
+                          className={`w-full px-4 py-3 bg-input border rounded-full text-foreground ${loginForm.formState.errors.email ? "border-red-500" : "border-border"}`} 
+                          placeholder="you@example.com" 
+                        />
+                        {loginForm.formState.errors.email && (
+                          <p className="text-xs text-red-500 mt-1 pl-4">{loginForm.formState.errors.email.message}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-2">Password</label>
-                        <input type="password" className="w-full px-4 py-3 bg-input border border-border rounded-full text-foreground" placeholder="••••••••" />
+                        <input 
+                          {...loginForm.register("password")}
+                          type="password" 
+                          className={`w-full px-4 py-3 bg-input border rounded-full text-foreground ${loginForm.formState.errors.password ? "border-red-500" : "border-border"}`} 
+                          placeholder="••••••••" 
+                        />
+                        {loginForm.formState.errors.password && (
+                          <p className="text-xs text-red-500 mt-1 pl-4">{loginForm.formState.errors.password.message}</p>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between text-sm">
+                      
+                      <div className="flex items-center justify-between text-sm mt-2">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input type="checkbox" className="w-4 h-4 rounded border-border bg-input" />
                           <span className="text-muted-foreground">Remember me</span>
                         </label>
-                        <button className="text-primary">Forgot password?</button>
+                        <button type="button" className="text-primary hover:underline">Forgot password?</button>
                       </div>
-                      <button className="w-full py-3 px-6 bg-button-gradient text-white rounded-full font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 hover:scale-[1.02]">
-                        Sign In
+                      
+                      <button 
+                        type="submit"
+                        disabled={isLoggingIn}
+                        className="w-full py-3 px-6 bg-button-gradient text-white rounded-full font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100 mt-6"
+                      >
+                        {isLoggingIn ? (
+                          <><Loader2 className="w-5 h-5 animate-spin" /> Signing In...</>
+                        ) : (
+                          "Sign In"
+                        )}
                       </button>
-                      <p className="text-sm text-center text-muted-foreground mt-4">
+                      
+                      <p className="text-sm text-center text-muted-foreground mt-6">
                         Don't have an account?{" "}
-                        <button onClick={() => setMode("register")} className="text-primary">Sign up</button>
+                        <button type="button" onClick={() => setMode("register")} className="text-primary font-semibold hover:underline">Sign up</button>
                       </p>
-                    </div>
+                    </form>
                   </div>
                 ) : (
                   <div className="flex flex-col justify-center items-center p-12 bg-[linear-gradient(145deg,hsl(0_0%_10%),hsl(0_0%_6%))] relative overflow-hidden h-full">
