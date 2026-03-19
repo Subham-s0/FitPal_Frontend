@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Check, 
   Sparkles,
@@ -71,11 +71,11 @@ const initialPlans = [
 
 const ManagePlans = () => {
   const [plans, setPlans] = useState(initialPlans);
-  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [selectedPlan, setSelectedPlan] = useState<ManagedPlan | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [newPrice, setNewPrice] = useState("");
 
-  const handleEditClick = (plan: any) => {
+  const handleEditClick = (plan: ManagedPlan) => {
     setSelectedPlan(plan);
     setNewPrice(plan.price.toString());
     setIsEditOpen(true);
@@ -83,11 +83,11 @@ const ManagePlans = () => {
 
   const handleSavePrice = () => {
     if (selectedPlan && newPrice) {
-      setPlans(plans.map(p => {
-        if (p.id === selectedPlan.id) {
-          return { ...p, price: parseInt(newPrice) };
+      setPlans(plans.map((plan) => {
+        if (plan.id === selectedPlan.id) {
+          return { ...plan, price: Number.parseInt(newPrice, 10) };
         }
-        return p;
+        return plan;
       }));
       setIsEditOpen(false);
     }
@@ -101,7 +101,7 @@ const ManagePlans = () => {
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
-        {plans.map((plan, index) => (
+        {plans.map((plan) => (
           <div
             key={plan.id}
             className={`relative p-8 rounded-3xl transition-all duration-500 hover:-translate-y-2 ${
@@ -189,3 +189,4 @@ const ManagePlans = () => {
 };
 
 export default ManagePlans;
+

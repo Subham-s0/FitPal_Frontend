@@ -13,10 +13,8 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-3 gap-10 mb-8 items-start">
           <div className="space-y-4">
-            <a href="/" className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full border-2 border-primary/40 p-1 flex items-center justify-center">
-                <img src="/logo.svg" alt="FitPal Logo" className="h-8 w-8" />
-              </div>
+            <a href="/" className="flex items-center gap-2 group">
+              <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 md:h-12 md:w-12" />
               <span className="text-xl font-bold">
                 <span className="text-gradient-fire">Fit</span>Pal
               </span>

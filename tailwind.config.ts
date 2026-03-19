@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -14,8 +15,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Outfit', 'system-ui', 'sans-serif'],
-        display: ['Outfit', 'system-ui', 'sans-serif'],
+        sans: ["Outfit", "system-ui", "sans-serif"],
+        display: ["Outfit", "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -66,7 +67,7 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "float": {
+        float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-20px)" },
         },
@@ -74,7 +75,6 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(25 100% 50% / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(25 100% 50% / 0.6)" },
         },
-        // Updated for the side-pendulum curve
         "spin-90": {
           "0%, 100%": { transform: "rotate(-15deg)" },
           "50%": { transform: "rotate(15deg)" },
@@ -83,17 +83,16 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.1s ease-out",
         "accordion-up": "accordion-up 0.1s ease-out",
-        "float": "float 3s ease-in-out infinite",
+        float: "float 3s ease-in-out infinite",
         "glow-pulse": "glow-pulse 3s ease-in-out infinite",
-        // Changed from 'linear' to 'ease-in-out' for natural gravity
         "spin-90": "spin-90 1s ease-in-out infinite",
       },
       backgroundImage: {
-        'gradient-fire': 'linear-gradient(135deg, hsl(25 100% 50%) 0%, hsl(40 100% 50%) 50%, hsl(45 100% 55%) 100%)',
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'button-gradient': 'linear-gradient(to right, #f97316 0%, #f97316 25%, #c2410c 100%)',
+        "gradient-fire": "linear-gradient(135deg, hsl(25 100% 50%) 0%, hsl(40 100% 50%) 50%, hsl(45 100% 55%) 100%)",
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "button-gradient": "linear-gradient(to right, #f97316 0%, #f97316 25%, #c2410c 100%)",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

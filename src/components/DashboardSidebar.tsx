@@ -64,7 +64,7 @@ const DashboardSidebar = ({ active, onChange }: SidebarProps) => {
           <Settings className="min-w-[24px] w-6 h-6 text-gray-500 group-hover/link:text-black" />
           <span className="ml-4 font-bold text-gray-400 group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block">Settings</span>
         </button>
-        <button onClick={() => navigate('/')} className="flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-red-500 transition-all justify-center group-hover:justify-start">
+        <button onClick={() => navigate('/logout')} className="flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-red-500 transition-all justify-center group-hover:justify-start">
           <LogOut className="min-w-[24px] w-6 h-6 text-red-500 group-hover/link:text-white" />
           <span className="ml-4 font-bold text-gray-400 group-hover/link:text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block">Logout</span>
         </button>

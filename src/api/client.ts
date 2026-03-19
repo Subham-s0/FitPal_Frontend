@@ -1,5 +1,6 @@
 import axios from "axios";
 import { apiBaseUrl } from "@/config/api";
+import { PUBLIC_FRONTEND_MODE } from "@/config/frontend-access";
 import type { ApiErrorResponse } from "@/models/auth.model";
 
 const AUTH_STORAGE_KEY = "fitpal_auth";
@@ -32,12 +33,17 @@ apiClient.interceptors.response.use(
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       localStorage.removeItem(AUTH_STORAGE_KEY);
-      // Only redirect if not already on an auth page
+      const pathname = window.location.pathname;
+      const isPublicAuthPage =
+        pathname === "/admin" ||
+        pathname.startsWith("/login") ||
+        pathname.startsWith("/signup");
+
       if (
-        !window.location.pathname.startsWith("/login") &&
-        !window.location.pathname.startsWith("/signup")
+        !PUBLIC_FRONTEND_MODE &&
+        !isPublicAuthPage
       ) {
-        window.location.href = "/login";
+        window.location.href = pathname.startsWith("/admin") ? "/admin" : "/login";
       }
     }
     return Promise.reject(error);

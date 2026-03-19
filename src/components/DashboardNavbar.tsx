@@ -5,7 +5,7 @@ import { Search, Bell } from "lucide-react";
 const DashboardNavbar = () => {
   const navigate = useNavigate();
   return (
-    <nav className="h-20 w-full flex items-center justify-between px-8 z-50 bg-[#0f0f0f]/80 backdrop-blur-md border-b border-white/5 sticky top-0">
+    <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-[#1f1f1f] bg-[#0f0f0f] px-8">
         <div className="flex items-center gap-2">
             <a href="/" className="flex items-center gap-2 group">
                 <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 md:h-12 md:w-12" />
@@ -18,22 +18,25 @@ const DashboardNavbar = () => {
         <div className="flex-grow max-w-md mx-12 hidden md:block">
             <div className="relative group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-orange-600 transition-colors" />
-                <input type="text" placeholder="Search routines..." 
-                       className="w-full bg-white/5 border border-white/10 rounded-full py-2.5 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-orange-600/50 focus:ring-4 focus:ring-orange-600/5 transition-all" />
+                <input
+                  type="text"
+                  placeholder="Search routines..."
+                  className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-2.5 pl-11 pr-4 text-sm text-white outline-none transition-colors focus:border-orange-600"
+                />
             </div>
         </div>
 
         <div className="flex items-center gap-6">
-            <button className="relative group p-2 rounded-full hover:bg-white/5 transition-colors">
+            <button className="relative group rounded-full p-2 transition-colors hover:bg-[#1a1a1a]">
                 <Bell className="w-6 h-6 text-gray-400 group-hover:text-orange-600 transition-colors" />
                 <span className="absolute top-1 right-2 w-2 h-2 bg-orange-600 rounded-full"></span>
             </button>
 
-            <button className="bg-orange-600/10 border border-orange-600/20 text-orange-600 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-orange-600/20 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-orange-600/10">
+            <button className="rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-orange-500">
                 Check In
             </button>
 
-            <div className="h-10 w-[1px] bg-white/10"></div>
+            <div className="h-10 w-[1px] bg-[#252525]"></div>
 
             <div className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/profile')}>
                 <div className="text-right leading-none hidden sm:block text-white">

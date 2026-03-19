@@ -59,7 +59,7 @@ const Hero = () => {
 
           {/* Single CTA */}
           <div className="flex items-center justify-center animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <Button variant="fireOutline" size="lg" className="gap-2 rounded-full" onClick={() => navigate("/dashboard")}>
+            <Button variant="fireOutline" size="lg" className="gap-2 rounded-full" onClick={() => navigate("/register")}>
               Get Started
               <ChevronRight className="h-5 w-5" />
             </Button>

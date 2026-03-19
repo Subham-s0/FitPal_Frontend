@@ -9,23 +9,39 @@ export interface AuthState {
   role: string | null;
   providers: string[];
   profileCompleted: boolean;
+  hasSubscription: boolean;
+  hasActiveSubscription: boolean;
 }
+
+const defaultState: AuthState = {
+  accessToken: null,
+  accountId: null,
+  email: null,
+  role: null,
+  providers: [],
+  profileCompleted: false,
+  hasSubscription: false,
+  hasActiveSubscription: false,
+};
 
 const getInitialState = (): AuthState => {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AuthState;
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<AuthState>;
+      return {
+        ...defaultState,
+        ...parsed,
+        providers: Array.isArray(parsed.providers) ? parsed.providers : [],
+        profileCompleted: Boolean(parsed.profileCompleted),
+        hasSubscription: Boolean(parsed.hasSubscription),
+        hasActiveSubscription: Boolean(parsed.hasActiveSubscription),
+      };
+    }
   } catch {
     // Ignore
   }
-  return {
-    accessToken: null,
-    accountId: null,
-    email: null,
-    role: null,
-    providers: [],
-    profileCompleted: false,
-  };
+  return defaultState;
 };
 
 let currentState: AuthState = getInitialState();
@@ -49,20 +65,29 @@ export const authStore = {
       role: payload.role,
       providers: payload.providers,
       profileCompleted: payload.profileCompleted,
+      hasSubscription: payload.hasSubscription,
+      hasActiveSubscription: payload.hasActiveSubscription,
     };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentState));
     notify();
   },
   clearAuth: () => {
-    currentState = {
-      accessToken: null,
-      accountId: null,
-      email: null,
-      role: null,
-      providers: [],
-      profileCompleted: false,
-    };
+    currentState = { ...defaultState };
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    notify();
+  },
+  updateOnboardingStatus: (payload: {
+    profileCompleted: boolean;
+    hasSubscription: boolean;
+    hasActiveSubscription: boolean;
+  }) => {
+    currentState = {
+      ...currentState,
+      profileCompleted: payload.profileCompleted,
+      hasSubscription: payload.hasSubscription,
+      hasActiveSubscription: payload.hasActiveSubscription,
+    };
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentState));
     notify();
   },
   isAuthenticated: () => !!currentState.accessToken,

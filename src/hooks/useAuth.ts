@@ -36,7 +36,11 @@ export const useAuthState = () => {
 
 export function useLogout() {
   return () => {
+    const redirectPath =
+      authStore.getSnapshot().role?.toUpperCase() === "SUPERADMIN"
+        ? "/admin"
+        : "/login";
     authStore.clearAuth();
-    window.location.href = "/login";
+    window.location.href = redirectPath;
   };
 }

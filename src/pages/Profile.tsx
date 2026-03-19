@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { 
@@ -22,7 +22,20 @@ import { toast } from "sonner";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'profile' | 'membership' | 'goals'>('profile');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<"profile" | "membership" | "goals">(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return tab === "membership" || tab === "goals" ? tab : "profile";
+  });
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    if (tab === "membership" || tab === "goals") {
+      setActiveTab(tab);
+      return;
+    }
+    setActiveTab("profile");
+  }, [location.search]);
 
   // Mock user data matching the html
   const user = {

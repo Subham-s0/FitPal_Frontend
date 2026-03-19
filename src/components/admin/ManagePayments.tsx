@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   MoreHorizontal, 
   Search, 
@@ -48,9 +48,9 @@ const initialPayments = [
 ];
 
 const ManagePayments = () => {
-  const [payments, setPayments] = useState(initialPayments);
+  const payments = initialPayments;
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [selectedPayment, setSelectedPayment] = useState<ManagedPayment | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const filteredPayments = payments.filter(payment => 
@@ -233,3 +233,4 @@ const ManagePayments = () => {
 };
 
 export default ManagePayments;
+

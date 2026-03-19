@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   MoreHorizontal, 
   Search, 
@@ -52,11 +52,11 @@ const initialGyms = [
 const ManageGyms = () => {
   const [gyms, setGyms] = useState(initialGyms);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGym, setSelectedGym] = useState<any>(null);
+  const [selectedGym, setSelectedGym] = useState<ManagedGym | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const handleStatusChange = (id: number, newStatus: string) => {
+  const handleStatusChange = (id: number, newStatus: ManagedGymStatus) => {
     setGyms(gyms.map(gym => {
       if (gym.id === id) {
         return { ...gym, status: newStatus };
@@ -291,3 +291,4 @@ const ManageGyms = () => {
 };
 
 export default ManageGyms;
+

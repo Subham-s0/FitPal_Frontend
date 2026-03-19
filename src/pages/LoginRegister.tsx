@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dumbbell, Activity, Timer, Trophy, Heart, Zap, Flame, BicepsFlexed } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -9,6 +9,7 @@ import { getApiErrorMessage } from "@/api/client";
 import { googleOAuthStartUrl } from "@/config/api";
 import { useLogin, useRegisterUser, useRegisterGym, useAuthState } from "@/hooks/useAuth";
 import { authStore } from "@/store/auth.store";
+import { getPostAuthRoute } from "@/utils/auth-routing";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -25,16 +26,32 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
   const [userType, setUserType] = useState<UserType>("user");
   const navigate = useNavigate();
   const auth = useAuthState();
+  const previousAccessTokenRef = useRef(auth.accessToken);
 
   useEffect(() => {
     setMode(initialMode);
   }, [initialMode]);
 
   useEffect(() => {
-    if (auth.accessToken) {
-      navigate(auth.profileCompleted ? "/dashboard" : "/profile-setup");
+    const hadAccessToken = Boolean(previousAccessTokenRef.current);
+    const hasAccessToken = Boolean(auth.accessToken);
+
+    if (!hasAccessToken) {
+      previousAccessTokenRef.current = auth.accessToken;
+      return;
     }
-  }, [auth.accessToken, auth.profileCompleted, navigate]);
+
+    navigate(
+      getPostAuthRoute({
+        role: auth.role,
+        profileCompleted: auth.profileCompleted,
+        hasSubscription: auth.hasSubscription,
+        hasActiveSubscription: auth.hasActiveSubscription,
+      })
+    );
+
+    previousAccessTokenRef.current = auth.accessToken;
+  }, [auth.accessToken, auth.hasActiveSubscription, auth.hasSubscription, auth.profileCompleted, auth.role, navigate]);
 
   useEffect(() => {
     const handleOAuthMessage = (event: MessageEvent) => {
@@ -55,7 +72,14 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
       if (payload.auth?.accessToken) {
         authStore.setAuth(payload.auth);
         toast.success(payload.auth.message || "Signed in successfully");
-        navigate(payload.auth.profileCompleted ? "/dashboard" : "/profile-setup");
+        navigate(
+          getPostAuthRoute({
+            role: payload.auth.role,
+            profileCompleted: payload.auth.profileCompleted,
+            hasSubscription: payload.auth.hasSubscription,
+            hasActiveSubscription: payload.auth.hasActiveSubscription,
+          })
+        );
         return;
       }
 
@@ -97,26 +121,64 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
 
   const onLoginSubmit = (data: LoginRequest) => {
     login(data, {
-      onSuccess: () => toast.success("Welcome back!"),
+      onSuccess: (response) => {
+        toast.success("Welcome back!");
+        navigate(
+          getPostAuthRoute({
+            role: response.role,
+            profileCompleted: response.profileCompleted,
+            hasSubscription: response.hasSubscription,
+            hasActiveSubscription: response.hasActiveSubscription,
+          }),
+          { replace: true }
+        );
+      },
       onError: (error) => toast.error(getApiErrorMessage(error, "Failed to sign in")),
     });
   };
 
   const onRegisterUserSubmit = (data: RegisterUserRequest) => {
     registerUser(data, {
-      onSuccess: () => toast.success("Account created successfully!"),
+      onSuccess: (response) => {
+        toast.success("Account created successfully!");
+        navigate(
+          getPostAuthRoute({
+            role: response.role,
+            profileCompleted: response.profileCompleted,
+            hasSubscription: response.hasSubscription,
+            hasActiveSubscription: response.hasActiveSubscription,
+          }),
+          { replace: true }
+        );
+      },
       onError: (error) => toast.error(getApiErrorMessage(error, "Registration failed")),
     });
   };
 
   const onRegisterGymSubmit = (data: RegisterGymRequest) => {
     registerGym(data, {
-      onSuccess: () => toast.success("Gym account created successfully!"),
+      onSuccess: (response) => {
+        toast.success("Gym account created successfully!");
+        navigate(
+          getPostAuthRoute({
+            role: response.role,
+            profileCompleted: response.profileCompleted,
+            hasSubscription: response.hasSubscription,
+            hasActiveSubscription: response.hasActiveSubscription,
+          }),
+          { replace: true }
+        );
+      },
       onError: (error) => toast.error(getApiErrorMessage(error, "Registration failed")),
     });
   };
 
   const handleGoogleLogin = () => {
+    if (mode === "register" && userType === "gym") {
+      toast.info("Google sign-up is only available for user accounts. Please register gyms with email and password.");
+      return;
+    }
+
     const width = 520;
     const height = 720;
     const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
@@ -286,7 +348,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                     </div>
                     <div className="mb-6 rounded-full border-2 border-[#FF6A00] bg-transparent relative flex w-full">
                       <div
-                        className="absolute inset-y-0 left-0 w-1/2 bg-[#FF6A00] rounded-full transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]"
+                        className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-[#FF6A00] transition-transform duration-500 [transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
                         style={{
                           transform: `translateX(${userType === "gym" ? "100%" : "0%"})`
                         }}
@@ -394,28 +456,36 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                         )}
                       </button>
                       
-                      <div className="relative my-4">
-                        <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-border" />
+                      {userType === "user" ? (
+                        <>
+                          <div className="relative my-4">
+                            <div className="absolute inset-0 flex items-center">
+                              <div className="w-full border-t border-border" />
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                              <span className="px-4 bg-card text-muted-foreground">Or</span>
+                            </div>
+                          </div>
+                          
+                          <button 
+                            type="button" 
+                            onClick={handleGoogleLogin}
+                            className="w-full py-2.5 px-6 border border-[#FF6A00]/50 text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:bg-[#FF6A00]/10 text-sm"
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                              <path fill="#4285F4" d="M21.35 11.1c0-.72-.06-1.24-.19-1.78H12v3.22h5.32c-.11.9-.72 2.25-2.08 3.16l-.02.14 3.03 2.34.21.02c1.94-1.79 2.99-4.43 2.99-7.34z"/>
+                              <path fill="#34A853" d="M12 22c2.71 0 4.99-.89 6.65-2.43l-3.17-2.45c-.85.6-2 .99-3.48 .99-2.67 0-4.94-1.79-5.74-4.2h-3.3l-.07.14C3.82 18.73 7.62 22 12 22z"/>
+                              <path fill="#FBBC05" d="M6.26 13.91c-.2-.6-.31-1.25-.31-1.91s.11-1.31.31-1.91v-.13H2.96C2.33 10.9 2 11.92 2 13s.33 2.1.96 2.95l3.3-2.04z"/>
+                              <path fill="#EA4335" d="M12 6.58c1.5 0 2.85 .52 3.91 1.54l2.86-2.78C16.99 3.59 14.71 2.6 12 2.6 7.62 2.6 3.82 5.27 2.96 9.05l3.3 2.04c.8-2.41 3.07-4.51 5.74-4.51z"/>
+                            </svg>
+                            Continue with Google
+                          </button>
+                        </>
+                      ) : (
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-[11px] leading-relaxed text-muted-foreground">
+                          Gym sign-up uses email and password only. Google sign-up is available for member accounts.
                         </div>
-                        <div className="relative flex justify-center text-xs">
-                          <span className="px-4 bg-card text-muted-foreground">Or</span>
-                        </div>
-                      </div>
-                      
-                      <button 
-                        type="button" 
-                        onClick={handleGoogleLogin}
-                        className="w-full py-2.5 px-6 border border-[#FF6A00]/50 text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 hover:bg-[#FF6A00]/10 text-sm"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                          <path fill="#4285F4" d="M21.35 11.1c0-.72-.06-1.24-.19-1.78H12v3.22h5.32c-.11.9-.72 2.25-2.08 3.16l-.02.14 3.03 2.34.21.02c1.94-1.79 2.99-4.43 2.99-7.34z"/>
-                          <path fill="#34A853" d="M12 22c2.71 0 4.99-.89 6.65-2.43l-3.17-2.45c-.85.6-2 .99-3.48 .99-2.67 0-4.94-1.79-5.74-4.2h-3.3l-.07.14C3.82 18.73 7.62 22 12 22z"/>
-                          <path fill="#FBBC05" d="M6.26 13.91c-.2-.6-.31-1.25-.31-1.91s.11-1.31.31-1.91v-.13H2.96C2.33 10.9 2 11.92 2 13s.33 2.1.96 2.95l3.3-2.04z"/>
-                          <path fill="#EA4335" d="M12 6.58c1.5 0 2.85 .52 3.91 1.54l2.86-2.78C16.99 3.59 14.71 2.6 12 2.6 7.62 2.6 3.82 5.27 2.96 9.05l3.3 2.04c.8-2.41 3.07-4.51 5.74-4.51z"/>
-                        </svg>
-                        Continue with Google
-                      </button>
+                      )}
                       
                       <p className="text-xs text-center text-muted-foreground mt-4">
                         Already have an account?{" "}
@@ -558,3 +628,4 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
 };
 
 export default LoginRegister;
+

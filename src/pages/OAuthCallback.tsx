@@ -3,6 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { ApiErrorResponse, AuthResponse } from "@/models/auth.model";
 import { authStore } from "@/store/auth.store";
+import { getPostAuthRoute } from "@/utils/auth-routing";
 import { toast } from "sonner";
 
 const OAUTH_MESSAGE_TYPE = "FITPAL_OAUTH_RESULT";
@@ -57,7 +58,15 @@ const OAuthCallback = () => {
     if (authPayload?.accessToken) {
       authStore.setAuth(authPayload);
       toast.success(authPayload.message || "Signed in successfully");
-      navigate(authPayload.profileCompleted ? "/dashboard" : "/profile-setup", { replace: true });
+      navigate(
+        getPostAuthRoute({
+          role: authPayload.role,
+          profileCompleted: authPayload.profileCompleted,
+          hasSubscription: authPayload.hasSubscription,
+          hasActiveSubscription: authPayload.hasActiveSubscription,
+        }),
+        { replace: true }
+      );
       return;
     }
 

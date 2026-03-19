@@ -55,6 +55,8 @@ export interface AuthResponse {
   role: string;
   providers: string[];
   profileCompleted: boolean;
+  hasSubscription: boolean;
+  hasActiveSubscription: boolean;
 }
 
 export interface ApiErrorResponse {

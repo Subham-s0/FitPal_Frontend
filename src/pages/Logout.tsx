@@ -6,8 +6,12 @@ const Logout = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const redirectPath =
+      authStore.getSnapshot().role?.toUpperCase() === "SUPERADMIN"
+        ? "/admin"
+        : "/login";
     authStore.clearAuth();
-    navigate("/login", { replace: true });
+    navigate(redirectPath, { replace: true });
   }, [navigate]);
 
   return (
