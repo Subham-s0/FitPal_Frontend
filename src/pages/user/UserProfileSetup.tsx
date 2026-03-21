@@ -6,8 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getPlansApi } from "@/api/plan.api";
-import { initiateEsewaPaymentApi } from "@/api/payment.api";
-import { PUBLIC_FRONTEND_MODE } from "@/config/frontend-access";
+import { initiateEsewaPaymentApi, initiateKhaltiPaymentApi } from "@/api/payment.api";
 import { useAuthState } from "@/hooks/useAuth";
 import {
   deleteProfileImageApi, getMyProfileApi,
@@ -23,6 +22,7 @@ import type {
 } from "@/models/profile.model";
 import { CustomDatePicker } from "@/components/ui/CustomDatePicker";
 import { CustomSelect } from "@/components/ui/CustomSelect";
+import { NumberInput } from "@/components/ui/number-input";
 import Pricing from "@/components/Pricing";
 import {
   Field, FieldError, Pill, ProfileSetupShell, SectionLabel, SetupActions,
@@ -51,6 +51,14 @@ interface PaymentMethodDefinition {
   colorClass: string; isAvailable: boolean; helperText?: string;
 }
 
+interface KhaltiBillingState {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+type KhaltiBillingErrors = Partial<Record<keyof KhaltiBillingState, string>>;
+
 const USER_STEPS: StepDefinition[] = [
   { id: "profile", label: "Profile", titlePrefix: "Build Your", titleAccent: "Member Profile", subtitle: "Let gyms and trainers recognize you with your name, photo, and account basics." },
   { id: "demographics", label: "Details", titlePrefix: "Add Your", titleAccent: "Personal Details", subtitle: "A few basics help us tailor recommendations and progress tracking." },
@@ -74,7 +82,7 @@ const FITNESS_FOCUS_OPTIONS: Array<{ label: string; value: PrimaryFitnessFocus }
 ];
 
 const PAYMENT_METHODS: PaymentMethodDefinition[] = [
-  { id: "khalti", name: "Khalti", subtitle: "Fast wallet checkout for Nepali users.", badge: "K", logoUrl: "https://khaltibyime.khalti.com/wp-content/uploads/2025/07/Logo-for-Blog.png", colorClass: "bg-slate-950/30 text-white", isAvailable: false, helperText: "Coming soon" },
+  { id: "khalti", name: "Khalti", subtitle: "Fast wallet checkout for Nepali users.", badge: "K", logoUrl: "https://khaltibyime.khalti.com/wp-content/uploads/2025/07/Logo-for-Blog.png", colorClass: "bg-slate-950/30 text-white", isAvailable: true },
   { id: "esewa", name: "eSewa", subtitle: "Popular digital wallet for direct payments.", badge: "e", logoUrl: "https://esewa.com.np/common/images/esewa_logo.png", colorClass: "bg-[#60bb46]/20 text-[#8ae36f]", isAvailable: true },
 ];
 
@@ -92,6 +100,8 @@ const normalizePlanType = (p: string | null | undefined) => p?.trim().toLowerCas
 const buildFrontendCallbackUrl = (pathname: string) => new URL(pathname, window.location.origin).toString();
 const formatCurrencyAmount = (amount: number) =>
   new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+const TEN_DIGIT_PHONE_REGEX = /^[0-9]{10}$/;
+const SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const syncAuthOnboardingStatus = (profile: Pick<UserProfileResponse, "profileCompleted" | "hasSubscription" | "hasActiveSubscription">) => {
   authStore.updateOnboardingStatus({ profileCompleted: profile.profileCompleted, hasSubscription: profile.hasSubscription, hasActiveSubscription: profile.hasActiveSubscription });
@@ -115,7 +125,6 @@ const ProfileSetup = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const auth = useAuthState();
-  const isPublicPreview = PUBLIC_FRONTEND_MODE && !auth.accessToken;
   const locationState = location.state as ProfileSetupLocationState | null;
   const initialSelectedPlan = normalizePlanType(locationState?.selectedPlan);
   const { data: plans = [], isLoading: isLoadingPlans, isError: isPlansError } = useQuery({ queryKey: ["plans"], queryFn: getPlansApi });
@@ -128,12 +137,18 @@ const ProfileSetup = () => {
   const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
   const [isProfileImageLoadFailed, setIsProfileImageLoadFailed] = useState(false);
   const [userErrors, setUserErrors] = useState<UserValidationErrors>({});
+  const [khaltiBillingErrors, setKhaltiBillingErrors] = useState<KhaltiBillingErrors>({});
   const [paymentMethodError, setPaymentMethodError] = useState("");
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>(initialSelectedPlan);
   const [billingCycle, setBillingCycle] = useState<PlanFrequency>(locationState?.isYearly ? "yearly" : "monthly");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodId | null>("esewa");
   const [selectedSubscription, setSelectedSubscription] = useState<UserSubscriptionResponse | null>(null);
   const [userData, setUserData] = useState<UserSetupState>(INITIAL_USER_STATE);
+  const [khaltiBilling, setKhaltiBilling] = useState<KhaltiBillingState>({
+    name: "",
+    email: auth.email ?? "",
+    phone: "",
+  });
 
   const currentStep = USER_STEPS[stepIndex] ?? USER_STEPS[0];
   const isWideStep = currentStep.id === "profile" || currentStep.id === "subscription" || currentStep.id === "payment";
@@ -209,7 +224,7 @@ const ProfileSetup = () => {
   }, [userData.profileImageUrl]);
 
   useEffect(() => {
-    if (isPublicPreview || !auth.accessToken) return;
+    if (!auth.accessToken) return;
     let cancelled = false;
     const loadProfile = async () => {
       setIsLoadingProfile(true);
@@ -229,6 +244,11 @@ const ProfileSetup = () => {
           weight: profile.weight != null ? String(profile.weight) : "",
           fitnessLevel: profile.fitnessLevel ?? "", primaryFocus: profile.primaryFitnessFocus ?? "",
         });
+        setKhaltiBilling({
+          name: [profile.firstName ?? "", profile.lastName ?? ""].filter(Boolean).join(" ").trim() || profile.userName || "",
+          email: profile.email || auth.email || "",
+          phone: profile.phoneNo ?? "",
+        });
         setSelectedSubscription(subscription);
         if (subscription) {
           setSelectedPlan(normalizePlanType(subscription.planType));
@@ -244,12 +264,21 @@ const ProfileSetup = () => {
     };
     void loadProfile();
     return () => { cancelled = true; };
-  }, [auth.accessToken, isPublicPreview]);
+  }, [auth.accessToken, auth.email]);
 
   const clearError = (field: UserField) => {
     setUserErrors((prev) => { if (!prev[field]) return prev; const next = { ...prev }; delete next[field]; return next; });
   };
   const setUser = (patch: Partial<UserSetupState>) => setUserData((prev) => ({ ...prev, ...patch }));
+  const setKhaltiBillingField = (field: keyof KhaltiBillingState, value: string) => {
+    setKhaltiBilling((prev) => ({ ...prev, [field]: value }));
+    setKhaltiBillingErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
   const setProfileImageStateFromProfile = (profile: UserProfileResponse) => {
     setUser({ profileImageUrl: profile.profileImageUrl ?? "", profileImagePublicId: profile.profileImagePublicId ?? "", profileImageResourceType: profile.profileImageResourceType ?? "" });
   };
@@ -277,7 +306,10 @@ const ProfileSetup = () => {
           if (actualAge < 16) nextErrors.dob = "Must be at least 16 years old";
         }
       }
-      if (userData.phone) { const phone = userData.phone.trim(); if (phone.length > 20) nextErrors.phone = "At most 20 characters"; else if (!/^(\+?[0-9\s\-()*]*)$/.test(phone)) nextErrors.phone = "Invalid characters"; }
+      if (userData.phone) {
+        const phone = userData.phone.trim();
+        if (!TEN_DIGIT_PHONE_REGEX.test(phone)) nextErrors.phone = "Must be exactly 10 digits";
+      }
     }
     if (step === "goals") {
       if (userData.weight) {
@@ -295,14 +327,32 @@ const ProfileSetup = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
+  const validateKhaltiBilling = () => {
+    const nextErrors: KhaltiBillingErrors = {};
+    const name = khaltiBilling.name.trim();
+    const email = khaltiBilling.email.trim();
+    const phone = khaltiBilling.phone.trim();
+
+    if (!name) nextErrors.name = "Name is required";
+    if (!email) nextErrors.email = "Email is required";
+    else if (!SIMPLE_EMAIL_REGEX.test(email)) nextErrors.email = "Enter a valid email";
+    if (!TEN_DIGIT_PHONE_REGEX.test(phone)) nextErrors.phone = "Phone must be exactly 10 digits";
+
+    setKhaltiBillingErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const validatePaymentStep = () => {
     if (!selectedPaymentMethod) { setPaymentMethodError("Select a payment method"); return false; }
+    if (selectedPaymentMethod === "khalti" && !validateKhaltiBilling()) {
+      setPaymentMethodError("Complete Khalti billing information to continue");
+      return false;
+    }
     setPaymentMethodError("");
     return true;
   };
 
   const persistStep = async (step: number) => {
-    if (isPublicPreview) return true;
     const payload: UpdateUserOnboardingRequest = { step };
     if (step === 1) { payload.userName = userData.username.trim() || undefined; payload.firstName = userData.firstName.trim() || undefined; payload.lastName = userData.lastName.trim() || undefined; payload.profileImageUrl = userData.profileImageUrl.trim() || undefined; payload.profileImagePublicId = userData.profileImagePublicId.trim() || undefined; payload.profileImageResourceType = userData.profileImageResourceType.trim() || undefined; }
     else if (step === 2) { payload.dob = userData.dob || undefined; payload.gender = (userData.gender || undefined) as Gender | undefined; payload.phoneNo = userData.phone.trim() || undefined; }
@@ -314,7 +364,6 @@ const ProfileSetup = () => {
   };
 
   const persistSelectedSubscription = async () => {
-    if (isPublicPreview) return true;
     if (!selectedPlanDetails) { toast.error(isPlansError ? "Plan details could not be loaded." : "Select a subscription plan before continuing."); return false; }
     setIsSavingStep(true);
     try {
@@ -336,8 +385,7 @@ const ProfileSetup = () => {
   };
 
   const startEsewaCheckout = async () => {
-    if (isPublicPreview) { toast.success("Preview setup complete"); navigate("/dashboard"); return true; }
-    if (selectedPaymentMethod !== "esewa") { setPaymentMethodError("Choose eSewa. Khalti checkout is not integrated yet."); toast.info("Khalti checkout is not integrated yet. Choose eSewa to continue."); return false; }
+    if (selectedPaymentMethod !== "esewa") { setPaymentMethodError("Choose eSewa to continue."); return false; }
     const subscriptionMatchesSelection = selectedSubscription && normalizePlanType(selectedSubscription.planType) === selectedPlan && selectedSubscription.billingCycle === toApiBillingCycle(billingCycle);
     if (!subscriptionMatchesSelection && !(await persistSelectedSubscription())) return false;
     const activeSubscription = subscriptionMatchesSelection && selectedSubscription ? selectedSubscription : null;
@@ -360,12 +408,38 @@ const ProfileSetup = () => {
     finally { setIsInitiatingPayment(false); }
   };
 
+  const startKhaltiCheckout = async () => {
+    if (selectedPaymentMethod !== "khalti") { setPaymentMethodError("Choose Khalti to continue."); return false; }
+    const subscriptionMatchesSelection = selectedSubscription && normalizePlanType(selectedSubscription.planType) === selectedPlan && selectedSubscription.billingCycle === toApiBillingCycle(billingCycle);
+    if (!subscriptionMatchesSelection && !(await persistSelectedSubscription())) return false;
+    const activeSubscription = subscriptionMatchesSelection && selectedSubscription ? selectedSubscription : null;
+    const checkoutSubscriptionState: UserSubscriptionStateResponse | null = activeSubscription
+      ? { selected: true, subscription: activeSubscription }
+      : await getMySubscriptionApi().catch((error) => { toast.error(getApiErrorMessage(error, "Failed to load saved subscription")); return null; });
+    const checkoutSubscription = checkoutSubscriptionState?.subscription ?? null;
+    if (!checkoutSubscription) return false;
+    setSelectedSubscription(checkoutSubscription);
+    setIsInitiatingPayment(true);
+    try {
+      const response = await initiateKhaltiPaymentApi({
+        subscriptionId: checkoutSubscription.subscriptionId,
+        returnUrl: buildFrontendCallbackUrl("/payments/khalti/return"),
+        websiteUrl: window.location.origin,
+        billingName: khaltiBilling.name.trim(),
+        billingEmail: khaltiBilling.email.trim(),
+        billingPhoneNumber: khaltiBilling.phone.trim(),
+      });
+      window.location.assign(response.paymentUrl);
+      return true;
+    } catch (error) { toast.error(getApiErrorMessage(error, "Failed to start Khalti payment")); return false; }
+    finally { setIsInitiatingPayment(false); }
+  };
+
   const handlePhotoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!PROFILE_IMAGE_ACCEPTED_TYPES.includes(file.type)) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Only PNG, JPG, WEBP allowed" })); event.target.value = ""; return; }
     if (file.size > PROFILE_IMAGE_MAX_BYTES) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Max 5 MB" })); event.target.value = ""; return; }
-    if (isPublicPreview) { setUser({ profileImageUrl: URL.createObjectURL(file), profileImagePublicId: "", profileImageResourceType: "image" }); setIsProfileImageLoadFailed(false); clearError("profileImageUrl"); toast.success("Preview photo applied"); event.target.value = ""; return; }
     setIsUploadingPhoto(true);
     try { const profile = await uploadProfileImageApi(file); setProfileImageStateFromProfile(profile); syncAuthOnboardingStatus(profile); setIsProfileImageLoadFailed(false); clearError("profileImageUrl"); toast.success("Photo uploaded"); }
     catch (error) { setUserErrors((prev) => ({ ...prev, profileImageUrl: getApiErrorMessage(error, "Upload failed") })); }
@@ -374,7 +448,6 @@ const ProfileSetup = () => {
 
   const handlePhotoDeleted = async () => {
     if (!hasProfileImage || isDeletingPhoto) return;
-    if (isPublicPreview) { setUser({ profileImageUrl: "", profileImagePublicId: "", profileImageResourceType: "" }); setIsProfileImageLoadFailed(false); clearError("profileImageUrl"); toast.success("Preview photo removed"); return; }
     setIsDeletingPhoto(true);
     try { const profile = await deleteProfileImageApi(); setProfileImageStateFromProfile(profile); syncAuthOnboardingStatus(profile); setIsProfileImageLoadFailed(false); clearError("profileImageUrl"); toast.success("Photo deleted"); }
     catch (error) { setUserErrors((prev) => ({ ...prev, profileImageUrl: getApiErrorMessage(error, "Failed to delete photo") })); }
@@ -390,6 +463,10 @@ const ProfileSetup = () => {
     if (currentStep.id === "payment") {
       if (auth.hasActiveSubscription) { navigate("/dashboard"); return; }
       if (!validatePaymentStep()) return;
+      if (selectedPaymentMethod === "khalti") {
+        await startKhaltiCheckout();
+        return;
+      }
       await startEsewaCheckout();
     }
   };
@@ -469,7 +546,20 @@ const ProfileSetup = () => {
         <Field label="Date of Birth" error={userErrors.dob}><CustomDatePicker value={userData.dob} onChange={(v) => { setUser({ dob: v }); clearError("dob"); }} invalid={Boolean(userErrors.dob)} /></Field>
         <Field label="Gender" error={userErrors.gender}><CustomSelect options={[{ value: "MALE", label: "Male" }, { value: "FEMALE", label: "Female" }]} value={userData.gender} onChange={(v) => { setUser({ gender: v }); clearError("gender"); }} invalid={Boolean(userErrors.gender)} /></Field>
       </div>
-      <Field label="Phone Number" error={userErrors.phone}><TextInput type="tel" placeholder="+977 98xxxxxxxx" value={userData.phone} onChange={(e) => { setUser({ phone: e.target.value }); clearError("phone"); }} /></Field>
+      <Field label="Phone Number" error={userErrors.phone}>
+        <TextInput
+          type="tel"
+          inputMode="numeric"
+          pattern="[0-9]{10}"
+          maxLength={10}
+          placeholder="98xxxxxxxx"
+          value={userData.phone}
+          onChange={(e) => {
+            setUser({ phone: e.target.value.replace(/\D/g, "").slice(0, 10) });
+            clearError("phone");
+          }}
+        />
+      </Field>
       <SetupActions nextLabel="Continue" stepIndex={stepIndex} totalSteps={USER_STEPS.length} busy={busy} busyLabel={busyLabel} onNext={nextStep} onBack={prevStep} />
     </div>
   );
@@ -479,8 +569,32 @@ const ProfileSetup = () => {
       <div>
         <SectionLabel>Body Measurements</SectionLabel>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Weight (kg)" error={userErrors.weight}><TextInput type="number" placeholder="75.5" value={userData.weight} onChange={(e) => { setUser({ weight: e.target.value }); clearError("weight"); }} /></Field>
-          <Field label="Height (cm)" error={userErrors.height}><TextInput type="number" placeholder="175" value={userData.height} onChange={(e) => { setUser({ height: e.target.value }); clearError("height"); }} /></Field>
+          <Field label="Weight (kg)" error={userErrors.weight}>
+            <NumberInput
+              min={20}
+              max={300}
+              step={0.5}
+              placeholder="75.5"
+              value={userData.weight}
+              onChange={(e) => {
+                setUser({ weight: e.target.value });
+                clearError("weight");
+              }}
+            />
+          </Field>
+          <Field label="Height (cm)" error={userErrors.height}>
+            <NumberInput
+              min={80}
+              max={280}
+              step={1}
+              placeholder="175"
+              value={userData.height}
+              onChange={(e) => {
+                setUser({ height: e.target.value });
+                clearError("height");
+              }}
+            />
+          </Field>
         </div>
       </div>
       <div>
@@ -575,9 +689,17 @@ const ProfileSetup = () => {
                     key={method.id}
                     type="button"
                     onClick={() => {
-                      if (!method.isAvailable) { toast.info(`${method.name} checkout is not integrated yet. Choose eSewa to continue.`); return; }
+                      if (!method.isAvailable) { toast.info(`${method.name} checkout is not available right now.`); return; }
                       setSelectedPaymentMethod(method.id);
                       setPaymentMethodError("");
+                      setKhaltiBillingErrors({});
+                      if (method.id === "khalti") {
+                        setKhaltiBilling((prev) => ({
+                          name: prev.name || [userData.firstName, userData.lastName].filter(Boolean).join(" ").trim() || userData.username || "",
+                          email: prev.email || auth.email || "",
+                          phone: prev.phone || userData.phone,
+                        }));
+                      }
                     }}
                     disabled={!method.isAvailable}
                     className={cn(
@@ -610,8 +732,42 @@ const ProfileSetup = () => {
               })}
             </div>
             <FieldError message={paymentMethodError} />
+            {selectedPaymentMethod === "khalti" && (
+              <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
+                <SectionLabel className="!mb-3">Khalti Billing Info</SectionLabel>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Full Name" error={khaltiBillingErrors.name} className="sm:col-span-2">
+                    <TextInput
+                      type="text"
+                      placeholder="Full name"
+                      value={khaltiBilling.name}
+                      onChange={(e) => setKhaltiBillingField("name", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Email" error={khaltiBillingErrors.email}>
+                    <TextInput
+                      type="email"
+                      placeholder="you@example.com"
+                      value={khaltiBilling.email}
+                      onChange={(e) => setKhaltiBillingField("email", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Phone (10 digits)" error={khaltiBillingErrors.phone}>
+                    <TextInput
+                      type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]{10}"
+                      maxLength={10}
+                      placeholder="98xxxxxxxx"
+                      value={khaltiBilling.phone}
+                      onChange={(e) => setKhaltiBillingField("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    />
+                  </Field>
+                </div>
+              </div>
+            )}
             <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-              eSewa checkout is live. Khalti remains unavailable until its backend flow is implemented.
+              Choose either eSewa or Khalti. FitPal activates the membership only after backend verification succeeds.
             </p>
           </div>
         </div>
@@ -689,7 +845,7 @@ const ProfileSetup = () => {
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
                   {auth.hasActiveSubscription
                     ? "Your subscription is already active."
-                    : `You'll be redirected to ${selectedPaymentMethodDetails?.name ?? "the payment gateway"} to complete payment. Activation is automatic on success.`}
+                    : `You'll be redirected to ${selectedPaymentMethodDetails?.name ?? "the payment gateway"} to complete payment. FitPal activates the membership only after the gateway status is verified.`}
                 </p>
               </div>
 

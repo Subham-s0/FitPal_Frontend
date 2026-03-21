@@ -1,6 +1,6 @@
 import type { BillingCycle } from "./subscription.model";
 
-export type PaymentMethod = "ESEWA";
+export type PaymentMethod = "ESEWA" | "KHALTI";
 
 export type PaymentStatus =
   | "PENDING"
@@ -27,6 +27,31 @@ export interface EsewaInitiatePaymentResponse {
   paymentAttemptId: number;
   paymentUrl: string;
   formFields: Record<string, string>;
+}
+
+export interface KhaltiInitiatePaymentRequest {
+  subscriptionId?: number;
+  planId?: number;
+  billingCycle?: BillingCycle;
+  returnUrl: string;
+  websiteUrl: string;
+  billingName: string;
+  billingEmail: string;
+  billingPhoneNumber: string;
+}
+
+export interface KhaltiInitiatePaymentResponse {
+  subscriptionId: number;
+  paymentAttemptId: number;
+  pidx: string;
+  paymentUrl: string;
+  expiresAt: string | null;
+  expiresIn: number | null;
+}
+
+export interface KhaltiLookupPaymentRequest {
+  paymentAttemptId: number;
+  pidx?: string;
 }
 
 export interface EsewaConfirmPaymentRequest {

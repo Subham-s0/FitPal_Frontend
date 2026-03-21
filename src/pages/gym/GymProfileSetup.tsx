@@ -3,14 +3,22 @@ import type { ChangeEvent, FC, KeyboardEvent as ReactKeyboardEvent, ReactNode } 
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/api/client";
+import { NumberInput } from "@/components/ui/number-input";
+import { TimeInput } from "@/components/ui/time-picker";
 import {
   deleteGymDocumentApi,
+  deleteGymPhotoApi,
+  createGymPhotoApi,
   getMyGymDocumentsApi,
+  getMyGymPhotosApi,
   getMyGymProfileApi,
   patchGymBasicsStepApi,
   patchGymLocationStepApi,
+  patchGymPayoutStepApi,
   submitGymReviewSubmissionApi,
   uploadDocumentFileApi,
+  uploadImageFileApi,
+  updateGymPhotoApi,
   upsertGymDocumentApi,
   verifyGymRegisteredEmailApi,
 } from "@/api/profile.api";
@@ -18,11 +26,12 @@ import { useAuthState } from "@/hooks/useAuth";
 import type {
   DocumentUploadResponse,
   GymDocumentResponse,
+  GymPhotoResponse,
   GymProfileResponse,
   GymType as ApiGymType,
 } from "@/models/profile.model";
 
-type GymStepId = "gymInfo" | "location" | "docs" | "gymDone";
+type GymStepId = "gymInfo" | "location" | "payout" | "docs" | "gymDone";
 
 type DocTypeValue =
   | "REGISTRATION_CERTIFICATE"
@@ -51,6 +60,16 @@ interface DocRow {
   publicId?: string;
   resourceType?: string;
   uploaded: boolean;
+}
+
+interface PhotoRow {
+  photoId: number;
+  publicId: string;
+  resourceType: string;
+  photoUrl: string;
+  caption: string;
+  displayOrder: number | null;
+  cover: boolean;
 }
 
 interface AuthConfig {
@@ -110,6 +129,7 @@ interface SidebarItem {
 const STEPS: StepDef[] = [
   { id: "gymInfo", label: "Basics" },
   { id: "location", label: "Location & Contact" },
+  { id: "payout", label: "Payout Wallets" },
   { id: "docs", label: "Documents" },
   { id: "gymDone", label: "Under Review" },
 ];
@@ -117,7 +137,8 @@ const STEPS: StepDef[] = [
 const HEADERS: Record<GymStepId, [string, string, string]> = {
   gymInfo: ["Basic Gym", "Information", "Gym name, type, optional registration number, optional established year, and capacity."],
   location: ["Location &", "Operating Info", "Address, coordinates, contact details and opening hours."],
-  docs: ["Verification", "Documents", "Upload required documents. Encrypted and reviewed by our team."],
+  payout: ["Payout", "Wallets", "Link eSewa and/or Khalti for revenue payouts."],
+  docs: ["Verification", "Documents", "Upload required documents and at least one gym photo."],
   gymDone: ["Submitted for", "Review", "Our team will verify your gym within 1-2 business days."],
 };
 
@@ -238,7 +259,7 @@ body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;ov
 .pill:hover{border-color:rgba(234,88,12,.5);color:#fff}
 .pill.sel{background:var(--orange);border-color:transparent;color:#fff;box-shadow:0 2px 10px var(--orange-glow)}
 .actions{display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid rgba(255,255,255,.05);margin-top:8px}`,
-  `+.btn-back{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-d);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:10px 20px;border-radius:12px;cursor:pointer;transition:all .2s}
+  `.btn-back{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-d);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:10px 20px;border-radius:12px;cursor:pointer;transition:all .2s}
 .btn-back:hover{color:#fff;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
 .btn-primary{padding:14px 32px;border-radius:14px;background:var(--fire);color:#fff;font-family:var(--font);font-size:13px;font-weight:800;border:none;cursor:pointer;box-shadow:0 10px 30px -10px var(--orange-glow);transition:all .3s;text-transform:uppercase;letter-spacing:.1em}
 .btn-primary:hover{transform:translateY(-3px);box-shadow:0 15px 40px -10px var(--orange-glow)}
@@ -669,6 +690,7 @@ const FitPalGymSetup: FC = () => {
   const auth = useAuthState();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(0);
   const [stepError, setStepError] = useState<string | null>(null);
@@ -676,6 +698,8 @@ const FitPalGymSetup: FC = () => {
   const [isSavingStep, setIsSavingStep] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [uploadingDocIndex, setUploadingDocIndex] = useState<number | null>(null);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [activePhotoId, setActivePhotoId] = useState<number | null>(null);
   const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);
   const [gymName, setGymName] = useState("");
   const [gymType, setGymType] = useState<ApiGymType | null>(null);
@@ -699,10 +723,17 @@ const FitPalGymSetup: FC = () => {
   const [gymLongitude, setGymLongitude] = useState<number | null>(null);
   const [gymOpens, setGymOpens] = useState("06:00");
   const [gymCloses, setGymCloses] = useState("22:00");
+  const [esewaEnabled, setEsewaEnabled] = useState(false);
+  const [esewaWalletId, setEsewaWalletId] = useState("");
+  const [esewaAccountName, setEsewaAccountName] = useState("");
+  const [khaltiEnabled, setKhaltiEnabled] = useState(false);
+  const [khaltiWalletId, setKhaltiWalletId] = useState("");
+  const [khaltiAccountName, setKhaltiAccountName] = useState("");
   const [docs, setDocs] = useState<DocRow[]>([
     { type: "REGISTRATION_CERTIFICATE", fileName: "", uploaded: false },
     { type: "LICENSE", fileName: "", uploaded: false },
   ]);
+  const [photos, setPhotos] = useState<PhotoRow[]>([]);
 
   const authEmail = auth.email ?? "gym.owner@fitpal.com";
   const authDisplayName = authEmail
@@ -719,6 +750,9 @@ const FitPalGymSetup: FC = () => {
 
   const resumeStepIndex = (profile: GymProfileResponse) => {
     if (profile.submittedForReview || profile.approved || profile.dashboardAccessible) {
+      return 4;
+    }
+    if (profile.onboardingStep >= 3) {
       return 3;
     }
     if (profile.onboardingStep >= 2) {
@@ -766,7 +800,29 @@ const FitPalGymSetup: FC = () => {
     return [...requiredRows, ...optionalRows];
   };
 
-  const applyProfileState = (profile: GymProfileResponse, documents?: GymDocumentResponse[]) => {
+  const sortPhotos = (items: PhotoRow[]) =>
+    [...items].sort((a, b) => {
+      const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.photoId - b.photoId;
+    });
+
+  const toPhotoRow = (photo: GymPhotoResponse): PhotoRow => ({
+    photoId: photo.photoId,
+    publicId: photo.publicId,
+    resourceType: photo.resourceType,
+    photoUrl: photo.photoUrl,
+    caption: photo.caption ?? "",
+    displayOrder: photo.displayOrder,
+    cover: photo.cover,
+  });
+
+  const applyProfileState = (
+    profile: GymProfileResponse,
+    documents?: GymDocumentResponse[],
+    gymPhotos?: GymPhotoResponse[]
+  ) => {
     setGymEmailVerified(profile.registeredEmailVerified);
     setGymName(profile.gymName ?? "");
     setGymType(profile.gymType ?? null);
@@ -788,8 +844,19 @@ const FitPalGymSetup: FC = () => {
     setGymLongitude(profile.longitude ?? null);
     setGymOpens(profile.opensAt ?? "06:00");
     setGymCloses(profile.closesAt ?? "22:00");
+    const savedEsewaWallet = profile.esewaWalletId ?? "";
+    const savedKhaltiWallet = profile.khaltiWalletId ?? "";
+    setEsewaEnabled(Boolean(savedEsewaWallet));
+    setEsewaWalletId(savedEsewaWallet);
+    setEsewaAccountName(profile.esewaAccountName ?? "");
+    setKhaltiEnabled(Boolean(savedKhaltiWallet));
+    setKhaltiWalletId(savedKhaltiWallet);
+    setKhaltiAccountName(profile.khaltiAccountName ?? "");
     if (documents) {
       setDocs(buildDocRows(documents));
+    }
+    if (gymPhotos) {
+      setPhotos(sortPhotos(gymPhotos.map(toPhotoRow)));
     }
     setStep(resumeStepIndex(profile));
   };
@@ -817,12 +884,13 @@ const FitPalGymSetup: FC = () => {
     const loadGymProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const [profile, documents] = await Promise.all([
+        const [profile, documents, gymPhotos] = await Promise.all([
           getMyGymProfileApi(),
           getMyGymDocumentsApi(),
+          getMyGymPhotosApi(),
         ]);
         if (cancelled) return;
-        applyProfileState(profile, documents);
+        applyProfileState(profile, documents, gymPhotos);
       } catch (error) {
         if (!cancelled) {
           toast.error(getApiErrorMessage(error, "Failed to load gym onboarding profile"));
@@ -867,20 +935,30 @@ const FitPalGymSetup: FC = () => {
     gymDesc,
     gymOpens,
     gymCloses,
+    esewaEnabled,
+    esewaWalletId,
+    esewaAccountName,
+    khaltiEnabled,
+    khaltiWalletId,
+    khaltiAccountName,
     docs,
+    photos,
   ]);
 
   const stepId = STEPS[step]?.id ?? "gymInfo";
   const hdr = HEADERS[stepId];
-  const isWide = stepId === "location" || stepId === "gymInfo";
+  const isWide = stepId === "location" || stepId === "gymInfo" || stepId === "payout" || stepId === "docs";
   const cardMax = isWide ? "860px" : "580px";
+  const maxGymPhotos = 12;
   const currentYear = new Date().getFullYear();
   const establishedYearValue = Number(gymEstablished);
   const capacityValue = Number(gymCapacity);
   const hasRequiredDocuments =
     docs.some((doc) => doc.type === "REGISTRATION_CERTIFICATE" && doc.uploaded) &&
     docs.some((doc) => doc.type === "LICENSE" && doc.uploaded);
+  const hasRequiredPhotos = photos.length >= 1;
   const hasValidOperatingHours = Boolean(gymOpens && gymCloses && gymCloses > gymOpens);
+  const isValidNepalWalletId = (value: string) => /^(98|97|96)\d{8}$/.test(value.trim());
 
   const getStep1Blocker = () => {
     if (!gymEmailVerified) return "Verify the registered email before continuing to Step 2.";
@@ -914,13 +992,35 @@ const FitPalGymSetup: FC = () => {
 
   const getStep3Blocker = () => {
     const step2Blocker = getStep2Blocker();
-    if (step2Blocker) return "Complete Step 2 first. Documents stay locked until location and contact details are complete.";
+    if (step2Blocker) return "Complete Step 2 first. Payout setup stays locked until location and contact details are complete.";
+    if (!esewaEnabled && !khaltiEnabled) return "Select at least one payout wallet before continuing to Step 4.";
+    if (esewaEnabled && !isValidNepalWalletId(esewaWalletId)) {
+      return "Enter a valid eSewa wallet number (98/97/96 + 8 digits).";
+    }
+    if (esewaEnabled && !esewaAccountName.trim()) {
+      return "Enter the account holder name for eSewa before continuing to Step 4.";
+    }
+    if (khaltiEnabled && !isValidNepalWalletId(khaltiWalletId)) {
+      return "Enter a valid Khalti wallet number (98/97/96 + 8 digits).";
+    }
+    if (khaltiEnabled && !khaltiAccountName.trim()) {
+      return "Enter the account holder name for Khalti before continuing to Step 4.";
+    }
+    return null;
+  };
+
+  const getStep4Blocker = () => {
+    const step3Blocker = getStep3Blocker();
+    if (step3Blocker) return "Complete Step 3 first. Documents stay locked until payout setup is complete.";
     if (!hasRequiredDocuments) return "Upload the required Registration Certificate and Operating License before submitting for review.";
+    if (!hasRequiredPhotos) return "Upload at least 1 gym photo before submitting for review.";
     return null;
   };
 
   const isStep1Complete = getStep1Blocker() === null;
   const isStep2Complete = getStep2Blocker() === null;
+  const isStep3Complete = getStep3Blocker() === null;
+  const isStep4Complete = getStep4Blocker() === null;
 
   useEffect(() => {
     if (step > 0 && !isStep1Complete) {
@@ -931,12 +1031,20 @@ const FitPalGymSetup: FC = () => {
       setStep(1);
       return;
     }
-    if (step > 2 && !hasRequiredDocuments) {
+    if (step > 2 && !isStep3Complete) {
       setStep(2);
+      return;
     }
-  }, [step, isStep1Complete, isStep2Complete, hasRequiredDocuments]);
+    if (step > 3 && !isStep4Complete) {
+      setStep(3);
+    }
+  }, [step, isStep1Complete, isStep2Complete, isStep3Complete, isStep4Complete]);
 
-  const isBusy = isSavingStep || isUploadingLogo || uploadingDocIndex !== null;
+  const isBusy = isSavingStep
+    || isUploadingLogo
+    || uploadingDocIndex !== null
+    || isUploadingPhotos
+    || activePhotoId !== null;
 
   const goToLocationStep = async () => {
     if (isBusy) return;
@@ -965,7 +1073,7 @@ const FitPalGymSetup: FC = () => {
     }
   };
 
-  const goToDocumentsStep = async () => {
+  const goToPayoutStep = async () => {
     if (isBusy) return;
     const blocker = getStep2Blocker();
     if (blocker) {
@@ -1002,7 +1110,7 @@ const FitPalGymSetup: FC = () => {
     }
   };
 
-  const goToReviewStep = async () => {
+  const goToDocumentsStep = async () => {
     if (isBusy) return;
     const blocker = getStep3Blocker();
     if (blocker) {
@@ -1012,9 +1120,37 @@ const FitPalGymSetup: FC = () => {
 
     setIsSavingStep(true);
     try {
-      const profile = await submitGymReviewSubmissionApi();
+      const profile = await patchGymPayoutStepApi({
+        esewaEnabled,
+        esewaWalletId: esewaEnabled ? esewaWalletId.trim() : undefined,
+        esewaAccountName: esewaEnabled ? (esewaAccountName.trim() || undefined) : undefined,
+        khaltiEnabled,
+        khaltiWalletId: khaltiEnabled ? khaltiWalletId.trim() : undefined,
+        khaltiAccountName: khaltiEnabled ? (khaltiAccountName.trim() || undefined) : undefined,
+      });
       applyProfileState(profile);
       setStep(3);
+      toast.success("Payout wallets saved");
+    } catch (error) {
+      setStepError(getApiErrorMessage(error, "Failed to save payout wallets"));
+    } finally {
+      setIsSavingStep(false);
+    }
+  };
+
+  const goToReviewStep = async () => {
+    if (isBusy) return;
+    const blocker = getStep4Blocker();
+    if (blocker) {
+      setStepError(blocker);
+      return;
+    }
+
+    setIsSavingStep(true);
+    try {
+      const profile = await submitGymReviewSubmissionApi();
+      applyProfileState(profile);
+      setStep(4);
       toast.success("Gym submitted for review");
     } catch (error) {
       setStepError(getApiErrorMessage(error, "Failed to submit gym for review"));
@@ -1150,6 +1286,119 @@ const FitPalGymSetup: FC = () => {
     }
   };
 
+  const openPhotoPicker = () => {
+    if (isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos) return;
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    event.target.value = "";
+
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const remainingSlots = Math.max(maxGymPhotos - photos.length, 0);
+    if (remainingSlots <= 0) {
+      setStepError(`You can upload at most ${maxGymPhotos} photos.`);
+      return;
+    }
+
+    const filesToUpload = selectedFiles.slice(0, remainingSlots);
+    if (filesToUpload.length < selectedFiles.length) {
+      toast.info(`Only ${remainingSlots} photo(s) were queued. Maximum is ${maxGymPhotos}.`);
+    }
+
+    setIsUploadingPhotos(true);
+    let nextPhotos = [...photos];
+    let uploadCount = 0;
+
+    try {
+      for (const file of filesToUpload) {
+        if (!file.type.startsWith("image/")) {
+          setStepError(`${file.name} is not an image file.`);
+          continue;
+        }
+
+        try {
+          const uploadedAsset = await uploadImageFileApi(file, "fitpal/gym-photos");
+          const createdPhoto = await createGymPhotoApi({
+            publicId: uploadedAsset.publicId,
+            resourceType: uploadedAsset.resourceType,
+            photoUrl: uploadedAsset.secureUrl || uploadedAsset.url,
+            caption: "",
+            cover: !nextPhotos.some((photo) => photo.cover),
+          });
+
+          nextPhotos = sortPhotos([...nextPhotos, toPhotoRow(createdPhoto)]);
+          uploadCount += 1;
+        } catch (error) {
+          setStepError(getApiErrorMessage(error, `Failed to upload photo: ${file.name}`));
+        }
+      }
+
+      setPhotos(nextPhotos);
+      if (uploadCount > 0) {
+        toast.success(`${uploadCount} photo${uploadCount > 1 ? "s" : ""} uploaded`);
+      }
+    } finally {
+      setIsUploadingPhotos(false);
+    }
+  };
+
+  const setCoverPhoto = async (photoId: number) => {
+    if (activePhotoId !== null || isUploadingPhotos) return;
+
+    setActivePhotoId(photoId);
+    try {
+      const updatedPhoto = await updateGymPhotoApi(photoId, { cover: true });
+      setPhotos((prev) =>
+        sortPhotos(
+          prev.map((photo) =>
+            photo.photoId === updatedPhoto.photoId
+              ? toPhotoRow(updatedPhoto)
+              : { ...photo, cover: false }
+          )
+        )
+      );
+      toast.success("Cover photo updated");
+    } catch (error) {
+      setStepError(getApiErrorMessage(error, "Failed to update cover photo"));
+    } finally {
+      setActivePhotoId(null);
+    }
+  };
+
+  const removePhoto = async (photoId: number) => {
+    if (activePhotoId !== null || isUploadingPhotos) return;
+
+    const currentPhotos = photos;
+    const deletingPhoto = currentPhotos.find((photo) => photo.photoId === photoId);
+
+    setActivePhotoId(photoId);
+    try {
+      await deleteGymPhotoApi(photoId);
+      let remainingPhotos = currentPhotos.filter((photo) => photo.photoId !== photoId);
+
+      if (deletingPhoto?.cover && remainingPhotos.length > 0) {
+        const fallbackCover = await updateGymPhotoApi(remainingPhotos[0].photoId, { cover: true });
+        remainingPhotos = remainingPhotos.map((photo) =>
+          photo.photoId === fallbackCover.photoId
+            ? toPhotoRow(fallbackCover)
+            : { ...photo, cover: false }
+        );
+      }
+
+      setPhotos(sortPhotos(remainingPhotos));
+      toast.success("Photo removed");
+    } catch (error) {
+      setStepError(getApiErrorMessage(error, "Failed to remove photo"));
+    } finally {
+      setActivePhotoId(null);
+    }
+  };
+
   const onLocationPicked = useCallback((
     lat: number | null,
     lng: number | null,
@@ -1164,7 +1413,7 @@ const FitPalGymSetup: FC = () => {
     if (fields.postal) setGymPostal(fields.postal);
   }, []);
 
-  const Track: FC = () => (
+  const renderTrack = () => (
     <div className="progress-track">
       {STEPS.map((currentStep, index) => {
         const done = index < step;
@@ -1185,7 +1434,7 @@ const FitPalGymSetup: FC = () => {
     </div>
   );
 
-  const ScreenGymInfo: FC = () => (
+  const renderGymInfoScreen = () => (
     <div className="screen animate-[screenFadeIn_0.2s_ease-out]">
       {stepError && <StepErrorBanner message={stepError} />}
       <input
@@ -1273,13 +1522,26 @@ const FitPalGymSetup: FC = () => {
             </div>
             <div className="field">
               <label>Established Year <span style={{ color: "var(--text-d)" }}>optional</span></label>
-              <input type="number" placeholder="e.g. 2018" min={1900} max={currentYear} value={gymEstablished} onChange={(event) => setGymEstablished(event.target.value)} />
+              <NumberInput
+                placeholder="e.g. 2018"
+                min={1900}
+                max={currentYear}
+                step={1}
+                value={gymEstablished}
+                onChange={(event) => setGymEstablished(event.target.value)}
+              />
             </div>
           </div>
 
           <div className="field" style={{ flex: 1 }}>
             <label>Maximum Member Capacity <span style={{ color: "#ef4444" }}>*</span></label>
-            <input type="number" placeholder="e.g. 150" min={10} value={gymCapacity} onChange={(event) => setGymCapacity(event.target.value)} />
+            <NumberInput
+              placeholder="e.g. 150"
+              min={10}
+              step={1}
+              value={gymCapacity}
+              onChange={(event) => setGymCapacity(event.target.value)}
+            />
             <div className="field-hint">Total concurrent members your facility can safely accommodate.</div>
           </div>
           
@@ -1291,7 +1553,7 @@ const FitPalGymSetup: FC = () => {
     </div>
   );
 
-  const ScreenLocation: FC = () => (
+  const renderLocationScreen = () => (
     <div className="screen animate-[screenFadeIn_0.2s_ease-out]">
       {stepError && <StepErrorBanner message={stepError} />}
       
@@ -1351,11 +1613,19 @@ const FitPalGymSetup: FC = () => {
             <div className="frow">
               <div className="field">
                 <label>Opens at <span style={{ color: "#ef4444" }}>*</span></label>
-                <input type="time" value={gymOpens} onChange={(event) => setGymOpens(event.target.value)} />
+                <TimeInput
+                  className="w-full"
+                  value={gymOpens}
+                  onChange={(event) => setGymOpens(event.target.value)}
+                />
               </div>
               <div className="field">
                 <label>Closes at <span style={{ color: "#ef4444" }}>*</span></label>
-                <input type="time" value={gymCloses} onChange={(event) => setGymCloses(event.target.value)} />
+                <TimeInput
+                  className="w-full"
+                  value={gymCloses}
+                  onChange={(event) => setGymCloses(event.target.value)}
+                />
               </div>
             </div>
             <div className="field" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1365,14 +1635,156 @@ const FitPalGymSetup: FC = () => {
           </div>
           
           <div style={{ alignSelf: "flex-end", width: "100%", marginTop: "8px" }}>
-            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(0)} onNext={goToDocumentsStep} />
+            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(0)} onNext={goToPayoutStep} />
           </div>
         </div>
       </div>
     </div>
   );
 
-  const ScreenDocs: FC = () => {
+  const renderPayoutScreen = () => {
+    const esewaWalletValid = isValidNepalWalletId(esewaWalletId);
+    const khaltiWalletValid = isValidNepalWalletId(khaltiWalletId);
+
+    return (
+      <div className="screen">
+        {stepError && <StepErrorBanner message={stepError} />}
+
+        <div className="sec-label" style={{ marginBottom: 10 }}>Payout Wallet</div>
+        <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>
+          Link the wallet where FitPal sends your revenue share. You can enable one or both.
+        </p>
+
+        <div style={{ border: `1px solid ${esewaEnabled ? "rgba(96,187,70,.4)" : "rgba(255,255,255,.08)"}`, borderRadius: 16, background: esewaEnabled ? "rgba(96,187,70,.04)" : "rgba(255,255,255,.02)", overflow: "hidden", transition: "all .2s", marginBottom: 12 }}>
+          <button
+            type="button"
+            onClick={() => setEsewaEnabled((prev) => !prev)}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}
+          >
+            <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(96,187,70,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 900, color: "#60BB46", flexShrink: 0 }}>E</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>eSewa</div>
+              <div style={{ fontSize: 11, color: "var(--text-d)", marginTop: 2 }}>Manual admin verification before first payout</div>
+            </div>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", border: `1.5px solid ${esewaEnabled ? "#60BB46" : "rgba(255,255,255,.15)"}`, background: esewaEnabled ? "#60BB46" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
+              {esewaEnabled && (
+                <svg width="10" height="10" fill="none" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              )}
+            </div>
+          </button>
+
+          {esewaEnabled && (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label>eSewa ID / Phone</label>
+                <input
+                  type="text"
+                  maxLength={10}
+                  placeholder="98XXXXXXXX"
+                  value={esewaWalletId}
+                  onChange={(event) => setEsewaWalletId(event.target.value)}
+                  style={{ background: "rgba(255,255,255,.04)", borderColor: esewaWalletId && !esewaWalletValid ? "rgba(239,68,68,.5)" : esewaWalletValid ? "rgba(96,187,70,.45)" : "rgba(255,255,255,.08)" }}
+                />
+                {esewaWalletId && !esewaWalletValid && (
+                  <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>
+                )}
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Registered Name</label>
+                <input
+                  type="text"
+                  placeholder="Full name on eSewa account"
+                  value={esewaAccountName}
+                  onChange={(event) => setEsewaAccountName(event.target.value)}
+                  style={{ background: "rgba(255,255,255,.04)" }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ border: `1px solid ${khaltiEnabled ? "rgba(139,92,246,.4)" : "rgba(255,255,255,.08)"}`, borderRadius: 16, background: khaltiEnabled ? "rgba(92,45,145,.05)" : "rgba(255,255,255,.02)", overflow: "hidden", transition: "all .2s", marginBottom: 12 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setKhaltiEnabled((prev) => {
+                const next = !prev;
+                return next;
+              });
+            }}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}
+          >
+            <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(92,45,145,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 900, color: "#8b5cf6", flexShrink: 0 }}>K</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Khalti</div>
+              <div style={{ fontSize: 11, color: "var(--text-d)", marginTop: 2 }}>Wallet will be reviewed during approval</div>
+            </div>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", border: `1.5px solid ${khaltiEnabled ? "#8b5cf6" : "rgba(255,255,255,.15)"}`, background: khaltiEnabled ? "#8b5cf6" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
+              {khaltiEnabled && (
+                <svg width="10" height="10" fill="none" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              )}
+            </div>
+          </button>
+
+          {khaltiEnabled && (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label>Khalti ID / Phone</label>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <div style={{ flex: 1 }}>
+                    <input
+                      type="text"
+                      maxLength={10}
+                      placeholder="98XXXXXXXX"
+                      value={khaltiWalletId}
+                      onChange={(event) => {
+                        setKhaltiWalletId(event.target.value);
+                      }}
+                      style={{ width: "100%", background: "rgba(255,255,255,.04)", borderColor: khaltiWalletId && !khaltiWalletValid ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.08)" }}
+                    />
+                    {khaltiWalletId && !khaltiWalletValid && (
+                      <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Registered Name</label>
+                <input
+                  type="text"
+                  placeholder="Full name on Khalti account"
+                  value={khaltiAccountName}
+                  onChange={(event) => setKhaltiAccountName(event.target.value)}
+                  style={{ background: "rgba(255,255,255,.04)" }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 16px", background: "rgba(59,130,246,.06)", border: "1px solid rgba(59,130,246,.18)", borderRadius: 14, marginTop: 4 }}>
+          <svg width="30" height="30" fill="none" viewBox="0 0 24 24" style={{ flexShrink: 0, color: "#60a5fa" }}>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#93c5fd", marginBottom: 4 }}>How payouts work</div>
+            <div style={{ fontSize: 12, color: "var(--text-m)", lineHeight: 1.7 }}>
+              Members pay FitPal subscriptions directly. FitPal sends your gym&apos;s revenue share to the wallet(s) you connect here.
+            </div>
+          </div>
+        </div>
+
+        <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(1)} onNext={goToDocumentsStep} />
+      </div>
+    );
+  };
+
+  const renderDocsScreen = () => {
     return (
       <div className="screen">
         {stepError && <StepErrorBanner message={stepError} />}
@@ -1382,6 +1794,14 @@ const FitPalGymSetup: FC = () => {
           accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
           style={{ display: "none" }}
           onChange={handleDocumentSelected}
+        />
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: "none" }}
+          onChange={handlePhotoSelected}
         />
         <div className="sec-label">Verification Documents</div>
         <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>
@@ -1487,12 +1907,93 @@ const FitPalGymSetup: FC = () => {
           Add Document
         </button>
 
-        {hasRequiredDocuments ? (
+        <div className="sec-label green" style={{ marginTop: 24 }}>Gym Photos</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 10, fontSize: 12, color: "var(--text-m)" }}>
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style={{ color: "var(--orange)", flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+            <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          At least 1 photo is required. You can upload up to {maxGymPhotos} photos.
+        </div>
+
+        <button
+          type="button"
+          onClick={openPhotoPicker}
+          disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos}
+          style={{
+            width: "100%",
+            marginTop: 12,
+            padding: "16px 14px",
+            borderRadius: 12,
+            border: "1.5px dashed rgba(249,115,22,.25)",
+            background: "rgba(249,115,22,.03)",
+            color: "var(--text-m)",
+            cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos ? "not-allowed" : "pointer",
+            fontFamily: "var(--font)",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+            {isUploadingPhotos ? "Uploading photos..." : "Drop photos here or click to browse"}
+          </div>
+          <div style={{ fontSize: 11, marginTop: 4, color: "#4b5563" }}>
+            JPG, PNG, WEBP - first photo becomes cover
+          </div>
+        </button>
+
+        {photos.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10, marginTop: 12 }}>
+            {photos.map((photo) => (
+              <div key={photo.photoId} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,.02)" }}>
+                <div style={{ position: "relative", width: "100%", height: 100, background: "#0d0d0d" }}>
+                  <img src={photo.photoUrl} alt="Gym" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {photo.cover && (
+                    <div style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", background: "rgba(16,185,129,.92)", color: "#fff", borderRadius: 999, padding: "3px 8px" }}>
+                      Cover
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 6, padding: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => void setCoverPhoto(photo.photoId)}
+                    disabled={photo.cover || activePhotoId !== null}
+                    style={{ flex: 1, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "#e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: photo.cover || activePhotoId !== null ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
+                  >
+                    {photo.cover ? "Cover" : "Set Cover"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removePhoto(photo.photoId)}
+                    disabled={activePhotoId !== null}
+                    style={{ border: "1px solid rgba(239,68,68,.35)", background: "rgba(239,68,68,.08)", color: "#fca5a5", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: activePhotoId !== null ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
+                  >
+                    {activePhotoId === photo.photoId ? "..." : "Remove"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, fontSize: 11, color: "var(--text-d)" }}>
+          <span><strong style={{ color: "var(--text-m)" }}>{photos.length}</strong> / {maxGymPhotos} photos</span>
+          <button
+            type="button"
+            onClick={openPhotoPicker}
+            disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos}
+            style={{ color: "var(--orange)", background: "rgba(249,115,22,.08)", border: "1px solid rgba(249,115,22,.2)", borderRadius: 8, padding: "5px 12px", cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos ? "not-allowed" : "pointer", fontFamily: "var(--font)", fontSize: 11, fontWeight: 700 }}
+          >
+            + Add More
+          </button>
+        </div>
+
+        {hasRequiredDocuments && hasRequiredPhotos ? (
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", borderRadius: 12, marginTop: 16 }}>
             <svg style={{ color: "#4ade80", flexShrink: 0 }} width="15" height="15" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80" }}>Ready to submit - required documents uploaded.</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80" }}>All required documents uploaded and at least 1 photo added. Ready to submit.</span>
           </div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 12, marginTop: 16 }}>
@@ -1500,16 +2001,16 @@ const FitPalGymSetup: FC = () => {
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
               <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#52525b" }}>Upload both required documents above to continue.</span>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#52525b" }}>Upload required documents and at least one gym photo to continue.</span>
           </div>
         )}
 
-        <Actions label="Submit for Review" step={step} totalSteps={STEPS.length} onBack={() => setStep(1)} onNext={goToReviewStep} />
+        <Actions label="Submit for Review" step={step} totalSteps={STEPS.length} onBack={() => setStep(2)} onNext={goToReviewStep} />
       </div>
     );
   };
 
-  const ScreenGymDone: FC = () => (
+  const renderGymDoneScreen = () => (
     <div className="screen done-wrap">
       <div className="done-icon pending">
         <svg width="34" height="34" fill="none" viewBox="0 0 36 36">
@@ -1519,18 +2020,18 @@ const FitPalGymSetup: FC = () => {
       </div>
       <div className="done-title">Pending Review</div>
       <div className="done-sub">
-        Documents submitted. Our team will verify your gym within <strong style={{ color: "var(--orange)" }}>1-2 business days</strong>. Confirmation sent to <strong style={{ color: "#fff" }}>{authConfig.email}</strong>.
+        Documents and {photos.length} photo(s) submitted. Our team will verify your gym within <strong style={{ color: "var(--orange)" }}>1-2 business days</strong>. Confirmation sent to <strong style={{ color: "#fff" }}>{authConfig.email}</strong>.
       </div>
-      <button className="done-btn" type="button" onClick={() => navigate("/dashboard", { state: { activeSection: "profile" } })}>
+      <button className="done-btn" type="button" onClick={() => window.location.reload()}>
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24">
           <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        Track Verification
+        Refresh Verification Status
       </button>
     </div>
   );
 
-  const ScreenLoading: FC = () => (
+  const renderLoadingScreen = () => (
     <div className="screen" style={{ minHeight: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--orange)", fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em" }}>
         <span className="spinner" />
@@ -1548,20 +2049,22 @@ const FitPalGymSetup: FC = () => {
 
   const renderCurrentScreen = () => {
     if (isLoadingProfile) {
-      return <ScreenLoading />;
+      return renderLoadingScreen();
     }
 
     switch (stepId) {
       case "gymInfo":
-        return <ScreenGymInfo />;
+        return renderGymInfoScreen();
       case "location":
-        return <ScreenLocation />;
+        return renderLocationScreen();
+      case "payout":
+        return renderPayoutScreen();
       case "docs":
-        return <ScreenDocs />;
+        return renderDocsScreen();
       case "gymDone":
-        return <ScreenGymDone />;
+        return renderGymDoneScreen();
       default:
-        return <ScreenGymInfo />;
+        return renderGymInfoScreen();
     }
   };
 
@@ -1651,7 +2154,7 @@ const FitPalGymSetup: FC = () => {
             </div>
             <h1 className="progress-title">{hdr[0]} <span className="fire-t">{hdr[1]}</span></h1>
             <p className="progress-sub">{hdr[2]}</p>
-            <Track />
+            {renderTrack()}
           </div>
 
           <div className="card" style={{ maxWidth: cardMax }}>

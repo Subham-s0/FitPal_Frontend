@@ -4,7 +4,6 @@ import { Check } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { getPlansApi } from "@/api/plan.api";
-import { PUBLIC_FRONTEND_MODE } from "@/config/frontend-access";
 import { cn } from "@/lib/utils";
 import type { PlanResponse } from "@/models/plan.model";
 
@@ -226,10 +225,6 @@ const Pricing = ({
           onClick={() => {
             if (onSelectPlan) {
               onSelectPlan(planId, isYearly);
-            } else if (PUBLIC_FRONTEND_MODE) {
-              navigate("/profile-setup", {
-                state: { selectedPlan: planId, isYearly },
-              });
             } else if (isHomePage) {
               navigate("/login", { state: { selectedPlan: planId, isYearly } });
             } else {

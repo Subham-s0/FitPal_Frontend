@@ -87,11 +87,35 @@ export interface UpdateGymLocationStepRequest {
   closesAt?: string;
 }
 
+export interface UpdateGymPayoutStepRequest {
+  esewaEnabled: boolean;
+  esewaWalletId?: string;
+  esewaAccountName?: string;
+  khaltiEnabled: boolean;
+  khaltiWalletId?: string;
+  khaltiAccountName?: string;
+}
+
 export interface UpsertGymDocumentRequest {
   documentType: GymDocumentType;
   publicId: string;
   resourceType: string;
   fileUrl: string;
+}
+
+export interface CreateGymPhotoRequest {
+  publicId: string;
+  resourceType: string;
+  photoUrl: string;
+  caption?: string;
+  displayOrder?: number;
+  cover?: boolean;
+}
+
+export interface UpdateGymPhotoRequest {
+  caption?: string;
+  displayOrder?: number;
+  cover?: boolean;
 }
 
 export interface GymProfileResponse {
@@ -125,6 +149,11 @@ export interface GymProfileResponse {
   websiteUrl: string | null;
   opensAt: string | null;
   closesAt: string | null;
+  esewaWalletId: string | null;
+  esewaAccountName: string | null;
+  khaltiWalletId: string | null;
+  khaltiAccountName: string | null;
+  khaltiWalletVerified: boolean;
   documentCount: number;
   maxDocuments: number;
   requiredDocumentsUploaded: boolean;
@@ -138,6 +167,17 @@ export interface GymDocumentResponse {
   publicId: string;
   resourceType: string;
   fileUrl: string;
+  createdAt: string;
+}
+
+export interface GymPhotoResponse {
+  photoId: number;
+  publicId: string;
+  resourceType: string;
+  photoUrl: string;
+  caption: string | null;
+  displayOrder: number | null;
+  cover: boolean;
   createdAt: string;
 }
 

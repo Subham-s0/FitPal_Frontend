@@ -1,7 +1,6 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PUBLIC_FRONTEND_MODE } from "@/config/frontend-access";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuthState } from "@/hooks/useAuth";
@@ -16,6 +15,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import OAuthCallback from "./pages/OAuthCallback";
 import Logout from "./pages/Logout";
 import EsewaPaymentCallback from "./pages/EsewaPaymentCallback";
+import KhaltiPaymentCallback from "./pages/KhaltiPaymentCallback";
 import { default as ProfileSetup } from "./pages/user/UserProfileSetup";
 import GymProfileSetup from "./pages/gym/GymProfileSetup";
 import ProfileSetupEntry from "./pages/ProfileSetupEntry";
@@ -34,10 +34,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
 
   if (!auth.accessToken) {
-    if (PUBLIC_FRONTEND_MODE) {
-      return <>{children}</>;
-    }
-
     console.warn("Unauthorized access attempt. Redirecting to login.");
     return <Navigate to="/login" replace />;
   }
@@ -84,10 +80,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const auth = useAuthState();
 
   if (!auth.accessToken) {
-    if (PUBLIC_FRONTEND_MODE) {
-      return <>{children}</>;
-    }
-
     return <Navigate to="/admin" replace />;
   }
 
@@ -129,6 +121,8 @@ const App = () => (
           <Route path="/payments/esewa/success/:paymentAttemptId" element={<EsewaPaymentCallback />} />
           <Route path="/payments/esewa/failure" element={<EsewaPaymentCallback />} />
           <Route path="/payments/esewa/failure/:paymentAttemptId" element={<EsewaPaymentCallback />} />
+          <Route path="/payments/khalti/return" element={<KhaltiPaymentCallback />} />
+          <Route path="/payments/khalti/return/:paymentAttemptId" element={<KhaltiPaymentCallback />} />
           <Route path="/gym/:id" element={<GymProfile />} />
 
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

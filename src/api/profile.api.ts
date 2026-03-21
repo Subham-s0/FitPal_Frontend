@@ -1,11 +1,15 @@
 import apiClient from "./client";
 import type {
+  CreateGymPhotoRequest,
   DocumentUploadResponse,
   GymDocumentResponse,
+  GymPhotoResponse,
   GymProfileResponse,
   GymProfileSetupStatusResponse,
   UpdateGymBasicsStepRequest,
   UpdateGymLocationStepRequest,
+  UpdateGymPayoutStepRequest,
+  UpdateGymPhotoRequest,
   UpsertGymDocumentRequest,
   ProfileSetupStatusResponse,
   UpdateUserOnboardingRequest,
@@ -39,6 +43,12 @@ export async function getGymProfileSetupStatusApi(): Promise<GymProfileSetupStat
 /** GET /api/gyms/me/profile/documents */
 export async function getMyGymDocumentsApi(): Promise<GymDocumentResponse[]> {
   const response = await apiClient.get<GymDocumentResponse[]>("/gyms/me/profile/documents");
+  return response.data;
+}
+
+/** GET /api/gyms/me/profile/photos */
+export async function getMyGymPhotosApi(): Promise<GymPhotoResponse[]> {
+  const response = await apiClient.get<GymPhotoResponse[]>("/gyms/me/profile/photos");
   return response.data;
 }
 
@@ -77,6 +87,17 @@ export async function patchGymLocationStepApi(
   return response.data;
 }
 
+/** PATCH /api/gyms/me/profile/steps/payout */
+export async function patchGymPayoutStepApi(
+  payload: UpdateGymPayoutStepRequest
+): Promise<GymProfileResponse> {
+  const response = await apiClient.patch<GymProfileResponse>(
+    "/gyms/me/profile/steps/payout",
+    payload
+  );
+  return response.data;
+}
+
 /** POST /api/gyms/me/profile/steps/review-submission */
 export async function submitGymReviewSubmissionApi(): Promise<GymProfileResponse> {
   const response = await apiClient.post<GymProfileResponse>(
@@ -98,6 +119,28 @@ export async function deleteGymDocumentApi(documentId: number): Promise<void> {
   await apiClient.delete(`/gyms/me/profile/documents/${documentId}`);
 }
 
+/** POST /api/gyms/me/profile/photos */
+export async function createGymPhotoApi(
+  payload: CreateGymPhotoRequest
+): Promise<GymPhotoResponse> {
+  const response = await apiClient.post<GymPhotoResponse>("/gyms/me/profile/photos", payload);
+  return response.data;
+}
+
+/** PATCH /api/gyms/me/profile/photos/:photoId */
+export async function updateGymPhotoApi(
+  photoId: number,
+  payload: UpdateGymPhotoRequest
+): Promise<GymPhotoResponse> {
+  const response = await apiClient.patch<GymPhotoResponse>(`/gyms/me/profile/photos/${photoId}`, payload);
+  return response.data;
+}
+
+/** DELETE /api/gyms/me/profile/photos/:photoId */
+export async function deleteGymPhotoApi(photoId: number): Promise<void> {
+  await apiClient.delete(`/gyms/me/profile/photos/${photoId}`);
+}
+
 /** POST /api/files/documents */
 export async function uploadDocumentFileApi(
   file: File,
@@ -110,6 +153,25 @@ export async function uploadDocumentFileApi(
   }
 
   const response = await apiClient.post<DocumentUploadResponse>("/files/documents", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+}
+
+/** POST /api/files/images */
+export async function uploadImageFileApi(
+  file: File,
+  folder?: string
+): Promise<DocumentUploadResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (folder) {
+    formData.append("folder", folder);
+  }
+
+  const response = await apiClient.post<DocumentUploadResponse>("/files/images", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

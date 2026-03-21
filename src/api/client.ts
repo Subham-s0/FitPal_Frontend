@@ -1,6 +1,5 @@
 import axios from "axios";
 import { apiBaseUrl } from "@/config/api";
-import { PUBLIC_FRONTEND_MODE } from "@/config/frontend-access";
 import type { ApiErrorResponse } from "@/models/auth.model";
 
 const AUTH_STORAGE_KEY = "fitpal_auth";
@@ -63,10 +62,7 @@ apiClient.interceptors.response.use(
         pathname.startsWith("/login") ||
         pathname.startsWith("/signup");
 
-      if (
-        !PUBLIC_FRONTEND_MODE &&
-        !isPublicAuthPage
-      ) {
+      if (!isPublicAuthPage) {
         window.location.href = pathname.startsWith("/admin") ? "/admin" : "/login";
       }
     }
@@ -80,17 +76,73 @@ export function getApiErrorMessage(
   error: unknown,
   fallback = "Request failed"
 ) {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const payload = error.response?.data;
-    if (payload?.details?.length) {
-      return payload.details[0];
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+
+  const extractMessageFromPayload = (payload: unknown): string | null => {
+    if (!payload) {
+      return null;
     }
-    if (payload?.message) {
+
+    if (typeof payload === "string") {
+      const trimmed = payload.trim();
+      if (!trimmed) {
+        return null;
+      }
+      try {
+        return extractMessageFromPayload(JSON.parse(trimmed));
+      } catch {
+        return trimmed;
+      }
+    }
+
+    if (!isRecord(payload)) {
+      return null;
+    }
+
+    const details = payload.details;
+    if (Array.isArray(details)) {
+      const firstDetail = details.find(
+        (entry): entry is string => typeof entry === "string" && entry.trim().length > 0
+      );
+      if (firstDetail) {
+        return firstDetail;
+      }
+    }
+
+    if (typeof payload.message === "string" && payload.message.trim().length > 0) {
       return payload.message;
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+      return payload.error;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "data")) {
+      return extractMessageFromPayload(payload.data);
+    }
+
+    return null;
+  };
+
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    const payloadMessage = extractMessageFromPayload(error.response?.data);
+    if (payloadMessage) {
+      return payloadMessage;
+    }
+
+    if (typeof error.response?.status === "number") {
+      if (error.response.status >= 500) {
+        return "Server error while processing payment verification.";
+      }
+      return `Request failed with status ${error.response.status}.`;
     }
   }
 
   if (error instanceof Error && error.message) {
+    if (error.message.includes("status code")) {
+      return fallback;
+    }
     return error.message;
   }
 

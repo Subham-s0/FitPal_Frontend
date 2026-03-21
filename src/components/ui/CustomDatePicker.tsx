@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface CustomDatePickerProps {
   value: string;
@@ -25,7 +25,7 @@ interface CustomDatePickerProps {
   minDate?: Date;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const MONTHS = [
   "January", "February", "March", "April",
@@ -55,7 +55,7 @@ function formatDisplay(date: Date): string {
   });
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function CustomDatePicker({
   value,
@@ -91,7 +91,7 @@ export function CustomDatePicker({
     return Array.from({ length: 100 }, (_, i) => String(maxYear - i));
   }, [effectiveMax]);
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
+  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const handleMonthChange = (monthIndex: string) =>
     setDisplayMonth((prev) => new Date(prev.getFullYear(), Number(monthIndex), 1));
@@ -112,11 +112,11 @@ export function CustomDatePicker({
   const isDisabled = (date: Date) =>
     date > effectiveMax || (!!minDate && date < minDate);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
     <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
-      {/* ── Trigger ── */}
+      {/* â”€â”€ Trigger â”€â”€ */}
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -125,7 +125,7 @@ export function CustomDatePicker({
           aria-invalid={invalid ? "true" : undefined}
           className={cn(
             "group h-9 w-full justify-between rounded-xl px-3",
-            "border-white/10 bg-[#0a0a0a] text-slate-200",
+            "border-white/8 bg-[#0a0a0a] text-slate-200",
             "hover:bg-[#0a0a0a] hover:border-orange-600/50 hover:text-slate-200",
             "focus-visible:ring-0 focus-visible:ring-offset-0",
             open && "border-orange-600/50 shadow-[0_0_0_3px_rgba(234,88,12,0.08)]",
@@ -146,7 +146,7 @@ export function CustomDatePicker({
                 onClick={handleClear}
                 className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] text-slate-500 transition-colors hover:bg-white/10 hover:text-white"
               >
-                ✕
+                x
               </span>
             )}
             <CalendarIcon
@@ -159,13 +159,13 @@ export function CustomDatePicker({
         </Button>
       </PopoverTrigger>
 
-      {/* ── Calendar panel ── */}
+      {/* â”€â”€ Calendar panel â”€â”€ */}
       <PopoverContent
         align="start"
         sideOffset={5}
         className={cn(
           "w-[min(260px,calc(100vw-32px))] min-w-[220px] p-2.5",
-          "border border-white/10 bg-[#111] text-slate-100",
+          "border border-white/8 bg-[#111] text-slate-100",
           "shadow-[0_16px_48px_rgba(0,0,0,0.7)] rounded-xl",
         )}
       >
@@ -176,7 +176,7 @@ export function CustomDatePicker({
               className={cn(
                 "h-7 rounded-lg border-white/10 bg-[#0a0a0a]",
                 "text-[11px] font-semibold text-slate-200",
-                "focus:ring-0 focus:ring-offset-0 hover:border-orange-600/40",
+                "focus:ring-0 focus:ring-offset-0 hover:border-orange-600/40 data-[state=open]:border-orange-600/50 data-[state=open]:shadow-[0_0_0_2px_rgba(234,88,12,0.12)]",
               )}
             >
               <SelectValue />
@@ -199,7 +199,7 @@ export function CustomDatePicker({
               className={cn(
                 "h-7 rounded-lg border-white/10 bg-[#0a0a0a]",
                 "text-[11px] font-semibold text-slate-200",
-                "focus:ring-0 focus:ring-offset-0 hover:border-orange-600/40",
+                "focus:ring-0 focus:ring-offset-0 hover:border-orange-600/40 data-[state=open]:border-orange-600/50 data-[state=open]:shadow-[0_0_0_2px_rgba(234,88,12,0.12)]",
               )}
             >
               <SelectValue />

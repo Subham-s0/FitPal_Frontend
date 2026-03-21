@@ -7,16 +7,17 @@ import { useNavigate } from "react-router-dom";
 const ProfileSetupEntry = () => {
   const auth = useAuthState();
   const navigate = useNavigate();
+  const isGymRole = auth.role?.toUpperCase() === "GYM";
 
   useEffect(() => {
     // Only redirect regular users with active subscriptions
     // Gym users don't require subscriptions
-    if (auth.role?.toUpperCase() !== "GYM" && auth.hasActiveSubscription) {
+    if (!isGymRole && auth.hasActiveSubscription) {
       navigate("/dashboard", { replace: true });
     }
-  }, [auth.role, auth.hasActiveSubscription, navigate]);
+  }, [isGymRole, auth.hasActiveSubscription, navigate]);
 
-  return auth.role?.toUpperCase() === "GYM" ? <GymProfileSetup /> : <ProfileSetup />;
+  return isGymRole ? <GymProfileSetup /> : <ProfileSetup />;
 };
 
 export default ProfileSetupEntry;

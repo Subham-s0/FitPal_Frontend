@@ -37,7 +37,10 @@ export function CustomSelect({
       <SelectTrigger
         aria-invalid={invalid ? "true" : undefined}
         className={cn(
-          "h-[46px] rounded-xl border-white/10 bg-[#0a0a0a] px-4 text-sm text-slate-200 placeholder:text-slate-500 focus:ring-0 focus:ring-offset-0 data-[placeholder]:text-slate-500",
+          "h-9 rounded-xl border-white/10 bg-[#0a0a0a] px-3 text-xs font-medium text-slate-200",
+          "hover:border-orange-600/50 hover:bg-[#0a0a0a]",
+          "focus:ring-0 focus:ring-offset-0 data-[state=open]:border-orange-600/50 data-[state=open]:shadow-[0_0_0_3px_rgba(234,88,12,0.08)]",
+          "data-[placeholder]:text-slate-500",
           invalid && "border-red-500/80",
           className,
         )}
