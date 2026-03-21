@@ -49,10 +49,12 @@ const GYM_NAV_ITEMS: DashboardNavItem[] = [
 
 const ADMIN_NAV_ITEMS: DashboardNavItem[] = [
   { id: "home", label: "Dashboard", icon: LayoutDashboard },
-  { id: "users", label: "Manage Users", icon: Users },
-  { id: "gyms", label: "Manage Gyms", icon: Building2 },
+  { id: "users", label: "Users", icon: Users },
+  { id: "gyms", label: "Gyms", icon: Building2 },
   { id: "plans", label: "Plans", icon: ClipboardList },
   { id: "payments", label: "Payments", icon: ChartColumnBig },
+  { id: "settlements", label: "Settlements", icon: CalendarRange },
+  { id: "notices", label: "Notices", icon: Bell },
 ];
 
 export const getDashboardRole = (role: string | null | undefined): DashboardShellRole => {
@@ -102,7 +104,7 @@ export const getDashboardPrimaryActionLabel = (role: string | null | undefined) 
   getDashboardRole(role) === "GYM"
     ? "Manage Gym"
     : getDashboardRole(role) === "ADMIN"
-      ? "Manage Users"
+      ? "Users"
       : "Check In";
 
 export const getDisplayNameFromEmail = (email: string | null | undefined, role: string | null | undefined) => {

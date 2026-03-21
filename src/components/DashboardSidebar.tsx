@@ -41,8 +41,8 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={`group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-orange-600 group-hover:justify-start group-hover:rounded-2xl ${
-              active === id ? "bg-orange-600" : ""
+            className={`group/link flex w-full items-center justify-center p-3 transition-all hover:bg-orange-600 group-hover:justify-start ${
+              active === id ? "rounded-full bg-orange-600" : "rounded-full group-hover:rounded-2xl"
             }`}
           >
             <Icon
@@ -51,7 +51,7 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
               }`}
             />
             <span
-              className={`ml-4 hidden whitespace-nowrap font-bold opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black ${
+              className={`ml-4 hidden whitespace-nowrap text-[13px] font-bold leading-none opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black ${
                 active === id ? "text-black" : "text-gray-400"
               }`}
             >
@@ -68,7 +68,7 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
           className="group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-white group-hover:justify-start group-hover:rounded-2xl"
         >
           <Settings className="h-6 w-6 min-w-[24px] text-gray-500 group-hover/link:text-black" />
-          <span className="ml-4 hidden whitespace-nowrap font-bold text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black">
+          <span className="ml-4 hidden whitespace-nowrap text-[13px] font-bold leading-none text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black">
             Settings
           </span>
         </button>
@@ -78,7 +78,7 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
           className="group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-red-500 group-hover:justify-start group-hover:rounded-2xl"
         >
           <LogOut className="h-6 w-6 min-w-[24px] text-red-500 group-hover/link:text-white" />
-          <span className="ml-4 hidden whitespace-nowrap font-bold text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-white">
+          <span className="ml-4 hidden whitespace-nowrap text-[13px] font-bold leading-none text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-white">
             Logout
           </span>
         </button>

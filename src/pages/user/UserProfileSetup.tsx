@@ -16,7 +16,7 @@ import {
 import { getMySubscriptionApi, selectMySubscriptionApi } from "@/api/subscription.api";
 import { authStore } from "@/store/auth.store";
 import { getApiErrorMessage } from "@/api/client";
-import type { BillingCycle, UserSubscriptionResponse } from "@/models/subscription.model";
+import type { BillingCycle, UserSubscriptionResponse, UserSubscriptionStateResponse } from "@/models/subscription.model";
 import type {
   FitnessLevel, Gender, PrimaryFitnessFocus,
   UpdateUserOnboardingRequest, UserProfileResponse,
@@ -214,14 +214,12 @@ const ProfileSetup = () => {
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const [profile, subscription] = await Promise.all([
+        const [profile, subscriptionState] = await Promise.all([
           getMyProfileApi(),
-          getMySubscriptionApi().catch((error) => {
-            if (axios.isAxiosError(error) && error.response?.status === 404) return null;
-            throw error;
-          }),
+          getMySubscriptionApi(),
         ]);
         if (cancelled) return;
+        const subscription = subscriptionState.subscription;
         setUserData({
           username: profile.userName ?? "", firstName: profile.firstName ?? "", lastName: profile.lastName ?? "",
           profileImageUrl: profile.profileImageUrl ?? "", profileImagePublicId: profile.profileImagePublicId ?? "",
@@ -343,7 +341,10 @@ const ProfileSetup = () => {
     const subscriptionMatchesSelection = selectedSubscription && normalizePlanType(selectedSubscription.planType) === selectedPlan && selectedSubscription.billingCycle === toApiBillingCycle(billingCycle);
     if (!subscriptionMatchesSelection && !(await persistSelectedSubscription())) return false;
     const activeSubscription = subscriptionMatchesSelection && selectedSubscription ? selectedSubscription : null;
-    const checkoutSubscription = activeSubscription ?? (await getMySubscriptionApi().catch((error) => { toast.error(getApiErrorMessage(error, "Failed to load saved subscription")); return null; }));
+    const checkoutSubscriptionState: UserSubscriptionStateResponse | null = activeSubscription
+      ? { selected: true, subscription: activeSubscription }
+      : await getMySubscriptionApi().catch((error) => { toast.error(getApiErrorMessage(error, "Failed to load saved subscription")); return null; });
+    const checkoutSubscription = checkoutSubscriptionState?.subscription ?? null;
     if (!checkoutSubscription) return false;
     setSelectedSubscription(checkoutSubscription);
     setIsInitiatingPayment(true);

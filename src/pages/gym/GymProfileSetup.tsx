@@ -156,9 +156,9 @@ html{scroll-behavior:smooth}
 }
 body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 .fire-t{background:var(--fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.dash-nav{height:72px;padding:0 40px;background:rgba(10,10,10,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;display:flex;align-items:center}
+.dash-nav{height:80px;padding:0 32px;background:rgba(10,10,10,.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;display:flex;align-items:center}
 .nav-logo{display:flex;align-items:center;gap:8px;text-decoration:none}
-.nav-logo-text{font-size:18px;font-weight:700;color:#fff}
+.nav-logo-text{font-size:20px;font-weight:700;color:#fff}
 .nav-search{flex:1;max-width:340px;margin:0 32px;position:relative}
 .nav-search input{width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:8px 16px 8px 40px;color:#fff;font-family:var(--font);font-size:13px;outline:none;transition:border-color .2s}
 .nav-search input:focus{border-color:rgba(234,88,12,.5)}
@@ -176,15 +176,16 @@ body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;ov
 .nav-ui{text-align:right;line-height:1}
 .nav-un{font-size:13px;font-weight:900}
 .nav-ur{font-size:9px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:.15em;margin-top:3px}
-.nav-av{width:40px;height:40px;border-radius:50%;border:2px solid var(--orange);padding:2px;overflow:hidden}
+.nav-av{width:48px;height:48px;border-radius:50%;border:2px solid var(--orange);padding:2px;overflow:hidden}
 .nav-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
 @media(max-width:640px){.nav-search,.nav-ui{display:none}}
-.shell{display:flex;min-height:calc(100vh - 72px)}
-.dash-sidebar{width:72px;background:rgba(8,8,8,.5);backdrop-filter:blur(15px);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px;transition:all .4s cubic-bezier(.19,1,.22,1);position:sticky;top:72px;height:calc(100vh - 72px);align-self:flex-start;z-index:90}
-.dash-sidebar:hover{width:256px;padding:14px}
+.shell{display:flex;min-height:calc(100vh - 80px)}
+.dash-sidebar{width:64px;background:rgba(8,8,8,.5);backdrop-filter:blur(15px);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:8px;transition:all .4s cubic-bezier(.19,1,.22,1);position:sticky;top:80px;height:calc(100vh - 80px);align-self:flex-start;z-index:90}
+.dash-sidebar:hover{width:288px;padding:16px}
 .sb-nav{flex:1;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
-.sb-btn{display:flex;align-items:center;width:100%;padding:11px;border-radius:999px;background:none;border:none;cursor:pointer;color:#6b7280;transition:all .3s;justify-content:center;font-family:var(--font)}
-.dash-sidebar:hover .sb-btn{border-radius:12px;justify-content:flex-start}
+.sb-btn{display:flex;align-items:center;width:100%;padding:12px;border-radius:999px;background:none;border:none;cursor:pointer;color:#6b7280;transition:all .3s;justify-content:center;font-family:var(--font)}
+.dash-sidebar:hover .sb-btn:not(.active){border-radius:12px;justify-content:flex-start}
+.dash-sidebar:hover .sb-btn.active{justify-content:flex-start}
 .sb-btn:hover,.sb-btn.active{background:var(--orange);color:#000}
 .sb-btn svg{min-width:22px;width:22px;height:22px;flex-shrink:0}
 .sb-btn span{margin-left:14px;font-weight:700;font-size:13px;white-space:nowrap;opacity:0;display:none}
@@ -794,12 +795,19 @@ const FitPalGymSetup: FC = () => {
   };
 
   useEffect(() => {
+    let injectedStyle: HTMLStyleElement | null = null;
+
     if (!document.getElementById("fitpal-gym-setup-css")) {
       const style = document.createElement("style");
       style.id = "fitpal-gym-setup-css";
       style.textContent = STYLE;
       document.head.appendChild(style);
+      injectedStyle = style;
     }
+
+    return () => {
+      injectedStyle?.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -1178,111 +1186,7 @@ const FitPalGymSetup: FC = () => {
   );
 
   const ScreenGymInfo: FC = () => (
-    <div className="screen">
-      {stepError && <StepErrorBanner message={stepError} />}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 22 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: "rgba(34,197,94,.06)", border: "1px solid rgba(34,197,94,.18)", borderRadius: 14 }}>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", border: "2px solid var(--orange)", padding: 2, overflow: "hidden", flexShrink: 0 }}>
-            <img src={authConfig.avatarUrl} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{authConfig.displayName}</div>
-            <div style={{ fontSize: 11, color: "#4ade80", marginTop: 2 }}>Registered as Gym Owner</div>
-          </div>
-          <div className="auth-badge gym">Owner</div>
-        </div>
-
-        <div style={{ padding: "14px 16px", background: "var(--muted)", border: `1px solid ${gymEmailVerified ? "rgba(52,211,153,.2)" : "rgba(255,255,255,.06)"}`, borderRadius: 14 }}>
-          <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--text-d)", marginBottom: 8 }}>
-            Registered Email - Account.email
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
-              <svg style={{ position: "absolute", left: 11, color: "#4b5563", pointerEvents: "none", flexShrink: 0 }} width="13" height="13" fill="none" viewBox="0 0 24 24">
-                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <input
-                type="email"
-                value={authConfig.email}
-                readOnly
-                style={{
-                  width: "100%",
-                  padding: "10px 14px 10px 34px",
-                  background: gymEmailVerified ? "rgba(52,211,153,.04)" : "rgba(255,255,255,.03)",
-                  border: `1px solid ${gymEmailVerified ? "rgba(52,211,153,.3)" : "rgba(255,255,255,.06)"}`,
-                  borderRadius: 10,
-                  color: gymEmailVerified ? "#4ade80" : "#9ca3af",
-                  fontFamily: "var(--font)",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  outline: "none",
-                  cursor: "default",
-                }}
-              />
-            </div>
-            {gymEmailVerified ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 5, border: "1px solid rgba(52,211,153,.3)", background: "rgba(52,211,153,.08)", borderRadius: 10, padding: "9px 13px", fontWeight: 800, color: "#4ade80", fontSize: 11, whiteSpace: "nowrap", flexShrink: 0, textTransform: "uppercase", letterSpacing: ".06em" }}>
-                <svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                Verified
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={verifyEmail}
-                disabled={verifying}
-                style={{ flexShrink: 0, padding: "10px 16px", borderRadius: 10, border: "none", background: verifying ? "rgba(249,115,22,.4)" : "var(--orange)", color: "#fff", fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".06em", cursor: verifying ? "not-allowed" : "pointer", fontFamily: "var(--font)", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}
-              >
-                {verifying ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />Verifying...</> : "Verify Email"}
-              </button>
-            )}
-          </div>
-          <div style={{ fontSize: 10, color: "#374151", marginTop: 6, lineHeight: 1.4 }}>This is your login email. Verify to activate your gym account.</div>
-        </div>
-      </div>
-
-      <div className="sec-label" style={{ marginBottom: 14 }}>Core Gym Details</div>
-
-      <div className="field">
-        <label>Gym name <span style={{ color: "#ef4444" }}>*</span></label>
-        <input type="text" placeholder="e.g. FitZone Kathmandu" value={gymName} onChange={(event) => setGymName(event.target.value)} />
-      </div>
-
-      <div className="field">
-        <label>Gym type <span style={{ color: "#ef4444" }}>*</span></label>
-        <div className="pill-group">
-          {GYM_TYPES.map((type) => (
-            <div key={type} className={`pill${gymType === type ? " sel" : ""}`} onClick={() => setGymType((current) => current === type ? null : type as ApiGymType)}>
-              {type}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="frow">
-        <div className="field">
-          <label>Registration No.</label>
-          <input type="text" placeholder="e.g. 123456/079/080" value={gymRegNo} onChange={(event) => setGymRegNo(event.target.value)} />
-        </div>
-        <div className="field">
-          <label>Established Year <span style={{ color: "var(--text-d)" }}>optional</span></label>
-          <input type="number" placeholder="e.g. 2018" min={1900} max={currentYear} value={gymEstablished} onChange={(event) => setGymEstablished(event.target.value)} />
-        </div>
-      </div>
-
-      <div className="field">
-        <label>Maximum Member Capacity <span style={{ color: "#ef4444" }}>*</span></label>
-        <input type="number" placeholder="e.g. 150" min={10} value={gymCapacity} onChange={(event) => setGymCapacity(event.target.value)} />
-        <div className="field-hint">Total concurrent members your facility can safely accommodate.</div>
-      </div>
-
-      <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} hideBack onBack={() => undefined} onNext={goToLocationStep} />
-    </div>
-  );
-
-  const ScreenLocation: FC = () => (
-    <div className="screen">
+    <div className="screen animate-[screenFadeIn_0.2s_ease-out]">
       {stepError && <StepErrorBanner message={stepError} />}
       <input
         ref={logoInputRef}
@@ -1291,30 +1195,119 @@ const FitPalGymSetup: FC = () => {
         style={{ display: "none" }}
         onChange={handleLogoSelected}
       />
-      <MapSection onLocationPicked={onLocationPicked} />
-      <div className="loc-grid">
-        <div style={{ display: "flex", flexDirection: "column", background: "var(--muted)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 16, overflow: "hidden" }}>
-          <div style={{ padding: "18px 18px 16px", borderBottom: "1px solid rgba(255,255,255,.05)", display: "flex", alignItems: "center", gap: 14 }}>
-            <div
-              style={{ width: 64, height: 64, borderRadius: 14, border: "1.5px dashed rgba(255,255,255,.18)", background: "rgba(255,255,255,.03)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "border-color .2s,background .2s" }}
-              onMouseOver={(event) => { event.currentTarget.style.borderColor = "rgba(249,115,22,.5)"; event.currentTarget.style.background = "rgba(249,115,22,.04)"; }}
-              onMouseOut={(event) => { event.currentTarget.style.borderColor = "rgba(255,255,255,.18)"; event.currentTarget.style.background = "rgba(255,255,255,.03)"; }}
-            >
-              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ color: "#4b5563" }}>
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "start" }} className="lg:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
+        
+        {/* Left Column: Owner Meta & Logo Upload */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Owner Details Card */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px", background: "#101010", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1.35rem", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--orange)", padding: 2, overflow: "hidden", flexShrink: 0 }}>
+                <img src={authConfig.avatarUrl} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{authConfig.displayName}</div>
+                <div style={{ fontSize: 11, color: "#4ade80", marginTop: 2, fontWeight: 600 }}>Registered Account</div>
+              </div>
+              <div className="auth-badge gym" style={{ alignSelf: "flex-start", marginTop: 4 }}>Owner</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", marginBottom: 2 }}>Gym Logo <span style={{ fontWeight: 400, color: "var(--text-d)", fontSize: 11 }}>optional</span></div>
-              <div style={{ fontSize: 11, color: "var(--text-d)", marginBottom: 8, lineHeight: 1.4 }}>Public profile photo.<br />JPG or PNG - Max 2MB</div>
-              <button className="av-btn" type="button" onClick={openLogoPicker}>
-                {isUploadingLogo ? "Uploading..." : gymLogoUrl ? "Replace Logo" : "Upload Logo"}
-              </button>
+            
+            <div style={{ padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: `1px solid ${gymEmailVerified ? "rgba(52,211,153,.3)" : "rgba(255,255,255,.06)"}`, borderRadius: 12, display: "flex", alignItems: "center", gap: 8 }}>
+               <div style={{ flex: 1, minWidth: 0 }}>
+                 <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--text-d)", marginBottom: 4 }}>Login Email</div>
+                 <div style={{ fontSize: 12, color: gymEmailVerified ? "#4ade80" : "#9ca3af", overflow: "hidden", textOverflow: "ellipsis" }}>{authConfig.email}</div>
+               </div>
+               {!gymEmailVerified && (
+                 <button type="button" onClick={verifyEmail} disabled={verifying} className="av-btn" style={{ margin: 0 }}>
+                    {verifying ? "..." : "Verify"}
+                 </button>
+               )}
+            </div>
+          </div>
+          
+          {/* Gym Logo Upload Card */}
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "20px", background: "linear-gradient(180deg, rgba(120,63,23,0.32) 0%, rgba(27,18,11,0.96) 58%, rgba(15,15,15,1) 100%)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: "1.45rem", alignItems: "center", boxShadow: "inset 0 1px 0 rgba(255,214,170,0.08)" }}>
+             <div style={{ width: 96, height: 96, borderRadius: "50%", border: "2px solid var(--orange)", padding: 4, overflow: "hidden", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", position: "relative" }}>
+                {gymLogoUrl ? (
+                   <img src={gymLogoUrl} alt="Gym Logo" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                ) : (
+                   <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ color: "#4b5563" }}>
+                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                     <circle cx="12" cy="13" r="4" />
+                   </svg>
+                )}
+             </div>
+             <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginBottom: 4 }}>Gym Logo</div>
+             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, textAlign: "center" }}>JPG or PNG - Max 2MB<br/>Used as your public profile photo.</div>
+             <button type="button" onClick={openLogoPicker} disabled={isUploadingLogo} style={{ padding: "8px 16px", borderRadius: "0.9rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background="rgba(255,255,255,0.1)"} onMouseOut={(e) => e.currentTarget.style.background="rgba(255,255,255,0.05)"}>
+               {isUploadingLogo ? "Uploading..." : gymLogoUrl ? "Change Logo" : "Upload Logo"}
+             </button>
+          </div>
+        </div>
+
+        {/* Right Column: Gym Details Form */}
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <div className="sec-label" style={{ marginBottom: 14 }}>Core Gym Details</div>
+
+          <div className="field">
+            <label>Gym name <span style={{ color: "#ef4444" }}>*</span></label>
+            <input type="text" placeholder="e.g. FitZone Kathmandu" value={gymName} onChange={(event) => setGymName(event.target.value)} />
+          </div>
+
+          <div className="field">
+            <label>Gym type <span style={{ color: "#ef4444" }}>*</span></label>
+            <div className="pill-group">
+              {GYM_TYPES.map((type) => (
+                <div key={type} className={`pill${gymType === type ? " sel" : ""}`} onClick={() => setGymType((current) => current === type ? null : type as ApiGymType)}>
+                  {type}
+                </div>
+              ))}
             </div>
           </div>
 
-          <div style={{ padding: "18px 18px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
+          <div className="frow">
+            <div className="field">
+              <label>Registration No.</label>
+              <input type="text" placeholder="e.g. 123456/079/080" value={gymRegNo} onChange={(event) => setGymRegNo(event.target.value)} />
+            </div>
+            <div className="field">
+              <label>Established Year <span style={{ color: "var(--text-d)" }}>optional</span></label>
+              <input type="number" placeholder="e.g. 2018" min={1900} max={currentYear} value={gymEstablished} onChange={(event) => setGymEstablished(event.target.value)} />
+            </div>
+          </div>
+
+          <div className="field" style={{ flex: 1 }}>
+            <label>Maximum Member Capacity <span style={{ color: "#ef4444" }}>*</span></label>
+            <input type="number" placeholder="e.g. 150" min={10} value={gymCapacity} onChange={(event) => setGymCapacity(event.target.value)} />
+            <div className="field-hint">Total concurrent members your facility can safely accommodate.</div>
+          </div>
+          
+          <div style={{ alignSelf: "flex-end", width: "100%" }}>
+            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} hideBack onBack={() => undefined} onNext={goToLocationStep} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ScreenLocation: FC = () => (
+    <div className="screen animate-[screenFadeIn_0.2s_ease-out]">
+      {stepError && <StepErrorBanner message={stepError} />}
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "start" }} className="lg:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
+        
+        {/* Left Column: Map Picker */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px", background: "var(--muted)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "1.45rem" }}>
+             <MapSection onLocationPicked={onLocationPicked} />
+          </div>
+        </div>
+
+        {/* Right Column: Address and Contact details */}
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          
+          <div style={{ display: "flex", flexDirection: "column", marginBottom: 16 }}>
             <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--orange)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
               Address Details<span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
             </div>
@@ -1337,10 +1330,8 @@ const FitPalGymSetup: FC = () => {
               <input type="text" placeholder="Nepal" value={gymCountry} onChange={(event) => setGymCountry(event.target.value)} />
             </div>
           </div>
-        </div>
 
-        <div style={{ display: "flex", flexDirection: "column", background: "var(--muted)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 16, overflow: "hidden" }}>
-          <div style={{ padding: "18px 18px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--orange)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
               Contact and Operating Hours<span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
             </div>
@@ -1367,15 +1358,17 @@ const FitPalGymSetup: FC = () => {
                 <input type="time" value={gymCloses} onChange={(event) => setGymCloses(event.target.value)} />
               </div>
             </div>
-            <div className="field" style={{ marginBottom: 0, flex: 1, display: "flex", flexDirection: "column" }}>
+            <div className="field" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <label>Description <span style={{ color: "var(--text-d)" }}>optional</span></label>
               <textarea placeholder="Describe your facilities, equipment, and what makes your gym unique..." value={gymDesc} onChange={(event) => setGymDesc(event.target.value)} style={{ flex: 1, minHeight: 80, resize: "none" }} />
             </div>
           </div>
+          
+          <div style={{ alignSelf: "flex-end", width: "100%", marginTop: "8px" }}>
+            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(0)} onNext={goToDocumentsStep} />
+          </div>
         </div>
       </div>
-
-      <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(0)} onNext={goToDocumentsStep} />
     </div>
   );
 
@@ -1584,24 +1577,12 @@ const FitPalGymSetup: FC = () => {
   return (
     <>
       <nav className="dash-nav">
-        <a className="nav-logo" href="/">
-          <svg viewBox="0 0 487 487" fill="none" style={{ width: 40, height: 40 }}>
-            <defs>
-              <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#FACC15" />
-                <stop offset="50%" stopColor="#FF9900" />
-                <stop offset="100%" stopColor="#FF6A00" />
-              </linearGradient>
-            </defs>
-            <rect x="165" y="138" width="28" height="212" rx="9" fill="url(#lg)" />
-            <rect x="294" y="138" width="28" height="212" rx="9" fill="url(#lg)" />
-            <rect x="135" y="225" width="218" height="37" rx="11" fill="url(#lg)" />
-            <rect x="103" y="161" width="28" height="162" rx="9" fill="url(#lg)" opacity=".82" />
-            <rect x="356" y="161" width="28" height="162" rx="9" fill="url(#lg)" opacity=".82" />
-            <rect x="72" y="183" width="28" height="114" rx="9" fill="url(#lg)" opacity=".6" />
-            <rect x="388" y="183" width="28" height="114" rx="9" fill="url(#lg)" opacity=".6" />
-          </svg>
-          <span className="nav-logo-text"><span className="fire-t">Fit</span>Pal</span>
+        <a className="nav-logo" href="/dashboard">
+          <img src="/logo.svg" alt="FitPal Logo" style={{ width: 48, height: 48, flexShrink: 0 }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="nav-logo-text"><span className="fire-t">Fit</span>Pal</span>
+            <span style={{ fontSize: 8, fontWeight: 900, color: "#fbbf24", background: "rgba(249,115,22,.1)", border: "1px solid rgba(249,115,22,.3)", borderRadius: 6, padding: "3px 8px", textTransform: "uppercase", letterSpacing: ".08em" }}>Gym</span>
+          </div>
         </a>
         <div className="nav-search">
           <svg className="nav-si" width="15" height="15" fill="none" viewBox="0 0 24 24">

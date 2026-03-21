@@ -18,8 +18,8 @@ interface SidebarProps {
 
 const primaryItems = [
   { key: "home", label: "Dashboard", icon: LayoutDashboard },
-  { key: "users", label: "Manage Users", icon: Users },
-  { key: "gyms", label: "Manage Gyms", icon: Building2 },
+  { key: "users", label: "Users", icon: Users },
+  { key: "gyms", label: "Gyms", icon: Building2 },
   { key: "plans", label: "Subscription Plans", icon: CreditCard },
   { key: "payments", label: "Payments", icon: DollarSign },
 ] as const;

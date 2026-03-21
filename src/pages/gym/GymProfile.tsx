@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, MapPin, Star } from 'lucide-react';
-import DashboardNavbar from "@/components/DashboardNavbar";
-import DashboardSidebar from "@/components/DashboardSidebar";
+import { useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ChevronLeft, Star } from "lucide-react";
+import DefaultLayout from "@/components/DefaultLayout";
+import { getDashboardRole } from "@/components/dashboard-shell-config";
+import { useAuthState } from "@/hooks/useAuth";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -67,9 +68,13 @@ const gymData = [
 const GymProfile = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const auth = useAuthState();
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<L.Map | null>(null);
     const markerRef = useRef<L.CircleMarker | null>(null);
+    const roleValue = auth.role ?? "USER";
+    const dashboardRole = getDashboardRole(roleValue);
+    const activeSection = dashboardRole === "GYM" ? "gymProfile" : "gyms";
 
     // Find gym by ID or default to first one
     const gym = gymData.find(g => g.id === id) || gymData[0];
@@ -101,19 +106,26 @@ const GymProfile = () => {
     }, [gym]);
 
     const handleSidebarChange = (section: string) => {
-        navigate('/dashboard', { state: { activeSection: section } });
+        if (dashboardRole === "ADMIN") {
+            navigate("/admin/dashboard", { state: { activeSection: section } });
+            return;
+        }
+
+        if (dashboardRole === "USER" && section === "profile") {
+            navigate("/profile");
+            return;
+        }
+
+        navigate("/dashboard", { state: { activeSection: section } });
     };
 
     return (
-        <div className="h-screen flex flex-col bg-[#050505] text-white overflow-hidden font-sans">
-            <DashboardNavbar />
-            
-            <div className="flex flex-1 overflow-hidden">
-                <DashboardSidebar active="gyms" onChange={handleSidebarChange} />
-
-                {/* Main Content */}
-                <main className="flex-grow flex flex-col p-6 overflow-y-auto custom-scrollbar text-[13px]">
-                    
+        <DefaultLayout
+            role={roleValue}
+            activeSection={activeSection}
+            onSectionChange={handleSidebarChange}
+        >
+            <div className="flex flex-col text-[13px]">
                     {/* Back Button */}
                     <button 
                         onClick={() => navigate(-1)} 
@@ -278,9 +290,8 @@ const GymProfile = () => {
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
-    </div>
+            </div>
+        </DefaultLayout>
     );
 };
 

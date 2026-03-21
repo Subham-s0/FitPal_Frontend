@@ -1,8 +1,10 @@
 export type PlanType = "BASIC" | "PRO" | "ELITE" | "PROMO";
+export type AccessTier = "BASIC" | "PRO" | "ELITE";
 
 export interface PlanResponse {
   planId: number;
   planType: PlanType;
+  accessTierGranted: AccessTier;
   name: string;
   description: string;
   monthlyPrice: number;

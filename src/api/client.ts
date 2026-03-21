@@ -5,6 +5,25 @@ import type { ApiErrorResponse } from "@/models/auth.model";
 
 const AUTH_STORAGE_KEY = "fitpal_auth";
 
+interface ApiSuccessResponse<T> {
+  success: boolean;
+  message: string;
+  data: T | null;
+}
+
+function isApiSuccessResponse<T>(value: unknown): value is ApiSuccessResponse<T> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.success === "boolean" &&
+    typeof candidate.message === "string" &&
+    Object.prototype.hasOwnProperty.call(candidate, "data")
+  );
+}
+
 const apiClient = axios.create({
   baseURL: apiBaseUrl,
   headers: { "Content-Type": "application/json" },
@@ -29,7 +48,12 @@ apiClient.interceptors.request.use((config) => {
 
 // ── Response: handle 401 globally ─────────────────────────────────────────
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (isApiSuccessResponse(response.data)) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       localStorage.removeItem(AUTH_STORAGE_KEY);

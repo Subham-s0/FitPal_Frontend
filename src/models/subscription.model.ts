@@ -38,3 +38,8 @@ export interface UserSubscriptionResponse {
     totalAmount: number;
   autoRenew: boolean;
 }
+
+export interface UserSubscriptionStateResponse {
+  selected: boolean;
+  subscription: UserSubscriptionResponse | null;
+}

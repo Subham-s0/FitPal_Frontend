@@ -13,6 +13,7 @@ export type GymType =
   | "Martial Arts"
   | "Pilates"
   | "Functional";
+export type AccessTier = "BASIC" | "PRO" | "ELITE";
 
 export type GymDocumentType =
   | "REGISTRATION_CERTIFICATE"
@@ -100,6 +101,7 @@ export interface GymProfileResponse {
   registeredEmailVerified: boolean;
   gymName: string | null;
   gymType: GymType | null;
+  minimumAccessTier: AccessTier;
   establishedAt: number | null;
   registrationNo: string | null;
   maxCapacity: number | null;

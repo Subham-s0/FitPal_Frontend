@@ -3,6 +3,8 @@ import {
   Activity,
   AlertTriangle,
   Award,
+  Bell,
+  CalendarRange,
   CheckCircle,
   DollarSign,
   Dumbbell,
@@ -32,7 +34,15 @@ import ManageUsers from "@/components/admin/ManageUsers";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 
-type AdminSection = "home" | "users" | "gyms" | "plans" | "payments" | "settings";
+type AdminSection =
+  | "home"
+  | "users"
+  | "gyms"
+  | "plans"
+  | "payments"
+  | "settlements"
+  | "notices"
+  | "settings";
 
 interface KPICardProps {
   title: string;
@@ -114,6 +124,18 @@ const healthStats: HealthStat[] = [
   },
 ];
 
+const settlementRows = [
+  { cycle: "Mar 15, 2026", gyms: 18, amount: "Rs. 482,000", status: "Processed" },
+  { cycle: "Mar 20, 2026", gyms: 12, amount: "Rs. 318,500", status: "Queued" },
+  { cycle: "Mar 25, 2026", gyms: 21, amount: "Rs. 596,200", status: "Pending Review" },
+];
+
+const adminNotices = [
+  { title: "Scheduled gateway maintenance", audience: "All gyms", status: "Active", time: "Today, 11:30 PM" },
+  { title: "Quarterly settlement reconciliation", audience: "Finance team", status: "Draft", time: "Tomorrow, 9:00 AM" },
+  { title: "New gym onboarding policy update", audience: "Support & admins", status: "Published", time: "Mar 18, 2026" },
+];
+
 const panelClassName =
   "rounded-[1.5rem] border border-white/10 bg-[#0e0e0e]/95 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.92)] backdrop-blur-xl";
 
@@ -163,7 +185,13 @@ const AdminDashboard = () => {
   const location = useLocation();
   const requestedSection = (location.state as { activeSection?: string } | null)?.activeSection;
   const resolveSection = (value: string | undefined): AdminSection =>
-    value === "users" || value === "gyms" || value === "plans" || value === "payments" || value === "settings"
+    value === "users" ||
+    value === "gyms" ||
+    value === "plans" ||
+    value === "payments" ||
+    value === "settlements" ||
+    value === "notices" ||
+    value === "settings"
       ? value
       : "home";
 
@@ -360,6 +388,112 @@ const AdminDashboard = () => {
         return <ManagePlans />;
       case "payments":
         return <ManagePayments />;
+      case "settlements":
+        return (
+          <div className="mx-auto max-w-[1400px] space-y-6">
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
+                Settlement <span className="text-gradient-fire">Center</span>
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                Track payout cycles, review pending transfers, and reconcile gym settlement batches.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <KPICard title="Pending Cycles" value="03" subtext="Awaiting finance review" icon={<CalendarRange className="h-5 w-5 text-orange-400" />} />
+              <KPICard title="This Week" value="Rs. 1.39M" change="+9.4%" icon={<DollarSign className="h-5 w-5 text-orange-400" />} />
+              <KPICard title="Completed" value="51" subtext="Settlement runs this quarter" icon={<CheckCircle className="h-5 w-5 text-orange-300" />} />
+            </div>
+
+            <SectionCard>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                    <DollarSign className="h-5 w-5 text-orange-400" />
+                    Upcoming Settlement Runs
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-400">Latest payout windows across partner gyms.</p>
+                </div>
+                <button className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400 transition hover:border-orange-500/30 hover:text-white">
+                  Export
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
+                      <th className="pb-3 pl-2">Cycle</th>
+                      <th className="pb-3 text-center">Gyms</th>
+                      <th className="pb-3 text-center">Amount</th>
+                      <th className="pb-3 pr-2 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[11px] font-bold">
+                    {settlementRows.map((row) => (
+                      <tr key={row.cycle} className="border-b border-white/[0.06] last:border-b-0">
+                        <td className="py-3 pl-2 text-white">{row.cycle}</td>
+                        <td className="py-3 text-center text-zinc-300">{row.gyms}</td>
+                        <td className="py-3 text-center text-zinc-300">{row.amount}</td>
+                        <td className="py-3 pr-2 text-right">
+                          <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[9px] uppercase tracking-[0.18em] text-orange-200">
+                            {row.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SectionCard>
+          </div>
+        );
+      case "notices":
+        return (
+          <div className="mx-auto max-w-[1200px] space-y-6">
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
+                Admin <span className="text-gradient-fire">Notices</span>
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                Publish platform-wide announcements, finance updates, and operational notices.
+              </p>
+            </div>
+
+            <SectionCard>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                    <Bell className="h-5 w-5 text-orange-400" />
+                    Notice Board
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-400">Internal and platform-wide communications.</p>
+                </div>
+                <button className="rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-orange-200 transition hover:bg-orange-500/20">
+                  New Notice
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {adminNotices.map((notice) => (
+                  <div key={notice.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-white">{notice.title}</p>
+                        <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-zinc-500">{notice.audience}</p>
+                      </div>
+                      <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[9px] uppercase tracking-[0.18em] text-orange-200">
+                        {notice.status}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs text-zinc-400">{notice.time}</p>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        );
       case "settings":
         return (
           <div className="mx-auto max-w-4xl">

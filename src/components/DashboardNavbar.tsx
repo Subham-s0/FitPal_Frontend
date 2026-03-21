@@ -68,8 +68,8 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
   return (
     <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-[#1f1f1f] bg-[#0f0f0f] px-8">
       <div className="flex items-center gap-2">
-        <a href={logoHref} className="group flex items-center gap-2">
-          <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 md:h-12 md:w-12" />
+        <a href={logoHref} className="group flex shrink-0 items-center gap-2">
+          <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 shrink-0 md:h-12 md:w-12" />
           <div className="flex items-center gap-2">
             <span className="text-xl font-bold text-white">
               <span className="text-gradient-fire">Fit</span>Pal
@@ -77,6 +77,10 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
             {dashboardRole === "ADMIN" ? (
               <span className="hidden rounded-md border border-orange-500/30 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-orange-300/80 sm:inline-flex">
                 Admin
+              </span>
+            ) : dashboardRole === "GYM" ? (
+              <span className="hidden rounded-md border border-orange-500/30 px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-orange-300/80 sm:inline-flex">
+                Gym
               </span>
             ) : null}
           </div>
