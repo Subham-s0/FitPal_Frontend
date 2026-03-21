@@ -31,5 +31,10 @@ export interface UserSubscriptionResponse {
   billedAmount: number;
   discountAmount: number;
   discountPercent: number;
+    taxRate: number;
+    taxAmount: number;
+    serviceChargeRate: number;
+    serviceChargeAmount: number;
+    totalAmount: number;
   autoRenew: boolean;
 }

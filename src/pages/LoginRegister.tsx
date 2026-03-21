@@ -206,11 +206,6 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
              {/* Deep Orange Gradient Base */}
             <div className="absolute inset-0 bg-[linear-gradient(to_bottom_right,hsla(30,100%,20%,0.2),hsla(0,0%,0%,0))]" />
             
-            {/* Soft Glowing Orbs (Layer Blur) */}
-            <div className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full bg-[hsla(30,100%,50%,0.08)] blur-[100px] animate-pulse [animation-duration:8s]" />
-            <div className="absolute top-[40%] -right-[20%] w-[60vw] h-[60vw] rounded-full bg-[hsla(15,100%,60%,0.05)] blur-[120px] animate-pulse [animation-duration:10s]" />
-            <div className="absolute -bottom-[20%] left-[20%] w-[50vw] h-[50vw] rounded-full bg-[hsla(40,100%,50%,0.05)] blur-[80px] animate-pulse [animation-duration:12s]" />
-
             {/* Orbiting Icons & Emojis Container */}
             <div className="absolute inset-0 overflow-hidden perspective-[1000px]">
               

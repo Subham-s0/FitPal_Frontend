@@ -1,53 +1,131 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Bell } from "lucide-react";
+import { Bell, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuthState } from "@/hooks/useAuth";
+import {
+  getDashboardPrimaryActionLabel,
+  getDashboardRole,
+  getDashboardRoleLabel,
+  getDashboardSearchPlaceholder,
+  getDisplayNameFromEmail,
+} from "./dashboard-shell-config";
 
-const DashboardNavbar = () => {
+interface DashboardNavbarProps {
+  role?: string | null;
+  onPrimaryAction?: () => void;
+  onProfileClick?: () => void;
+}
+
+const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNavbarProps) => {
   const navigate = useNavigate();
+  const auth = useAuthState();
+  const roleValue = role ?? auth.role;
+  const dashboardRole = getDashboardRole(roleValue);
+  const displayName = getDisplayNameFromEmail(auth.email, roleValue);
+  const roleLabel = getDashboardRoleLabel(roleValue);
+  const primaryActionLabel = getDashboardPrimaryActionLabel(roleValue);
+  const searchPlaceholder = getDashboardSearchPlaceholder(roleValue);
+  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
+  const logoHref = dashboardRole === "ADMIN" ? "/admin/dashboard" : "/";
+
+  const handlePrimaryAction = () => {
+    if (onPrimaryAction) {
+      onPrimaryAction();
+      return;
+    }
+
+    if (dashboardRole === "GYM") {
+      navigate("/dashboard", { state: { activeSection: "profile" } });
+      return;
+    }
+
+    if (dashboardRole === "ADMIN") {
+      navigate("/admin/dashboard", { state: { activeSection: "users" } });
+      return;
+    }
+
+    navigate("/dashboard", { state: { activeSection: "gyms" } });
+  };
+
+  const handleProfileClick = () => {
+    if (onProfileClick) {
+      onProfileClick();
+      return;
+    }
+
+    if (dashboardRole === "GYM") {
+      navigate("/dashboard", { state: { activeSection: "profile" } });
+      return;
+    }
+
+    if (dashboardRole === "ADMIN") {
+      navigate("/admin/dashboard");
+      return;
+    }
+
+    navigate("/profile");
+  };
+
   return (
     <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-[#1f1f1f] bg-[#0f0f0f] px-8">
-        <div className="flex items-center gap-2">
-            <a href="/" className="flex items-center gap-2 group">
-                <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 md:h-12 md:w-12" />
-                <span className="text-xl font-bold text-white">
-                  <span className="text-gradient-fire">Fit</span>Pal
-                </span>
-            </a>
+      <div className="flex items-center gap-2">
+        <a href={logoHref} className="group flex items-center gap-2">
+          <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 md:h-12 md:w-12" />
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold text-white">
+              <span className="text-gradient-fire">Fit</span>Pal
+            </span>
+            {dashboardRole === "ADMIN" ? (
+              <span className="hidden rounded-md border border-orange-500/30 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-orange-300/80 sm:inline-flex">
+                Admin
+              </span>
+            ) : null}
+          </div>
+        </a>
+      </div>
+
+      <div className="mx-12 hidden max-w-md flex-grow md:block">
+        <div className="group relative">
+          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-colors group-focus-within:text-orange-600" />
+          <input
+            type="text"
+            placeholder={searchPlaceholder}
+            className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-2.5 pl-11 pr-4 text-sm text-white outline-none transition-colors focus:border-orange-600"
+          />
         </div>
+      </div>
 
-        <div className="flex-grow max-w-md mx-12 hidden md:block">
-            <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-orange-600 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Search routines..."
-                  className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-2.5 pl-11 pr-4 text-sm text-white outline-none transition-colors focus:border-orange-600"
-                />
-            </div>
-        </div>
+      <div className="flex items-center gap-6">
+        <button className="group relative rounded-full p-2 transition-colors hover:bg-[#1a1a1a]">
+          <Bell className="h-6 w-6 text-gray-400 transition-colors group-hover:text-orange-600" />
+          <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-orange-600" />
+        </button>
 
-        <div className="flex items-center gap-6">
-            <button className="relative group rounded-full p-2 transition-colors hover:bg-[#1a1a1a]">
-                <Bell className="w-6 h-6 text-gray-400 group-hover:text-orange-600 transition-colors" />
-                <span className="absolute top-1 right-2 w-2 h-2 bg-orange-600 rounded-full"></span>
-            </button>
+        <button
+          type="button"
+          onClick={handlePrimaryAction}
+          className="rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-orange-500"
+        >
+          {primaryActionLabel}
+        </button>
 
-            <button className="rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-orange-500">
-                Check In
-            </button>
+        <div className="h-10 w-px bg-[#252525]" />
 
-            <div className="h-10 w-[1px] bg-[#252525]"></div>
-
-            <div className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/profile')}>
-                <div className="text-right leading-none hidden sm:block text-white">
-                    <p className="font-black text-sm tracking-tight">Alex Sharma</p>
-                    <p className="text-[9px] text-orange-600 font-bold uppercase tracking-widest mt-1">Elite Member</p>
-                </div>
-                <div className="w-12 h-12 rounded-full border-2 border-orange-600 p-0.5">
-                    <img src="https://ui-avatars.com/api/?name=Alex+S&background=111&color=fb923c" className="rounded-full w-full h-full object-cover" alt="Profile" />
-                </div>
-            </div>
-        </div>
+        <button
+          type="button"
+          className="flex cursor-pointer items-center gap-4 transition-opacity hover:opacity-80"
+          onClick={handleProfileClick}
+        >
+          <div className="hidden text-right leading-none text-white sm:block">
+            <p className="text-sm font-black tracking-tight">{displayName}</p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-orange-600">
+              {roleLabel}
+            </p>
+          </div>
+          <div className="h-12 w-12 rounded-full border-2 border-orange-600 p-0.5">
+            <img src={avatarUrl} className="h-full w-full rounded-full object-cover" alt={displayName} />
+          </div>
+        </button>
+      </div>
     </nav>
   );
 };

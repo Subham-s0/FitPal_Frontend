@@ -1,72 +1,86 @@
-import React from 'react';
-import { useNavigate } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Building2, 
-  ClipboardList, 
-  Dumbbell, 
-  User, 
-  Settings, 
+import {
   LogOut,
-  Activity
+  Settings,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuthState } from "@/hooks/useAuth";
+import { getDashboardNavItems, getDashboardRole } from "./dashboard-shell-config";
 
 interface SidebarProps {
+  role?: string | null;
   active: string;
   onChange: (section: string) => void;
 }
 
-const DashboardSidebar = ({ active, onChange }: SidebarProps) => {
+const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
   const navigate = useNavigate();
+  const auth = useAuthState();
+  const roleValue = role ?? auth.role;
+  const navItems = getDashboardNavItems(roleValue);
+  const dashboardRole = getDashboardRole(roleValue);
+
+  const handleSettings = () => {
+    if (dashboardRole === "ADMIN") {
+      onChange("settings");
+      return;
+    }
+
+    if (dashboardRole === "GYM") {
+      navigate("/dashboard", { state: { activeSection: "profile" } });
+      return;
+    }
+
+    navigate("/profile");
+  };
 
   return (
-    <aside className="w-16 hover:w-72 bg-[#0a0a0a]/50 backdrop-blur-sm border-r border-white/5 transition-all duration-500 group flex flex-col p-2 group-hover:p-4 z-40 h-full overflow-hidden">
-      <nav className="flex-1 flex flex-col gap-4 overflow-y-auto scrollbar-hide">
-        <button 
-          onClick={() => onChange('home')}
-          className={`flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-orange-600 transition-all justify-center group-hover:justify-start ${active === 'home' ? 'bg-orange-600' : ''}`}
-        >
-          <LayoutDashboard className={`min-w-[24px] w-6 h-6 group-hover/link:text-black ${active === 'home' ? 'text-black' : 'text-orange-600'}`} />
-          <span className={`ml-4 font-bold group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block ${active === 'home' ? 'text-black' : 'text-gray-400'}`}>Dashboard</span>
-        </button>
-        <button 
-          onClick={() => onChange('gyms')}
-          className={`flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-orange-600 transition-all justify-center group-hover:justify-start ${active === 'gyms' ? 'bg-orange-600' : ''}`}
-        >
-          <Building2 className={`min-w-[24px] w-6 h-6 group-hover/link:text-black ${active === 'gyms' ? 'text-black' : 'text-gray-500'}`} />
-          <span className={`ml-4 font-bold group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block ${active === 'gyms' ? 'text-black' : 'text-gray-400'}`}>Gyms</span>
-        </button>
-        <button 
-          onClick={() => onChange('routines')}
-          className={`flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-orange-600 transition-all justify-center group-hover:justify-start ${active === 'routines' ? 'bg-orange-600' : ''}`}
-        >
-          <ClipboardList className={`min-w-[24px] w-6 h-6 group-hover/link:text-black ${active === 'routines' ? 'text-black' : 'text-gray-500'}`} />
-          <span className={`ml-4 font-bold group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block ${active === 'routines' ? 'text-black' : 'text-gray-400'}`}>Routines</span>
-        </button>
-        <button 
-          onClick={() => onChange('exercises')}
-          className={`flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-orange-600 transition-all justify-center group-hover:justify-start ${active === 'exercises' ? 'bg-orange-600' : ''}`}
-        >
-          <Dumbbell className={`min-w-[24px] w-6 h-6 group-hover/link:text-black ${active === 'exercises' ? 'text-black' : 'text-gray-500'}`} />
-          <span className={`ml-4 font-bold group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block ${active === 'exercises' ? 'text-black' : 'text-gray-400'}`}>Exercises</span>
-        </button>
-        <button 
-          onClick={() => onChange('workouts')}
-          className={`flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-orange-600 transition-all justify-center group-hover:justify-start ${active === 'workouts' ? 'bg-orange-600' : ''}`}
-        >
-          <Activity className={`min-w-[24px] w-6 h-6 group-hover/link:text-black ${active === 'workouts' ? 'text-black' : 'text-gray-500'}`} />
-          <span className={`ml-4 font-bold group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block ${active === 'workouts' ? 'text-black' : 'text-gray-400'}`}>Workouts</span>
-        </button>
+    <aside className="group z-40 flex h-full w-16 flex-col overflow-hidden border-r border-white/5 bg-[#0a0a0a]/50 p-2 backdrop-blur-sm transition-all duration-500 hover:w-72 hover:p-4">
+      <nav className="scrollbar-hide flex flex-1 flex-col gap-4 overflow-y-auto">
+        {navItems.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            className={`group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-orange-600 group-hover:justify-start group-hover:rounded-2xl ${
+              active === id ? "bg-orange-600" : ""
+            }`}
+          >
+            <Icon
+              className={`h-6 w-6 min-w-[24px] group-hover/link:text-black ${
+                active === id ? "text-black" : "text-gray-500"
+              }`}
+            />
+            <span
+              className={`ml-4 hidden whitespace-nowrap font-bold opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black ${
+                active === id ? "text-black" : "text-gray-400"
+              }`}
+            >
+              {label}
+            </span>
+          </button>
+        ))}
       </nav>
 
-      <div className="mt-auto border-t border-white/5 pt-4 flex flex-col gap-4">
-        <button onClick={() => navigate('/settings')} className="flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-white transition-all justify-center group-hover:justify-start">
-          <Settings className="min-w-[24px] w-6 h-6 text-gray-500 group-hover/link:text-black" />
-          <span className="ml-4 font-bold text-gray-400 group-hover/link:text-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block">Settings</span>
+      <div className="mt-auto flex flex-col gap-4 border-t border-white/5 pt-4">
+        <button
+          type="button"
+          onClick={handleSettings}
+          className="group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-white group-hover:justify-start group-hover:rounded-2xl"
+        >
+          <Settings className="h-6 w-6 min-w-[24px] text-gray-500 group-hover/link:text-black" />
+          <span className="ml-4 hidden whitespace-nowrap font-bold text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black">
+            Settings
+          </span>
         </button>
-        <button onClick={() => navigate('/logout')} className="flex items-center w-full group/link p-3 rounded-full group-hover:rounded-2xl hover:bg-red-500 transition-all justify-center group-hover:justify-start">
-          <LogOut className="min-w-[24px] w-6 h-6 text-red-500 group-hover/link:text-white" />
-          <span className="ml-4 font-bold text-gray-400 group-hover/link:text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden group-hover:block">Logout</span>
+        <button
+          type="button"
+          onClick={() => navigate("/logout")}
+          className="group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-red-500 group-hover:justify-start group-hover:rounded-2xl"
+        >
+          <LogOut className="h-6 w-6 min-w-[24px] text-red-500 group-hover/link:text-white" />
+          <span className="ml-4 hidden whitespace-nowrap font-bold text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-white">
+            Logout
+          </span>
         </button>
       </div>
     </aside>

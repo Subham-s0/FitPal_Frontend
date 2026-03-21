@@ -1,4 +1,4 @@
-import { Bell, Search, ShieldCheck } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { useAuthState } from "@/hooks/useAuth";
@@ -16,10 +16,7 @@ const AdminNavbar = () => {
     <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-white/10 bg-[#0b0b0b]/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         <Link to="/admin/dashboard" className="flex min-w-0 items-center gap-3">
-          <div className="relative flex h-12 w-12 flex-none items-center justify-center rounded-2xl border border-orange-500/25 bg-orange-500/10">
-            <div className="absolute inset-0 rounded-2xl bg-orange-500/15 blur-xl" />
-            <ShieldCheck className="relative h-6 w-6 text-orange-500" />
-          </div>
+          <img src="/logo.svg" alt="FitPal Logo" className="h-12 w-12 flex-none" />
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -33,9 +30,6 @@ const AdminNavbar = () => {
                 Admin
               </span>
             </div>
-            <p className="hidden text-[10px] uppercase tracking-[0.22em] text-zinc-500 sm:block">
-              Restricted admin surface
-            </p>
           </div>
         </Link>
       </div>
@@ -52,11 +46,6 @@ const AdminNavbar = () => {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
-        <div className="hidden items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-200 md:flex">
-          <span className="h-2 w-2 rounded-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]" />
-          Restricted Access
-        </div>
-
         <button className="relative rounded-full border border-white/10 bg-white/[0.03] p-2 text-zinc-400 transition hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-white">
           <Bell className="h-5 w-5" />
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-orange-500" />

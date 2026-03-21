@@ -29,29 +29,20 @@ const AdminSidebar = ({ active, onChange }: SidebarProps) => {
 
   const itemClassName = (isActive: boolean) =>
     cn(
-      "group/link flex w-full items-center justify-center rounded-full border p-3 transition-all duration-300 group-hover:justify-start group-hover:rounded-2xl",
+      "group/item flex items-center border transition-all duration-300",
       isActive
-        ? "border-orange-400/50 bg-[linear-gradient(135deg,#FF6A00,#FF9500)] text-white shadow-[0_14px_32px_-18px_rgba(249,115,22,0.9)]"
-        : "border-transparent bg-transparent text-zinc-500 hover:border-orange-500/15 hover:bg-orange-500/10 hover:text-orange-200"
+        ? "mx-auto h-14 w-14 justify-center rounded-2xl border-transparent bg-orange-500 p-0 text-black shadow-[0_14px_32px_-18px_rgba(249,115,22,0.85)] group-hover/sidebar:h-auto group-hover/sidebar:w-full group-hover/sidebar:justify-start group-hover/sidebar:rounded-2xl group-hover/sidebar:px-3 group-hover/sidebar:py-3 group-focus-within/sidebar:h-auto group-focus-within/sidebar:w-full group-focus-within/sidebar:justify-start group-focus-within/sidebar:rounded-2xl group-focus-within/sidebar:px-3 group-focus-within/sidebar:py-3"
+        : "w-full justify-center rounded-full border-transparent bg-transparent p-3 text-zinc-500 hover:border-orange-500/15 hover:bg-orange-500/10 hover:text-orange-200 group-hover/sidebar:justify-start group-hover/sidebar:rounded-2xl group-focus-within/sidebar:justify-start group-focus-within/sidebar:rounded-2xl"
     );
 
   const labelClassName = (isActive: boolean) =>
     cn(
-      "ml-4 hidden whitespace-nowrap font-bold opacity-0 transition-opacity group-hover:block group-hover:opacity-100",
-      isActive ? "text-white" : "text-zinc-400 group-hover/link:text-orange-100"
+      "ml-4 hidden whitespace-nowrap font-bold opacity-0 transition-opacity duration-200 group-hover/sidebar:block group-hover/sidebar:opacity-100 group-focus-within/sidebar:block group-focus-within/sidebar:opacity-100",
+      isActive ? "text-black" : "text-zinc-400 group-hover/item:text-orange-100"
     );
 
   return (
-    <aside className="group z-40 flex h-full w-16 flex-col overflow-hidden border-r border-white/10 bg-[#0e0e0e]/90 p-2 backdrop-blur-xl transition-all duration-500 hover:w-72 hover:p-4">
-      <div className="mb-4 hidden rounded-2xl border border-orange-500/15 bg-orange-500/[0.04] p-4 group-hover:block">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">
-          Admin Controls
-        </p>
-        <p className="mt-2 text-sm font-semibold text-white">
-          Original console palette restored.
-        </p>
-      </div>
-
+    <aside className="group/sidebar z-40 flex h-full w-20 flex-col overflow-hidden border-r border-white/10 bg-[#0e0e0e]/90 p-2 backdrop-blur-xl transition-all duration-500 hover:w-72 hover:p-4 focus-within:w-72 focus-within:p-4">
       <nav className="scrollbar-hide flex flex-1 flex-col gap-4 overflow-y-auto">
         {primaryItems.map(({ key, label, icon: Icon }) => {
           const isActive = active === key;
@@ -65,7 +56,7 @@ const AdminSidebar = ({ active, onChange }: SidebarProps) => {
               <Icon
                 className={cn(
                   "h-6 w-6 min-w-[24px]",
-                  isActive ? "text-white" : "text-orange-400 group-hover/link:text-orange-200"
+                  isActive ? "text-black" : "text-orange-400 group-hover/item:text-orange-300"
                 )}
               />
               <span className={labelClassName(isActive)}>{label}</span>
@@ -79,7 +70,7 @@ const AdminSidebar = ({ active, onChange }: SidebarProps) => {
           <Settings
             className={cn(
               "h-6 w-6 min-w-[24px]",
-              active === "settings" ? "text-white" : "text-orange-400 group-hover/link:text-orange-200"
+              active === "settings" ? "text-black" : "text-orange-400 group-hover/item:text-orange-300"
             )}
           />
           <span className={labelClassName(active === "settings")}>Settings</span>
@@ -87,10 +78,10 @@ const AdminSidebar = ({ active, onChange }: SidebarProps) => {
 
         <button
           onClick={() => navigate("/logout")}
-          className="group/link flex w-full items-center justify-center rounded-full border border-transparent p-3 text-zinc-500 transition-all duration-300 group-hover:justify-start group-hover:rounded-2xl hover:border-red-500/20 hover:bg-red-500/10"
+          className="group/item flex w-full items-center justify-center rounded-full border border-transparent p-3 text-zinc-500 transition-all duration-300 hover:border-red-500/20 hover:bg-red-500/10 group-hover/sidebar:justify-start group-focus-within/sidebar:justify-start group-hover/sidebar:rounded-2xl group-focus-within/sidebar:rounded-2xl"
         >
-          <LogOut className="h-6 w-6 min-w-[24px] text-red-400 group-hover/link:text-red-300" />
-          <span className="ml-4 hidden whitespace-nowrap font-bold text-zinc-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-red-100">
+          <LogOut className="h-6 w-6 min-w-[24px] text-red-400 group-hover/item:text-red-300" />
+          <span className="ml-4 hidden whitespace-nowrap font-bold text-zinc-400 opacity-0 transition-opacity duration-200 group-hover/sidebar:block group-hover/sidebar:opacity-100 group-focus-within/sidebar:block group-focus-within/sidebar:opacity-100 group-hover/item:text-white">
             Logout
           </span>
         </button>

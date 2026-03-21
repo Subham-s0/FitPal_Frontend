@@ -13,7 +13,16 @@ export type GymType =
   | "Martial Arts"
   | "Pilates"
   | "Functional";
-export type StoredPaymentMethod = "ESEWA" | "KHALTI";
+
+export type GymDocumentType =
+  | "REGISTRATION_CERTIFICATE"
+  | "TAX_CERTIFICATE"
+  | "OWNER_ID_PROOF"
+  | "ADDRESS_PROOF"
+  | "LICENSE"
+  | "OTHER";
+
+export type GymDocumentStatus = "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 
 export interface ProfileSetupStatusResponse {
   profileCompleted: boolean;
@@ -36,41 +45,30 @@ export interface DocumentUploadResponse {
   folder: string;
 }
 
-export interface BillingProfileResponse {
-  billingProfileId: number | null;
-  accountId: number;
-  userId: number;
-  fullName: string | null;
-  billingEmail: string | null;
-  phoneNumber: string | null;
-  address: string | null;
-  city: string | null;
-  preferredPaymentMethod: StoredPaymentMethod | null;
-}
-
-export interface UpdateBillingProfileRequest {
-  fullName?: string;
-  billingEmail?: string;
-  phoneNumber?: string;
-  address?: string;
-  city?: string;
-  preferredPaymentMethod?: StoredPaymentMethod;
-}
-
 export interface GymProfileSetupStatusResponse {
   profileCompleted: boolean;
   currentOnboardingStep: number;
   hasGymProfile: boolean;
   documentCount: number;
+  maxDocuments: number;
+  registeredEmailVerified: boolean;
+  submittedForReview: boolean;
+  approved: boolean;
+  dashboardAccessible: boolean;
+  requiredDocumentsUploaded: boolean;
+  readyForReviewSubmission: boolean;
+  missingRequirements: string[];
 }
 
-export interface UpdateGymOnboardingRequest {
-  step: number;
+export interface UpdateGymBasicsStepRequest {
   gymName?: string;
   gymType?: GymType;
   establishedAt?: number;
   registrationNo?: string;
   maxCapacity?: number;
+}
+
+export interface UpdateGymLocationStepRequest {
   addressLine?: string;
   city?: string;
   country?: string;
@@ -78,17 +76,28 @@ export interface UpdateGymOnboardingRequest {
   latitude?: number;
   longitude?: number;
   phoneNo?: string;
-  email?: string;
+  contactEmail?: string;
   description?: string;
   logoUrl?: string;
+  logoPublicId?: string;
+  logoResourceType?: string;
   websiteUrl?: string;
-  openingHours?: string;
+  opensAt?: string;
+  closesAt?: string;
+}
+
+export interface UpsertGymDocumentRequest {
+  documentType: GymDocumentType;
+  publicId: string;
+  resourceType: string;
+  fileUrl: string;
 }
 
 export interface GymProfileResponse {
   accountId: number;
   gymId: number;
-  email: string;
+  registeredEmail: string;
+  registeredEmailVerified: boolean;
   gymName: string | null;
   gymType: GymType | null;
   establishedAt: number | null;
@@ -96,6 +105,9 @@ export interface GymProfileResponse {
   maxCapacity: number | null;
   onboardingStep: number;
   profileCompleted: boolean;
+  submittedForReview: boolean;
+  approved: boolean;
+  dashboardAccessible: boolean;
   addressLine: string | null;
   city: string | null;
   country: string | null;
@@ -106,9 +118,25 @@ export interface GymProfileResponse {
   contactEmail: string | null;
   description: string | null;
   logoUrl: string | null;
+  logoPublicId: string | null;
+  logoResourceType: string | null;
   websiteUrl: string | null;
-  openingHours: string | null;
+  opensAt: string | null;
+  closesAt: string | null;
   documentCount: number;
+  maxDocuments: number;
+  requiredDocumentsUploaded: boolean;
+  readyForReviewSubmission: boolean;
+}
+
+export interface GymDocumentResponse {
+  documentId: number;
+  documentType: GymDocumentType;
+  status: GymDocumentStatus;
+  publicId: string;
+  resourceType: string;
+  fileUrl: string;
+  createdAt: string;
 }
 
 export interface UpdateUserOnboardingRequest {

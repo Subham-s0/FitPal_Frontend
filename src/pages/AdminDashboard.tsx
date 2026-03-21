@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -24,13 +24,13 @@ import {
   YAxis,
 } from "recharts";
 
-import AdminNavbar from "@/components/AdminNavbar";
-import AdminSidebar from "@/components/AdminSidebar";
+import DefaultLayout from "@/components/DefaultLayout";
 import ManageGyms from "@/components/admin/ManageGyms";
 import ManagePayments from "@/components/admin/ManagePayments";
 import ManagePlans from "@/components/admin/ManagePlans";
 import ManageUsers from "@/components/admin/ManageUsers";
 import { cn } from "@/lib/utils";
+import { useLocation } from "react-router-dom";
 
 type AdminSection = "home" | "users" | "gyms" | "plans" | "payments" | "settings";
 
@@ -115,7 +115,7 @@ const healthStats: HealthStat[] = [
 ];
 
 const panelClassName =
-  "overflow-hidden rounded-[2rem] border border-white/10 bg-[#0e0e0e]/95 shadow-[0_30px_80px_-32px_rgba(0,0,0,0.92)] backdrop-blur-xl";
+  "rounded-[1.5rem] border border-white/10 bg-[#0e0e0e]/95 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.92)] backdrop-blur-xl";
 
 const chartTooltipStyle = {
   backgroundColor: "#0e0e0e",
@@ -131,77 +131,62 @@ const SectionCard = ({
   children: ReactNode;
   className?: string;
 }) => (
-  <div className={cn(panelClassName, className)}>
-    <div className="h-[3px] bg-[linear-gradient(90deg,#FF6A00,#FF9500,#FFBB00)]" />
-    <div className="p-6">{children}</div>
-  </div>
+  <div className={cn(panelClassName, "p-6", className)}>{children}</div>
 );
 
 const KPICard = ({ title, value, change, subtext, icon }: KPICardProps) => (
-  <div className="group overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0e0e0e]/95 shadow-[0_24px_60px_-30px_rgba(0,0,0,0.95)] transition-all hover:-translate-y-0.5 hover:border-orange-500/30">
-    <div className="h-[2px] bg-[linear-gradient(90deg,#FF6A00,#FF9500,#FFBB00)] opacity-70" />
-    <div className="p-5">
-      <div className="mb-2 flex items-start justify-between">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">{title}</p>
-        <div className="rounded-xl border border-orange-500/15 bg-orange-500/10 p-2 transition-colors group-hover:bg-orange-500/15">
-          {icon}
-        </div>
+  <div className="rounded-[1.5rem] border border-white/10 bg-[#0e0e0e]/95 p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.95)]">
+    <div className="mb-2 flex items-start justify-between">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">{title}</p>
+      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-2">
+        {icon}
       </div>
-      <h3 className="mb-1 text-2xl font-black text-white">{value}</h3>
-      {change && (
-        <div className="flex items-center gap-1">
-          {change.startsWith("+") ? (
-            <TrendingUp className="h-3 w-3 text-orange-300" />
-          ) : (
-            <TrendingDown className="h-3 w-3 text-red-400" />
-          )}
-          <span className={`text-xs font-bold ${change.startsWith("+") ? "text-orange-300" : "text-red-400"}`}>
-            {change} vs last month
-          </span>
-        </div>
-      )}
-      {subtext && <p className="text-xs font-medium text-zinc-400">{subtext}</p>}
     </div>
+    <h3 className="mb-1 text-2xl font-black text-white">{value}</h3>
+    {change && (
+      <div className="flex items-center gap-1">
+        {change.startsWith("+") ? (
+          <TrendingUp className="h-3 w-3 text-orange-300" />
+        ) : (
+          <TrendingDown className="h-3 w-3 text-red-400" />
+        )}
+        <span className={`text-xs font-bold ${change.startsWith("+") ? "text-orange-300" : "text-red-400"}`}>
+          {change} vs last month
+        </span>
+      </div>
+    )}
+    {subtext && <p className="text-xs font-medium text-zinc-400">{subtext}</p>}
   </div>
 );
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState<AdminSection>("home");
+  const location = useLocation();
+  const requestedSection = (location.state as { activeSection?: string } | null)?.activeSection;
+  const resolveSection = (value: string | undefined): AdminSection =>
+    value === "users" || value === "gyms" || value === "plans" || value === "payments" || value === "settings"
+      ? value
+      : "home";
+
+  const [activeSection, setActiveSection] = useState<AdminSection>(() => resolveSection(requestedSection));
+
+  useEffect(() => {
+    if (!requestedSection) return;
+    setActiveSection(resolveSection(requestedSection));
+  }, [requestedSection]);
 
   const renderContent = () => {
     switch (activeSection) {
       case "home":
         return (
           <div className="mx-auto max-w-[1600px] space-y-8">
-            <SectionCard>
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <span className="mb-4 inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-orange-200">
-                    Admin Dashboard
-                  </span>
-                  <h1 className="mb-3 text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
-                    Command <span className="text-gradient-fire">Center</span>
-                  </h1>
-                  <p className="max-w-2xl text-sm leading-6 text-zinc-400 sm:text-base">
-                    The admin dashboard now follows the original console palette: deep charcoal surfaces,
-                    muted zinc text, and orange-to-amber accents for every key action.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-orange-500/15 bg-orange-500/[0.05] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Access State</p>
-                    <p className="mt-2 text-lg font-black text-white">Restricted</p>
-                    <p className="mt-1 text-xs text-orange-200">Authorized personnel only</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">Visual Theme</p>
-                    <p className="mt-2 text-lg font-black text-white">Original Admin</p>
-                    <p className="mt-1 text-xs text-zinc-400">Orange accent system restored</p>
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
+                Dashboard <span className="text-gradient-fire">Overview</span>
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                Key platform metrics and operational status for FitPal administration.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <KPICard title="Total Revenue" value="Rs. 4.2M" change="+12.5%" icon={<DollarSign className="h-5 w-5 text-orange-400" />} />
@@ -218,9 +203,6 @@ const AdminDashboard = () => {
                       <TrendingUp className="h-5 w-5 text-orange-400" />
                       Revenue Trend
                     </h3>
-                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                      Orange-primary performance view
-                    </p>
                   </div>
                   <select className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400 outline-none transition focus:border-orange-500/40">
                     <option>Last 30 Days</option>
@@ -304,9 +286,6 @@ const AdminDashboard = () => {
                       <Award className="h-5 w-5 text-orange-400" />
                       Top Performing Gyms (MTD)
                     </h3>
-                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-zinc-500">
-                      High-activity partner network
-                    </p>
                   </div>
                   <button className="rounded-full border border-white/10 bg-white/[0.03] p-2 transition hover:border-orange-500/30 hover:bg-orange-500/10">
                     <Activity className="h-4 w-4 text-zinc-400" />
@@ -401,24 +380,16 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="relative flex h-screen flex-col overflow-hidden bg-[#030303] font-sans text-white selection:bg-orange-500/30">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom_right,hsla(30,100%,20%,0.2),transparent)]" />
-        <div className="absolute -left-[10%] -top-[18%] h-[70vw] w-[70vw] rounded-full bg-[hsla(30,100%,50%,0.08)] blur-[100px] animate-pulse [animation-duration:8s]" />
-        <div className="absolute -right-[20%] top-[38%] h-[60vw] w-[60vw] rounded-full bg-[hsla(15,100%,60%,0.05)] blur-[120px] animate-pulse [animation-duration:10s]" />
-        <div className="absolute -bottom-[20%] left-[20%] h-[50vw] w-[50vw] rounded-full bg-[hsla(40,100%,50%,0.05)] blur-[80px] animate-pulse [animation-duration:12s]" />
-      </div>
-
-      <div className="relative z-10 flex h-full flex-col">
-        <AdminNavbar />
-        <div className="flex flex-1 overflow-hidden">
-          <AdminSidebar active={activeSection} onChange={setActiveSection} />
-          <main className="relative flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
-            {renderContent()}
-          </main>
-        </div>
-      </div>
-    </div>
+    <DefaultLayout
+      role="ADMIN"
+      activeSection={activeSection}
+      onSectionChange={(section) => setActiveSection(resolveSection(section))}
+      onPrimaryAction={() => setActiveSection("users")}
+      onProfileClick={() => setActiveSection("home")}
+      contentClassName="px-4 py-6 sm:px-6 lg:px-8"
+    >
+      {renderContent()}
+    </DefaultLayout>
   );
 };
 

@@ -126,7 +126,9 @@ const App = () => (
           <Route path="/oauth/validate" element={<OAuthCallback />} />
           <Route path="/oauth/callback" element={<OAuthCallback />} />
           <Route path="/payments/esewa/success" element={<EsewaPaymentCallback />} />
+          <Route path="/payments/esewa/success/:paymentAttemptId" element={<EsewaPaymentCallback />} />
           <Route path="/payments/esewa/failure" element={<EsewaPaymentCallback />} />
+          <Route path="/payments/esewa/failure/:paymentAttemptId" element={<EsewaPaymentCallback />} />
           <Route path="/gym/:id" element={<GymProfile />} />
 
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
