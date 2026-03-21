@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import GymProfileSetup from "./GymProfileSetup";
-import { UserProfileSetup as ProfileSetup } from "@/features/profile-setup";
+import GymProfileSetup from "./gym/GymProfileSetup";
+import { default as ProfileSetup } from "@/pages/user/UserProfileSetup";
 import { useAuthState } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 

@@ -1,12 +1,17 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  Bell,
   Building2,
   CalendarRange,
   ChartColumnBig,
   ClipboardList,
+  DollarSign,
   Dumbbell,
   LayoutDashboard,
+  MessageSquare,
+  QrCode,
+  Settings,
   User,
   Users,
 } from "lucide-react";
@@ -30,11 +35,16 @@ const MEMBER_NAV_ITEMS: DashboardNavItem[] = [
 ];
 
 const GYM_NAV_ITEMS: DashboardNavItem[] = [
-  { id: "home", label: "Dashboard", icon: LayoutDashboard },
-  { id: "members", label: "Members", icon: Users },
-  { id: "classes", label: "Classes", icon: CalendarRange },
-  { id: "analytics", label: "Analytics", icon: ChartColumnBig },
-  { id: "profile", label: "My Gym", icon: Building2 },
+  { id: "home",      label: "Dashboard",      icon: LayoutDashboard },
+  { id: "gymProfile",label: "Profile & Docs", icon: Building2 },
+  { id: "qr",        label: "QR & Check-In",  icon: QrCode },
+  { id: "members",   label: "Members",        icon: Users },
+  { id: "revenue",   label: "Revenue",        icon: DollarSign },
+  { id: "insights",  label: "Insights",       icon: ChartColumnBig },
+  { id: "equipment", label: "Equipment",      icon: Dumbbell },
+  { id: "reviews",   label: "Reviews",        icon: MessageSquare },
+  { id: "notices",   label: "Notices",        icon: Bell },
+  { id: "settings",  label: "Settings",       icon: Settings },
 ];
 
 const ADMIN_NAV_ITEMS: DashboardNavItem[] = [

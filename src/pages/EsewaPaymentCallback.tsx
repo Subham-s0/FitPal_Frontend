@@ -76,8 +76,9 @@ const EsewaPaymentCallback = () => {
             { replace: true }
           );
         }, 2000);
-      } catch (err: any) {
-        setErrorMessage(err?.message ?? "Payment verification failed.");
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : (err as { message?: string })?.message;
+        setErrorMessage(errorMsg ?? "Payment verification failed.");
         setStatus("failure");
       }
     };

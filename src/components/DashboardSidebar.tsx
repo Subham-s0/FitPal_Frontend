@@ -26,7 +26,7 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
     }
 
     if (dashboardRole === "GYM") {
-      navigate("/dashboard", { state: { activeSection: "profile" } });
+      onChange("settings");
       return;
     }
 

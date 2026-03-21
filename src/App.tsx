@@ -10,14 +10,14 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import LoginRegister from "./pages/LoginRegister";
-import GymProfile from "./pages/GymProfile";
-import Profile from "./pages/Profile";
-import AdminDashboard from "./pages/AdminDashboard";
+import GymProfile from "./pages/gym/GymProfile";
+import Profile from "./pages/user/Profile";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import OAuthCallback from "./pages/OAuthCallback";
 import Logout from "./pages/Logout";
 import EsewaPaymentCallback from "./pages/EsewaPaymentCallback";
-import { UserProfileSetup as ProfileSetup } from "@/features/profile-setup";
-import GymProfileSetup from "./pages/GymProfileSetup";
+import { default as ProfileSetup } from "./pages/user/UserProfileSetup";
+import GymProfileSetup from "./pages/gym/GymProfileSetup";
 import ProfileSetupEntry from "./pages/ProfileSetupEntry";
 import {
   ADMIN_DASHBOARD_ROUTE,
@@ -25,7 +25,7 @@ import {
   getPostAuthRoute,
   isProfileSetupRoute,
 } from "./utils/auth-routing";
-import AdminLoginPortal from "./pages/AdminLoginPortal";
+import AdminLoginPortal from "./pages/admin/AdminLoginPortal";
 
 const queryClient = new QueryClient();
 
