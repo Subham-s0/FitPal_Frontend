@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FC, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/api/client";
 import { NumberInput } from "@/components/ui/number-input";
 import { TimeInput } from "@/components/ui/time-picker";
 import {
+  deleteUploadedAssetApi,
   deleteGymDocumentApi,
   deleteGymPhotoApi,
   createGymPhotoApi,
@@ -23,8 +24,10 @@ import {
   verifyGymRegisteredEmailApi,
 } from "@/api/profile.api";
 import { useAuthState } from "@/hooks/useAuth";
+import { GYM_PROFILE_SETUP_ROUTE } from "@/utils/auth-routing";
 import type {
   DocumentUploadResponse,
+  GymApprovalStatus,
   GymDocumentResponse,
   GymPhotoResponse,
   GymProfileResponse,
@@ -63,7 +66,7 @@ interface DocRow {
 }
 
 interface PhotoRow {
-  photoId: number;
+  photoId: number | null;
   publicId: string;
   resourceType: string;
   photoUrl: string;
@@ -117,6 +120,7 @@ interface ActionsProps {
   step: number;
   totalSteps: number;
   hideBack?: boolean;
+  disabled?: boolean;
   onBack: () => void;
   onNext: () => void;
 }
@@ -124,6 +128,10 @@ interface ActionsProps {
 interface SidebarItem {
   label: string;
   icon: ReactNode;
+}
+
+interface GymSetupLocationState {
+  editSubmission?: boolean;
 }
 
 const STEPS: StepDef[] = [
@@ -162,6 +170,8 @@ const DOC_TYPES: DocTypeDef[] = [
 
 const KTM_BOUNDS = { minLat: 27.58, maxLat: 27.83, minLng: 85.2, maxLng: 85.52 };
 const KTM_CENTER: [number, number] = [27.7172, 85.324];
+const KHALTI_LOGO_URL = "https://khaltibyime.khalti.com/wp-content/uploads/2025/07/Logo-for-Blog.png";
+const ESEWA_LOGO_URL = "https://esewa.com.np/common/images/esewa_logo.png";
 
 const STYLE_PARTS = [
   `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
@@ -270,8 +280,14 @@ body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;ov
 .done-icon.pending{background:rgba(234,88,12,.1);border:1.5px solid rgba(234,88,12,.3);box-shadow:0 0 40px var(--orange-glow)}
 .done-title{font-size:24px;font-weight:900;text-transform:uppercase;letter-spacing:-.3px;margin-bottom:7px}
 .done-sub{font-size:13px;color:var(--text-m);margin-bottom:24px;line-height:1.65;max-width:300px;margin-left:auto;margin-right:auto}
-.done-btn{display:inline-flex;align-items:center;gap:7px;padding:13px 28px;border-radius:12px;background:var(--orange);color:#fff;font-family:var(--font);font-size:12px;font-weight:900;border:none;cursor:pointer;box-shadow:0 4px 22px var(--orange-glow);transition:all .2s;text-transform:uppercase;letter-spacing:.08em}
+.done-actions{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.done-btn{display:inline-flex;align-items:center;gap:7px;padding:13px 28px;border-radius:999px;background:var(--orange);color:#fff;font-family:var(--font);font-size:12px;font-weight:900;border:none;cursor:pointer;box-shadow:0 4px 22px var(--orange-glow);transition:all .2s;text-transform:uppercase;letter-spacing:.08em}
 .done-btn:hover{background:#dc4e05;transform:translateY(-2px)}
+.corner-action-btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 24px;border-radius:999px;background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.2);backdrop-filter:blur(20px);color:#fff;font-family:var(--font);cursor:pointer;transition:all .3s}
+.corner-action-btn:hover{background:rgba(249,115,22,.1)}
+.corner-action-btn span{font-size:11px;font-weight:900;text-transform:uppercase;line-height:1;letter-spacing:.18em;transition:color .3s}
+.corner-action-btn:hover span{color:var(--orange)}
+@media(max-width:500px){.done-actions{gap:8px}.corner-action-btn,.done-btn{padding:11px 18px}.corner-action-btn span{font-size:10px;letter-spacing:.14em}}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:#1f2937;border-radius:4px}
@@ -669,12 +685,12 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
   );
 };
 
-const Actions: FC<ActionsProps> = ({ label, step, totalSteps, hideBack = false, onBack, onNext }) => (
+const Actions: FC<ActionsProps> = ({ label, step, totalSteps, hideBack = false, disabled = false, onBack, onNext }) => (
   <div className="actions">
-    {hideBack ? <span /> : <button className="btn-back" type="button" onClick={onBack}>Back</button>}
+    {hideBack ? <span /> : <button className="btn-back" type="button" onClick={onBack} disabled={disabled} style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1 }}>Back</button>}
     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
       <span className="step-count">Step {step + 1} of {totalSteps}</span>
-      <button className="btn-primary" type="button" onClick={onNext}>{label}</button>
+      <button className="btn-primary" type="button" onClick={onNext} disabled={disabled} style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1, transform: "none" }}>{label}</button>
     </div>
   </div>
 );
@@ -685,9 +701,33 @@ const StepErrorBanner: FC<{ message: string }> = ({ message }) => (
   </div>
 );
 
+const StatusBanner: FC<{ title: string; message: string }> = ({ title, message }) => (
+  <div
+    style={{
+      marginBottom: 18,
+      padding: "14px 16px",
+      borderRadius: 14,
+      border: "1px solid rgba(249,115,22,.28)",
+      background: "rgba(249,115,22,.08)",
+      color: "#fed7aa",
+      lineHeight: 1.6,
+    }}
+  >
+    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#fb923c", marginBottom: 4 }}>
+      {title}
+    </div>
+    <div style={{ fontSize: 12, fontWeight: 600 }}>{message}</div>
+  </div>
+);
+
 const FitPalGymSetup: FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = useAuthState();
+  const persistedLogoAssetRef = useRef<{ publicId: string | null; resourceType: string | null }>({
+    publicId: null,
+    resourceType: null,
+  });
   const logoInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -697,10 +737,15 @@ const FitPalGymSetup: FC = () => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSavingStep, setIsSavingStep] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isRemovingLogo, setIsRemovingLogo] = useState(false);
   const [uploadingDocIndex, setUploadingDocIndex] = useState<number | null>(null);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [activePhotoId, setActivePhotoId] = useState<number | null>(null);
   const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);
+  const [gymApprovalStatus, setGymApprovalStatus] = useState<GymApprovalStatus>("DRAFT");
+  const [gymSubmittedForReview, setGymSubmittedForReview] = useState(false);
+  const [gymApproved, setGymApproved] = useState(false);
+  const [gymDashboardAccessible, setGymDashboardAccessible] = useState(false);
   const [gymName, setGymName] = useState("");
   const [gymType, setGymType] = useState<ApiGymType | null>(null);
   const [gymRegNo, setGymRegNo] = useState("");
@@ -747,21 +792,30 @@ const FitPalGymSetup: FC = () => {
     displayName: authDisplayName,
     avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authDisplayName)}&background=111&color=fb923c`,
   };
+  const editSubmissionRequested = Boolean((location.state as GymSetupLocationState | null)?.editSubmission);
+  const editSubmissionRequestedRef = useRef(false);
+  const isGymPendingReview = gymApprovalStatus === "PENDING_REVIEW" || gymSubmittedForReview;
+  const isGymApproved = gymApprovalStatus === "APPROVED" || gymApproved || gymDashboardAccessible;
+
+  useEffect(() => {
+    editSubmissionRequestedRef.current = editSubmissionRequested;
+    if (editSubmissionRequested) {
+      setStep(3);
+    }
+  }, [editSubmissionRequested]);
 
   const resumeStepIndex = (profile: GymProfileResponse) => {
-    if (profile.submittedForReview || profile.approved || profile.dashboardAccessible) {
+    if (
+      profile.approved
+      || profile.dashboardAccessible
+      || profile.submittedForReview
+      || profile.approvalStatus === "APPROVED"
+      || profile.approvalStatus === "PENDING_REVIEW"
+    ) {
       return 4;
     }
-    if (profile.onboardingStep >= 3) {
-      return 3;
-    }
-    if (profile.onboardingStep >= 2) {
-      return 2;
-    }
-    if (profile.onboardingStep >= 1) {
-      return 1;
-    }
-    return 0;
+
+    return Math.max(0, Math.min(profile.onboardingStep ?? 0, 3));
   };
 
   const resolveUploadedFileName = (fileUrl?: string | null, fallback = "uploaded-file") => {
@@ -800,16 +854,46 @@ const FitPalGymSetup: FC = () => {
     return [...requiredRows, ...optionalRows];
   };
 
+  const clearLogoState = () => {
+    setGymLogoUrl("");
+    setGymLogoPublicId("");
+    setGymLogoResourceType("");
+  };
+
+  const deleteUploadedAsset = async (publicId?: string | null, resourceType?: string | null) => {
+    if (!publicId) {
+      return;
+    }
+
+    await deleteUploadedAssetApi({
+      publicId,
+      resourceType: resourceType || undefined,
+    });
+  };
+
+  const deleteUploadedAssetSilently = async (publicId?: string | null, resourceType?: string | null) => {
+    try {
+      await deleteUploadedAsset(publicId, resourceType);
+    } catch {
+      // Best-effort cleanup for temporary uploads.
+    }
+  };
+
   const sortPhotos = (items: PhotoRow[]) =>
     [...items].sort((a, b) => {
       const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
       const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
       if (orderA !== orderB) return orderA - orderB;
-      return a.photoId - b.photoId;
+      const photoIdA = typeof a.photoId === "number" ? a.photoId : Number.MAX_SAFE_INTEGER;
+      const photoIdB = typeof b.photoId === "number" ? b.photoId : Number.MAX_SAFE_INTEGER;
+      return photoIdA - photoIdB;
     });
 
+  const hasPhotoId = (photoId: number | null | undefined): photoId is number =>
+    typeof photoId === "number" && Number.isFinite(photoId) && photoId > 0;
+
   const toPhotoRow = (photo: GymPhotoResponse): PhotoRow => ({
-    photoId: photo.photoId,
+    photoId: photo.photoId ?? null,
     publicId: photo.publicId,
     resourceType: photo.resourceType,
     photoUrl: photo.photoUrl,
@@ -823,6 +907,10 @@ const FitPalGymSetup: FC = () => {
     documents?: GymDocumentResponse[],
     gymPhotos?: GymPhotoResponse[]
   ) => {
+    setGymApprovalStatus(profile.approvalStatus);
+    setGymSubmittedForReview(profile.submittedForReview);
+    setGymApproved(profile.approved);
+    setGymDashboardAccessible(profile.dashboardAccessible);
     setGymEmailVerified(profile.registeredEmailVerified);
     setGymName(profile.gymName ?? "");
     setGymType(profile.gymType ?? null);
@@ -836,6 +924,10 @@ const FitPalGymSetup: FC = () => {
     setGymLogoUrl(profile.logoUrl ?? "");
     setGymLogoPublicId(profile.logoPublicId ?? "");
     setGymLogoResourceType(profile.logoResourceType ?? "");
+    persistedLogoAssetRef.current = {
+      publicId: profile.logoPublicId ?? null,
+      resourceType: profile.logoResourceType ?? null,
+    };
     setGymAddressLine(profile.addressLine ?? "");
     setGymCity(profile.city ?? "");
     setGymCountry(profile.country ?? "Nepal");
@@ -857,6 +949,17 @@ const FitPalGymSetup: FC = () => {
     }
     if (gymPhotos) {
       setPhotos(sortPhotos(gymPhotos.map(toPhotoRow)));
+    }
+    if (
+      editSubmissionRequestedRef.current
+      && profile.approvalStatus !== "PENDING_REVIEW"
+      && !profile.submittedForReview
+      && !profile.approved
+      && !profile.dashboardAccessible
+    ) {
+      setStep(3);
+      editSubmissionRequestedRef.current = false;
+      return;
     }
     setStep(resumeStepIndex(profile));
   };
@@ -993,20 +1096,21 @@ const FitPalGymSetup: FC = () => {
   const getStep3Blocker = () => {
     const step2Blocker = getStep2Blocker();
     if (step2Blocker) return "Complete Step 2 first. Payout setup stays locked until location and contact details are complete.";
-    if (!esewaEnabled && !khaltiEnabled) return "Select at least one payout wallet before continuing to Step 4.";
-    if (esewaEnabled && !isValidNepalWalletId(esewaWalletId)) {
-      return "Enter a valid eSewa wallet number (98/97/96 + 8 digits).";
+
+    const hasCompleteEsewaWallet =
+      esewaEnabled && isValidNepalWalletId(esewaWalletId) && Boolean(esewaAccountName.trim());
+    const hasCompleteKhaltiWallet =
+      khaltiEnabled && isValidNepalWalletId(khaltiWalletId) && Boolean(khaltiAccountName.trim());
+
+    if (hasCompleteEsewaWallet || hasCompleteKhaltiWallet) {
+      return null;
     }
-    if (esewaEnabled && !esewaAccountName.trim()) {
-      return "Enter the account holder name for eSewa before continuing to Step 4.";
+
+    if (!esewaEnabled && !khaltiEnabled) {
+      return "Select at least one payout wallet before continuing to Step 4.";
     }
-    if (khaltiEnabled && !isValidNepalWalletId(khaltiWalletId)) {
-      return "Enter a valid Khalti wallet number (98/97/96 + 8 digits).";
-    }
-    if (khaltiEnabled && !khaltiAccountName.trim()) {
-      return "Enter the account holder name for Khalti before continuing to Step 4.";
-    }
-    return null;
+
+    return "Complete at least one payout wallet with wallet ID and registered name before continuing to Step 4.";
   };
 
   const getStep4Blocker = () => {
@@ -1042,6 +1146,7 @@ const FitPalGymSetup: FC = () => {
 
   const isBusy = isSavingStep
     || isUploadingLogo
+    || isRemovingLogo
     || uploadingDocIndex !== null
     || isUploadingPhotos
     || activePhotoId !== null;
@@ -1064,7 +1169,6 @@ const FitPalGymSetup: FC = () => {
         maxCapacity: capacityValue,
       });
       applyProfileState(profile);
-      setStep(1);
       toast.success("Basics saved");
     } catch (error) {
       setStepError(getApiErrorMessage(error, "Failed to save basics step"));
@@ -1101,7 +1205,6 @@ const FitPalGymSetup: FC = () => {
         closesAt: gymCloses,
       });
       applyProfileState(profile);
-      setStep(2);
       toast.success("Location and contact saved");
     } catch (error) {
       setStepError(getApiErrorMessage(error, "Failed to save location step"));
@@ -1129,7 +1232,6 @@ const FitPalGymSetup: FC = () => {
         khaltiAccountName: khaltiEnabled ? (khaltiAccountName.trim() || undefined) : undefined,
       });
       applyProfileState(profile);
-      setStep(3);
       toast.success("Payout wallets saved");
     } catch (error) {
       setStepError(getApiErrorMessage(error, "Failed to save payout wallets"));
@@ -1150,8 +1252,7 @@ const FitPalGymSetup: FC = () => {
     try {
       const profile = await submitGymReviewSubmissionApi();
       applyProfileState(profile);
-      setStep(4);
-      toast.success("Gym submitted for review");
+      toast.success(isGymPendingReview ? "Gym resubmitted for review" : "Gym submitted for review");
     } catch (error) {
       setStepError(getApiErrorMessage(error, "Failed to submit gym for review"));
     } finally {
@@ -1183,9 +1284,16 @@ const FitPalGymSetup: FC = () => {
     setDocs((prev) => [...prev, { type: (next?.value ?? "OTHER") as DocTypeValue, fileName: "", uploaded: false }]);
   };
 
+  const resetDocRow = (doc: DocRow): DocRow => ({
+    type: doc.type,
+    fileName: "",
+    uploaded: false,
+  });
+
   const removeDoc = async (idx: number) => {
     const targetDoc = docs[idx];
-    if (!targetDoc || targetDoc.type === "REGISTRATION_CERTIFICATE" || targetDoc.type === "LICENSE") return;
+    if (!targetDoc) return;
+    const isRequired = targetDoc.type === "REGISTRATION_CERTIFICATE" || targetDoc.type === "LICENSE";
 
     if (targetDoc.documentId) {
       setUploadingDocIndex(idx);
@@ -1200,7 +1308,12 @@ const FitPalGymSetup: FC = () => {
       setUploadingDocIndex(null);
     }
 
-    setDocs((prev) => prev.filter((_, index) => index !== idx));
+    setDocs((prev) => {
+      if (isRequired) {
+        return prev.map((doc, index) => (index === idx ? resetDocRow(doc) : doc));
+      }
+      return prev.filter((_, index) => index !== idx);
+    });
   };
 
   const setDocType = (idx: number, value: DocTypeValue) => {
@@ -1208,7 +1321,7 @@ const FitPalGymSetup: FC = () => {
   };
 
   const openLogoPicker = () => {
-    if (isUploadingLogo) return;
+    if (isUploadingLogo || isRemovingLogo) return;
     logoInputRef.current?.click();
   };
 
@@ -1216,18 +1329,58 @@ const FitPalGymSetup: FC = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const previousLogoPublicId = gymLogoPublicId;
+    const previousLogoResourceType = gymLogoResourceType;
+    const persistedLogoPublicId = persistedLogoAssetRef.current.publicId;
+
     setIsUploadingLogo(true);
     try {
-      const uploadedAsset: DocumentUploadResponse = await uploadDocumentFileApi(file, "fitpal/gym-logos");
+      const uploadedAsset: DocumentUploadResponse = await uploadImageFileApi(file, "fitpal/gym-logos");
       setGymLogoUrl(uploadedAsset.secureUrl || uploadedAsset.url);
       setGymLogoPublicId(uploadedAsset.publicId);
       setGymLogoResourceType(uploadedAsset.resourceType);
+
+      if (previousLogoPublicId && previousLogoPublicId !== persistedLogoPublicId) {
+        await deleteUploadedAssetSilently(previousLogoPublicId, previousLogoResourceType);
+      }
+
       toast.success("Logo uploaded");
     } catch (error) {
       setStepError(getApiErrorMessage(error, "Failed to upload logo"));
     } finally {
       setIsUploadingLogo(false);
       event.target.value = "";
+    }
+  };
+
+  const handleLogoRemoved = async () => {
+    if (!gymLogoUrl || isUploadingLogo || isRemovingLogo) {
+      return;
+    }
+
+    const currentLogoPublicId = gymLogoPublicId;
+    const currentLogoResourceType = gymLogoResourceType;
+    const persistedLogoPublicId = persistedLogoAssetRef.current.publicId;
+    const shouldDeleteTemporaryAsset = Boolean(
+      currentLogoPublicId && currentLogoPublicId !== persistedLogoPublicId
+    );
+
+    setIsRemovingLogo(true);
+    try {
+      if (shouldDeleteTemporaryAsset) {
+        await deleteUploadedAsset(currentLogoPublicId, currentLogoResourceType);
+      }
+
+      clearLogoState();
+      toast.success(
+        shouldDeleteTemporaryAsset
+          ? "Logo removed"
+          : "Logo cleared. Save location step to persist the change."
+      );
+    } catch (error) {
+      setStepError(getApiErrorMessage(error, "Failed to remove logo"));
+    } finally {
+      setIsRemovingLogo(false);
     }
   };
 
@@ -1250,19 +1403,25 @@ const FitPalGymSetup: FC = () => {
       return;
     }
 
+    const previousOtherDocumentId = targetDoc.type === "OTHER" ? targetDoc.documentId : undefined;
     setUploadingDocIndex(targetIndex);
+    let uploadedAsset: DocumentUploadResponse | null = null;
     try {
-      if (targetDoc.type === "OTHER" && targetDoc.documentId) {
-        await deleteGymDocumentApi(targetDoc.documentId);
-      }
-
-      const uploadedAsset = await uploadDocumentFileApi(file, "fitpal/gym-documents");
+      uploadedAsset = await uploadDocumentFileApi(file, "fitpal/gym-documents");
       const savedDocument = await upsertGymDocumentApi({
         documentType: targetDoc.type,
         publicId: uploadedAsset.publicId,
         resourceType: uploadedAsset.resourceType,
         fileUrl: uploadedAsset.secureUrl || uploadedAsset.url,
       });
+
+      if (previousOtherDocumentId && previousOtherDocumentId !== savedDocument.documentId) {
+        try {
+          await deleteGymDocumentApi(previousOtherDocumentId);
+        } catch {
+          toast.error("New document was saved, but the previous optional document could not be removed.");
+        }
+      }
 
       setDocs((prev) => prev.map((doc, index) => (
         index === targetIndex
@@ -1279,6 +1438,9 @@ const FitPalGymSetup: FC = () => {
       )));
       toast.success("Document uploaded");
     } catch (error) {
+      if (uploadedAsset?.publicId) {
+        await deleteUploadedAssetSilently(uploadedAsset.publicId, uploadedAsset.resourceType);
+      }
       setStepError(getApiErrorMessage(error, "Failed to upload document"));
     } finally {
       setUploadingDocIndex(null);
@@ -1321,9 +1483,10 @@ const FitPalGymSetup: FC = () => {
           continue;
         }
 
+        let uploadedAsset: DocumentUploadResponse | null = null;
         try {
-          const uploadedAsset = await uploadImageFileApi(file, "fitpal/gym-photos");
-          const createdPhoto = await createGymPhotoApi({
+          uploadedAsset = await uploadImageFileApi(file, "fitpal/gym-photos");
+          let createdPhoto = await createGymPhotoApi({
             publicId: uploadedAsset.publicId,
             resourceType: uploadedAsset.resourceType,
             photoUrl: uploadedAsset.secureUrl || uploadedAsset.url,
@@ -1331,9 +1494,22 @@ const FitPalGymSetup: FC = () => {
             cover: !nextPhotos.some((photo) => photo.cover),
           });
 
+          if (!hasPhotoId(createdPhoto.photoId)) {
+            const refreshedPhotos = await getMyGymPhotosApi();
+            const matchedPhoto = refreshedPhotos.find((photo) => photo.publicId === createdPhoto.publicId);
+            if (matchedPhoto) {
+              createdPhoto = matchedPhoto;
+            }
+          }
+
+          if (!hasPhotoId(createdPhoto.photoId)) {
+            throw new Error("Photo is still syncing. Refresh once and try again.");
+          }
+
           nextPhotos = sortPhotos([...nextPhotos, toPhotoRow(createdPhoto)]);
           uploadCount += 1;
         } catch (error) {
+          await deleteUploadedAssetSilently(uploadedAsset?.publicId, uploadedAsset?.resourceType);
           setStepError(getApiErrorMessage(error, `Failed to upload photo: ${file.name}`));
         }
       }
@@ -1347,7 +1523,12 @@ const FitPalGymSetup: FC = () => {
     }
   };
 
-  const setCoverPhoto = async (photoId: number) => {
+  const setCoverPhoto = async (photoId: number | null) => {
+    if (!hasPhotoId(photoId)) {
+      setStepError("Photo is still syncing. Refresh once and try again.");
+      return;
+    }
+
     if (activePhotoId !== null || isUploadingPhotos) return;
 
     setActivePhotoId(photoId);
@@ -1370,7 +1551,12 @@ const FitPalGymSetup: FC = () => {
     }
   };
 
-  const removePhoto = async (photoId: number) => {
+  const removePhoto = async (photoId: number | null) => {
+    if (!hasPhotoId(photoId)) {
+      setStepError("Photo is still syncing. Refresh once and try again.");
+      return;
+    }
+
     if (activePhotoId !== null || isUploadingPhotos) return;
 
     const currentPhotos = photos;
@@ -1381,8 +1567,9 @@ const FitPalGymSetup: FC = () => {
       await deleteGymPhotoApi(photoId);
       let remainingPhotos = currentPhotos.filter((photo) => photo.photoId !== photoId);
 
-      if (deletingPhoto?.cover && remainingPhotos.length > 0) {
-        const fallbackCover = await updateGymPhotoApi(remainingPhotos[0].photoId, { cover: true });
+      const fallbackCoverCandidate = remainingPhotos.find((photo) => hasPhotoId(photo.photoId));
+      if (deletingPhoto?.cover && fallbackCoverCandidate && hasPhotoId(fallbackCoverCandidate.photoId)) {
+        const fallbackCover = await updateGymPhotoApi(fallbackCoverCandidate.photoId, { cover: true });
         remainingPhotos = remainingPhotos.map((photo) =>
           photo.photoId === fallbackCover.photoId
             ? toPhotoRow(fallbackCover)
@@ -1440,7 +1627,7 @@ const FitPalGymSetup: FC = () => {
       <input
         ref={logoInputRef}
         type="file"
-        accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx"
+        accept="image/png,image/jpeg,image/webp"
         style={{ display: "none" }}
         onChange={handleLogoSelected}
       />
@@ -1476,23 +1663,52 @@ const FitPalGymSetup: FC = () => {
           </div>
           
           {/* Gym Logo Upload Card */}
-          <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "20px", background: "linear-gradient(180deg, rgba(120,63,23,0.32) 0%, rgba(27,18,11,0.96) 58%, rgba(15,15,15,1) 100%)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: "1.45rem", alignItems: "center", boxShadow: "inset 0 1px 0 rgba(255,214,170,0.08)" }}>
-             <div style={{ width: 96, height: 96, borderRadius: "50%", border: "2px solid var(--orange)", padding: 4, overflow: "hidden", marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)", position: "relative" }}>
-                {gymLogoUrl ? (
-                   <img src={gymLogoUrl} alt="Gym Logo" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                ) : (
-                   <svg width="32" height="32" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ color: "#4b5563" }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "20px", background: "linear-gradient(180deg, rgba(120,63,23,0.32) 0%, rgba(27,18,11,0.96) 58%, rgba(15,15,15,1) 100%)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: "1.45rem", alignItems: "center", textAlign: "center", boxShadow: "inset 0 1px 0 rgba(255,214,170,0.08)" }}>
+             <div style={{ position: "relative", width: 96, height: 96, marginBottom: 12 }}>
+               <div style={{ width: "100%", height: "100%", borderRadius: "50%", border: "2px solid var(--orange)", padding: 4, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)" }}>
+                 {gymLogoUrl ? (
+                   <img
+                    src={gymLogoUrl}
+                    alt="Gym Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      borderRadius: "50%",
+                      objectFit: "contain",
+                      objectPosition: "center",
+                      background: "rgba(0,0,0,0.22)",
+                      padding: 8,
+                    }}
+                  />
+                 ) : (
+                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#4b5563", display: "block" }}>
                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                      <circle cx="12" cy="13" r="4" />
                    </svg>
-                )}
-             </div>
+                 )}
+               </div>
+                 {gymLogoUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleLogoRemoved()}
+                    disabled={isUploadingLogo || isRemovingLogo}
+                    aria-label="Remove gym logo"
+                    style={{ position: "absolute", top: 0, right: 0, width: 28, height: 28, borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.8)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: isUploadingLogo || isRemovingLogo ? "not-allowed" : "pointer", transition: "all .2s", zIndex: 1 }}
+                    onMouseOver={(event) => { event.currentTarget.style.borderColor = "rgba(248,113,113,0.5)"; event.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
+                    onMouseOut={(event) => { event.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; event.currentTarget.style.background = "rgba(0,0,0,0.8)"; }}
+                  >
+                    <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+                      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                 ) : null}
+              </div>
              <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginBottom: 4 }}>Gym Logo</div>
              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, textAlign: "center" }}>JPG or PNG - Max 2MB<br/>Used as your public profile photo.</div>
-             <button type="button" onClick={openLogoPicker} disabled={isUploadingLogo} style={{ padding: "8px 16px", borderRadius: "0.9rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", cursor: "pointer", transition: "all 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background="rgba(255,255,255,0.1)"} onMouseOut={(e) => e.currentTarget.style.background="rgba(255,255,255,0.05)"}>
-               {isUploadingLogo ? "Uploading..." : gymLogoUrl ? "Change Logo" : "Upload Logo"}
+             <button type="button" onClick={openLogoPicker} disabled={isUploadingLogo || isRemovingLogo} style={{ padding: "8px 16px", borderRadius: "0.9rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", cursor: isUploadingLogo || isRemovingLogo ? "not-allowed" : "pointer", transition: "all 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background="rgba(255,255,255,0.1)"} onMouseOut={(e) => e.currentTarget.style.background="rgba(255,255,255,0.05)"}>
+               {isUploadingLogo ? "Uploading..." : isRemovingLogo ? "Removing..." : gymLogoUrl ? "Change Logo" : "Upload Logo"}
              </button>
-          </div>
+           </div>
         </div>
 
         {/* Right Column: Gym Details Form */}
@@ -1546,7 +1762,7 @@ const FitPalGymSetup: FC = () => {
           </div>
           
           <div style={{ alignSelf: "flex-end", width: "100%" }}>
-            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} hideBack onBack={() => undefined} onNext={goToLocationStep} />
+            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} hideBack disabled={isBusy} onBack={() => undefined} onNext={goToLocationStep} />
           </div>
         </div>
       </div>
@@ -1635,7 +1851,7 @@ const FitPalGymSetup: FC = () => {
           </div>
           
           <div style={{ alignSelf: "flex-end", width: "100%", marginTop: "8px" }}>
-            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(0)} onNext={goToPayoutStep} />
+            <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(0)} onNext={goToPayoutStep} />
           </div>
         </div>
       </div>
@@ -1661,7 +1877,9 @@ const FitPalGymSetup: FC = () => {
             onClick={() => setEsewaEnabled((prev) => !prev)}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}
           >
-            <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(96,187,70,.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 900, color: "#60BB46", flexShrink: 0 }}>E</div>
+            <div style={{ width: 112, height: 56, borderRadius: 14, background: "rgba(96,187,70,.14)", border: "1px solid rgba(96,187,70,.22)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", overflow: "hidden", flexShrink: 0 }}>
+              <img src={ESEWA_LOGO_URL} alt="eSewa" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>eSewa</div>
               <div style={{ fontSize: 11, color: "var(--text-d)", marginTop: 2 }}>Manual admin verification before first payout</div>
@@ -1678,13 +1896,13 @@ const FitPalGymSetup: FC = () => {
           {esewaEnabled && (
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
               <div className="field" style={{ marginBottom: 12 }}>
-                <label>eSewa ID / Phone</label>
+                <label>eSewa ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
                 <input
                   type="text"
                   maxLength={10}
                   placeholder="98XXXXXXXX"
                   value={esewaWalletId}
-                  onChange={(event) => setEsewaWalletId(event.target.value)}
+                  onChange={(event) => setEsewaWalletId(event.target.value.replace(/\D/g, "").slice(0, 10))}
                   style={{ background: "rgba(255,255,255,.04)", borderColor: esewaWalletId && !esewaWalletValid ? "rgba(239,68,68,.5)" : esewaWalletValid ? "rgba(96,187,70,.45)" : "rgba(255,255,255,.08)" }}
                 />
                 {esewaWalletId && !esewaWalletValid && (
@@ -1692,7 +1910,7 @@ const FitPalGymSetup: FC = () => {
                 )}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
-                <label>Registered Name</label>
+                <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
                 <input
                   type="text"
                   placeholder="Full name on eSewa account"
@@ -1716,7 +1934,9 @@ const FitPalGymSetup: FC = () => {
             }}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}
           >
-            <div style={{ width: 42, height: 42, borderRadius: 11, background: "rgba(92,45,145,.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 900, color: "#8b5cf6", flexShrink: 0 }}>K</div>
+            <div style={{ width: 112, height: 56, borderRadius: 14, background: "rgba(92,45,145,.16)", border: "1px solid rgba(139,92,246,.32)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", overflow: "hidden", flexShrink: 0 }}>
+              <img src={KHALTI_LOGO_URL} alt="Khalti" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>Khalti</div>
               <div style={{ fontSize: 11, color: "var(--text-d)", marginTop: 2 }}>Wallet will be reviewed during approval</div>
@@ -1733,7 +1953,7 @@ const FitPalGymSetup: FC = () => {
           {khaltiEnabled && (
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
               <div className="field" style={{ marginBottom: 12 }}>
-                <label>Khalti ID / Phone</label>
+                <label>Khalti ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                   <div style={{ flex: 1 }}>
                     <input
@@ -1742,7 +1962,7 @@ const FitPalGymSetup: FC = () => {
                       placeholder="98XXXXXXXX"
                       value={khaltiWalletId}
                       onChange={(event) => {
-                        setKhaltiWalletId(event.target.value);
+                        setKhaltiWalletId(event.target.value.replace(/\D/g, "").slice(0, 10));
                       }}
                       style={{ width: "100%", background: "rgba(255,255,255,.04)", borderColor: khaltiWalletId && !khaltiWalletValid ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.08)" }}
                     />
@@ -1753,7 +1973,7 @@ const FitPalGymSetup: FC = () => {
                 </div>
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
-                <label>Registered Name</label>
+                <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
                 <input
                   type="text"
                   placeholder="Full name on Khalti account"
@@ -1779,7 +1999,7 @@ const FitPalGymSetup: FC = () => {
           </div>
         </div>
 
-        <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} onBack={() => setStep(1)} onNext={goToDocumentsStep} />
+        <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(1)} onNext={goToDocumentsStep} />
       </div>
     );
   };
@@ -1860,6 +2080,16 @@ const FitPalGymSetup: FC = () => {
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                   <span style={{ fontSize: 12, fontWeight: 600, color: "#4ade80", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.fileName}</span>
+                  <button
+                    type="button"
+                    onClick={() => void removeDoc(idx)}
+                    disabled={uploadingDocIndex === idx}
+                    style={{ flexShrink: 0, background: "none", border: "none", cursor: uploadingDocIndex === idx ? "not-allowed" : "pointer", color: "#fca5a5", fontSize: 10, fontWeight: 700, fontFamily: "var(--font)", textTransform: "uppercase", letterSpacing: ".06em", padding: "2px 6px", borderRadius: 6 }}
+                    onMouseOver={(event) => { event.currentTarget.style.color = "#ef4444"; }}
+                    onMouseOut={(event) => { event.currentTarget.style.color = "#fca5a5"; }}
+                  >
+                    {uploadingDocIndex === idx ? "..." : "Remove"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => openDocumentPicker(idx)}
@@ -1944,7 +2174,7 @@ const FitPalGymSetup: FC = () => {
         {photos.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10, marginTop: 12 }}>
             {photos.map((photo) => (
-              <div key={photo.photoId} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,.02)" }}>
+              <div key={photo.photoId ?? photo.publicId} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,.02)" }}>
                 <div style={{ position: "relative", width: "100%", height: 100, background: "#0d0d0d" }}>
                   <img src={photo.photoUrl} alt="Gym" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   {photo.cover && (
@@ -1952,23 +2182,40 @@ const FitPalGymSetup: FC = () => {
                       Cover
                     </div>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => void removePhoto(photo.photoId)}
+                    disabled={activePhotoId !== null || !hasPhotoId(photo.photoId)}
+                    aria-label="Remove gym photo"
+                    style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.8)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", transition: "all .2s", zIndex: 1, opacity: activePhotoId === photo.photoId ? 0.65 : 1 }}
+                    onMouseOver={(event) => { event.currentTarget.style.borderColor = "rgba(248,113,113,0.5)"; event.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
+                    onMouseOut={(event) => { event.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; event.currentTarget.style.background = "rgba(0,0,0,0.8)"; }}
+                  >
+                    {!hasPhotoId(photo.photoId) || activePhotoId === photo.photoId ? (
+                      <span style={{ fontSize: 10, fontWeight: 900, lineHeight: 1 }}>...</span>
+                    ) : (
+                      <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+                        <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
                 <div style={{ display: "flex", gap: 6, padding: 8 }}>
                   <button
                     type="button"
                     onClick={() => void setCoverPhoto(photo.photoId)}
-                    disabled={photo.cover || activePhotoId !== null}
-                    style={{ flex: 1, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "#e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: photo.cover || activePhotoId !== null ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
+                    disabled={photo.cover || activePhotoId !== null || !hasPhotoId(photo.photoId)}
+                    style={{ flex: 1, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "#e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: photo.cover || activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
                   >
-                    {photo.cover ? "Cover" : "Set Cover"}
+                    {photo.cover ? "Cover" : !hasPhotoId(photo.photoId) ? "Syncing" : "Set Cover"}
                   </button>
                   <button
                     type="button"
                     onClick={() => void removePhoto(photo.photoId)}
-                    disabled={activePhotoId !== null}
-                    style={{ border: "1px solid rgba(239,68,68,.35)", background: "rgba(239,68,68,.08)", color: "#fca5a5", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: activePhotoId !== null ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
+                    disabled={activePhotoId !== null || !hasPhotoId(photo.photoId)}
+                    style={{ border: "1px solid rgba(239,68,68,.35)", background: "rgba(239,68,68,.08)", color: "#fca5a5", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
                   >
-                    {activePhotoId === photo.photoId ? "..." : "Remove"}
+                    {!hasPhotoId(photo.photoId) ? "Syncing" : activePhotoId === photo.photoId ? "..." : "Remove"}
                   </button>
                 </div>
               </div>
@@ -2005,7 +2252,14 @@ const FitPalGymSetup: FC = () => {
           </div>
         )}
 
-        <Actions label="Submit for Review" step={step} totalSteps={STEPS.length} onBack={() => setStep(2)} onNext={goToReviewStep} />
+        <Actions
+          label={isGymPendingReview ? "Resubmit for Review" : "Submit for Review"}
+          step={step}
+          totalSteps={STEPS.length}
+          disabled={isBusy}
+          onBack={() => setStep(2)}
+          onNext={goToReviewStep}
+        />
       </div>
     );
   };
@@ -2018,16 +2272,35 @@ const FitPalGymSetup: FC = () => {
           <path d="M18 12v7l5 2.5" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" />
         </svg>
       </div>
-      <div className="done-title">Pending Review</div>
+      <div className="done-title">{isGymApproved ? "Gym Approved" : "Pending Review"}</div>
       <div className="done-sub">
-        Documents and {photos.length} photo(s) submitted. Our team will verify your gym within <strong style={{ color: "var(--orange)" }}>1-2 business days</strong>. Confirmation sent to <strong style={{ color: "#fff" }}>{authConfig.email}</strong>.
+        {isGymApproved ? (
+          <>
+            Your gym has been approved and can now access the dashboard.
+          </>
+        ) : (
+          <>
+            Thank you for submitting your application for our platform. Our team will review this application within <strong style={{ color: "var(--orange)" }}>1-2 business days</strong>, and confirmation will be shown on this page.
+          </>
+        )}
       </div>
-      <button className="done-btn" type="button" onClick={() => window.location.reload()}>
-        <svg width="15" height="15" fill="none" viewBox="0 0 24 24">
-          <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        Refresh Verification Status
-      </button>
+      <div className="done-actions">
+        {!isGymApproved ? (
+          <button
+            className="corner-action-btn"
+            type="button"
+            onClick={() => navigate(GYM_PROFILE_SETUP_ROUTE, { replace: true, state: { editSubmission: true } })}
+          >
+            <span>Edit Submission</span>
+          </button>
+        ) : null}
+        <button className="done-btn" type="button" onClick={() => window.location.reload()}>
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24">
+            <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Refresh Status
+        </button>
+      </div>
     </div>
   );
 
@@ -2158,9 +2431,14 @@ const FitPalGymSetup: FC = () => {
           </div>
 
           <div className="card" style={{ maxWidth: cardMax }}>
+            {isGymPendingReview && stepId !== "gymDone" ? (
+              <StatusBanner
+                title="Submission Under Review"
+                message="You can still update your gym information. As soon as you save a change, the backend moves this application back to draft and you will need to resubmit it for review."
+              />
+            ) : null}
             {renderCurrentScreen()}
           </div>
-
           <p style={{ marginTop: 14, fontSize: 11, color: "#374151", textAlign: "center", position: "relative", zIndex: 1 }}>
             By continuing you agree to our <a href="#" style={{ color: "var(--orange)", textDecoration: "none" }}>Terms</a> and <a href="#" style={{ color: "var(--orange)", textDecoration: "none" }}>Privacy Policy</a>
           </p>

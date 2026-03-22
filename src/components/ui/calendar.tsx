@@ -9,9 +9,6 @@ import { cn } from "@/lib/utils";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Custom Caption
-// ─────────────────────────────────────────────────────────────────────────────
 function CustomCaption({
   displayMonth,
   selectedDate,

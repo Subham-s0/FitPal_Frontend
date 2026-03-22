@@ -14,6 +14,7 @@ export type GymType =
   | "Pilates"
   | "Functional";
 export type AccessTier = "BASIC" | "PRO" | "ELITE";
+export type GymApprovalStatus = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 
 export type GymDocumentType =
   | "REGISTRATION_CERTIFICATE"
@@ -46,6 +47,18 @@ export interface DocumentUploadResponse {
   folder: string;
 }
 
+export interface DeleteAssetRequest {
+  publicId: string;
+  resourceType?: string;
+  fileUrl?: string;
+}
+
+export interface DeleteAssetResponse {
+  message: string;
+  publicId: string;
+  resourceType: string | null;
+}
+
 export interface GymProfileSetupStatusResponse {
   profileCompleted: boolean;
   currentOnboardingStep: number;
@@ -53,6 +66,7 @@ export interface GymProfileSetupStatusResponse {
   documentCount: number;
   maxDocuments: number;
   registeredEmailVerified: boolean;
+  approvalStatus: GymApprovalStatus;
   submittedForReview: boolean;
   approved: boolean;
   dashboardAccessible: boolean;
@@ -131,6 +145,7 @@ export interface GymProfileResponse {
   maxCapacity: number | null;
   onboardingStep: number;
   profileCompleted: boolean;
+  approvalStatus: GymApprovalStatus;
   submittedForReview: boolean;
   approved: boolean;
   dashboardAccessible: boolean;

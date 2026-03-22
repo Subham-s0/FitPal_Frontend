@@ -1,6 +1,8 @@
 import apiClient from "./client";
 import type {
   CreateGymPhotoRequest,
+  DeleteAssetRequest,
+  DeleteAssetResponse,
   DocumentUploadResponse,
   GymDocumentResponse,
   GymPhotoResponse,
@@ -175,6 +177,16 @@ export async function uploadImageFileApi(
     headers: {
       "Content-Type": "multipart/form-data",
     },
+  });
+  return response.data;
+}
+
+/** DELETE /api/files/assets */
+export async function deleteUploadedAssetApi(
+  payload: DeleteAssetRequest
+): Promise<DeleteAssetResponse> {
+  const response = await apiClient.delete<DeleteAssetResponse>("/files/assets", {
+    data: payload,
   });
   return response.data;
 }
