@@ -10,14 +10,17 @@ interface SidebarProps {
   role?: string | null;
   active: string;
   onChange: (section: string) => void;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
 }
 
-const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
+const DashboardSidebar = ({ role, active, onChange, expanded, onExpandedChange }: SidebarProps) => {
   const navigate = useNavigate();
   const auth = useAuthState();
   const roleValue = role ?? auth.role;
   const navItems = getDashboardNavItems(roleValue);
   const dashboardRole = getDashboardRole(roleValue);
+  const settingsActive = active === "settings";
 
   const handleSettings = () => {
     if (dashboardRole === "ADMIN") {
@@ -34,24 +37,38 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
   };
 
   return (
-    <aside className="group z-40 flex h-full w-16 flex-col overflow-hidden border-r border-white/5 bg-[#0a0a0a]/50 p-2 backdrop-blur-sm transition-all duration-500 hover:w-72 hover:p-4">
+    <aside
+      className={`z-40 flex h-full w-full flex-col overflow-hidden border-r border-[#1f1f1f] bg-[#0f0f0f] transition-all duration-300 ${expanded ? "p-4" : "p-2"}`}
+      onMouseEnter={() => onExpandedChange(true)}
+      onMouseLeave={() => onExpandedChange(false)}
+      onFocusCapture={() => onExpandedChange(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          onExpandedChange(false);
+        }
+      }}
+    >
       <nav className="scrollbar-hide flex flex-1 flex-col gap-4 overflow-y-auto">
         {navItems.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             onClick={() => onChange(id)}
-            className={`group/link flex w-full items-center justify-center p-3 transition-all hover:bg-orange-600 group-hover:justify-start ${
-              active === id ? "rounded-full bg-orange-600" : "rounded-full group-hover:rounded-2xl"
+            className={`group/link flex w-full items-center p-3 transition-all hover:bg-orange-600 ${
+              expanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
+            } ${
+              active === id ? "bg-orange-600" : ""
             }`}
           >
             <Icon
-              className={`h-6 w-6 min-w-[24px] group-hover/link:text-black ${
+              className={`h-6 w-6 min-w-[24px] ${
                 active === id ? "text-black" : "text-gray-500"
               }`}
             />
             <span
-              className={`ml-4 hidden whitespace-nowrap text-[13px] font-bold leading-none opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black ${
+              className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
+                expanded ? "block opacity-100" : "hidden opacity-0"
+              } ${
                 active === id ? "text-black" : "text-gray-400"
               }`}
             >
@@ -65,20 +82,36 @@ const DashboardSidebar = ({ role, active, onChange }: SidebarProps) => {
         <button
           type="button"
           onClick={handleSettings}
-          className="group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-white group-hover:justify-start group-hover:rounded-2xl"
+          className={`group/link flex w-full items-center p-3 transition-all hover:bg-orange-600 ${
+            expanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
+          } ${
+            settingsActive ? "bg-orange-600" : ""
+          }`}
         >
-          <Settings className="h-6 w-6 min-w-[24px] text-gray-500 group-hover/link:text-black" />
-          <span className="ml-4 hidden whitespace-nowrap text-[13px] font-bold leading-none text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-black">
+          <Settings
+            className={`h-6 w-6 min-w-[24px] ${
+              settingsActive ? "text-black" : "text-gray-500"
+            }`}
+          />
+          <span
+            className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
+              expanded ? "block opacity-100" : "hidden opacity-0"
+            } ${
+              settingsActive ? "text-black" : "text-gray-400 group-hover/link:text-black"
+            }`}
+          >
             Settings
           </span>
         </button>
         <button
           type="button"
           onClick={() => navigate("/logout")}
-          className="group/link flex w-full items-center justify-center rounded-full p-3 transition-all hover:bg-red-500 group-hover:justify-start group-hover:rounded-2xl"
+          className={`group/link flex w-full items-center p-3 transition-all hover:bg-red-500 ${
+            expanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
+          }`}
         >
-          <LogOut className="h-6 w-6 min-w-[24px] text-red-500 group-hover/link:text-white" />
-          <span className="ml-4 hidden whitespace-nowrap text-[13px] font-bold leading-none text-gray-400 opacity-0 transition-opacity group-hover:block group-hover:opacity-100 group-hover/link:text-white">
+          <LogOut className="h-6 w-6 min-w-[24px] text-red-500" />
+          <span className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none text-gray-400 transition-opacity ${expanded ? "block opacity-100" : "hidden opacity-0"}`}>
             Logout
           </span>
         </button>

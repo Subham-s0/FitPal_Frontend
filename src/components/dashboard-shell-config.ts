@@ -36,15 +36,12 @@ const MEMBER_NAV_ITEMS: DashboardNavItem[] = [
 
 const GYM_NAV_ITEMS: DashboardNavItem[] = [
   { id: "home",      label: "Dashboard",      icon: LayoutDashboard },
-  { id: "gymProfile",label: "Profile & Docs", icon: Building2 },
   { id: "qr",        label: "QR & Check-In",  icon: QrCode },
   { id: "members",   label: "Members",        icon: Users },
   { id: "revenue",   label: "Revenue",        icon: DollarSign },
   { id: "insights",  label: "Insights",       icon: ChartColumnBig },
   { id: "equipment", label: "Equipment",      icon: Dumbbell },
   { id: "reviews",   label: "Reviews",        icon: MessageSquare },
-  { id: "notices",   label: "Notices",        icon: Bell },
-  { id: "settings",  label: "Settings",       icon: Settings },
 ];
 
 const ADMIN_NAV_ITEMS: DashboardNavItem[] = [
@@ -92,6 +89,13 @@ export const getDashboardRoleLabel = (role: string | null | undefined) =>
     : getDashboardRole(role) === "ADMIN"
       ? "Super Admin"
       : "Gym Member";
+
+export const getDashboardRoleBadgeLabel = (role: string | null | undefined) =>
+  getDashboardRole(role) === "GYM"
+    ? "Gym"
+    : getDashboardRole(role) === "ADMIN"
+      ? "Admin"
+      : "Member";
 
 export const getDashboardSearchPlaceholder = (role: string | null | undefined) =>
   getDashboardRole(role) === "GYM"

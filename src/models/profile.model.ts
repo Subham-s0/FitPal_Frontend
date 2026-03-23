@@ -140,6 +140,8 @@ export interface GymProfileResponse {
   gymName: string | null;
   gymType: GymType | null;
   minimumAccessTier: AccessTier;
+  checkInEnabled: boolean;
+  allowedCheckInRadiusMeters: number;
   establishedAt: number | null;
   registrationNo: string | null;
   maxCapacity: number | null;
@@ -166,6 +168,7 @@ export interface GymProfileResponse {
   closesAt: string | null;
   esewaWalletId: string | null;
   esewaAccountName: string | null;
+  esewaWalletVerified: boolean;
   khaltiWalletId: string | null;
   khaltiAccountName: string | null;
   khaltiWalletVerified: boolean;

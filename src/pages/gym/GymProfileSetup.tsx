@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChangeEvent, FC, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  ChangeEvent,
+  FC,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/api/client";
+import DefaultLayout from "@/components/DefaultLayout";
 import { NumberInput } from "@/components/ui/number-input";
 import { TimeInput } from "@/components/ui/time-picker";
 import {
@@ -24,7 +30,6 @@ import {
   verifyGymRegisteredEmailApi,
 } from "@/api/profile.api";
 import { useAuthState } from "@/hooks/useAuth";
-import { GYM_PROFILE_SETUP_ROUTE } from "@/utils/auth-routing";
 import type {
   DocumentUploadResponse,
   GymApprovalStatus,
@@ -33,8 +38,17 @@ import type {
   GymProfileResponse,
   GymType as ApiGymType,
 } from "@/models/profile.model";
+import { authStore } from "@/store/auth.store";
 
-type GymStepId = "gymInfo" | "location" | "payout" | "docs" | "gymDone";
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type GymStepId =
+  | "gymInfo"
+  | "location"
+  | "payout"
+  | "docs"
+  | "reviewSubmit"
+  | "gymDone";
 
 type DocTypeValue =
   | "REGISTRATION_CERTIFICATE"
@@ -75,12 +89,6 @@ interface PhotoRow {
   cover: boolean;
 }
 
-interface AuthConfig {
-  email: string;
-  displayName: string;
-  avatarUrl: string;
-}
-
 interface NominatimAddress {
   road?: string;
   pedestrian?: string;
@@ -107,6 +115,8 @@ interface FillFields {
 }
 
 interface MapSectionProps {
+  initialLatitude: number | null;
+  initialLongitude: number | null;
   onLocationPicked: (
     lat: number | null,
     lng: number | null,
@@ -125,56 +135,71 @@ interface ActionsProps {
   onNext: () => void;
 }
 
-interface SidebarItem {
-  label: string;
-  icon: ReactNode;
-}
-
-interface GymSetupLocationState {
-  editSubmission?: boolean;
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEPS: StepDef[] = [
   { id: "gymInfo", label: "Basics" },
   { id: "location", label: "Location & Contact" },
   { id: "payout", label: "Payout Wallets" },
   { id: "docs", label: "Documents" },
+  { id: "reviewSubmit", label: "Please Check Again" },
   { id: "gymDone", label: "Under Review" },
 ];
 
+// Derived step indices — no magic numbers scattered through the file
+const DOCUMENTS_STEP_INDEX    = STEPS.findIndex(s => s.id === "docs");
+const REVIEW_SUBMIT_STEP_INDEX = STEPS.findIndex(s => s.id === "reviewSubmit");
+const FINAL_REVIEW_STEP_INDEX  = STEPS.length - 1;
+
 const HEADERS: Record<GymStepId, [string, string, string]> = {
-  gymInfo: ["Basic Gym", "Information", "Gym name, type, optional registration number, optional established year, and capacity."],
-  location: ["Location &", "Operating Info", "Address, coordinates, contact details and opening hours."],
-  payout: ["Payout", "Wallets", "Link eSewa and/or Khalti for revenue payouts."],
-  docs: ["Verification", "Documents", "Upload required documents and at least one gym photo."],
-  gymDone: ["Submitted for", "Review", "Our team will verify your gym within 1-2 business days."],
+  gymInfo:      ["Basic Gym", "Information", "Gym name, type, optional registration number, optional established year, and capacity."],
+  location:     ["Location &", "Operating Info", "Address, coordinates, contact details and opening hours."],
+  payout:       ["Payout", "Wallets", "Link eSewa and/or Khalti for revenue payouts."],
+  docs:         ["Verification", "Documents", "Upload required documents and at least one gym photo."],
+  reviewSubmit: ["Please Check", "Again", "Review all uploaded details before final submission."],
+  gymDone:      ["Submission", "Review", "Your profile is now under review and locked for edits."],
 };
 
-const GYM_TYPES = [
-  "Commercial",
-  "CrossFit",
-  "Yoga",
-  "Martial Arts",
-  "Pilates",
-  "Functional",
-];
+const GYM_TYPES = ["Commercial", "CrossFit", "Yoga", "Martial Arts", "Pilates", "Functional"];
 
 const DOC_TYPES: DocTypeDef[] = [
-  { value: "REGISTRATION_CERTIFICATE", label: "Registration Certificate", required: true },
-  { value: "LICENSE", label: "Operating License / Permit", required: true },
-  { value: "TAX_CERTIFICATE", label: "Tax Certificate", required: false },
-  { value: "OWNER_ID_PROOF", label: "Owner ID Proof", required: false },
-  { value: "ADDRESS_PROOF", label: "Address Proof", required: false },
-  { value: "OTHER", label: "Other", required: false },
+  { value: "REGISTRATION_CERTIFICATE", label: "Registration Certificate",    required: true  },
+  { value: "LICENSE",                  label: "Operating License / Permit",  required: true  },
+  { value: "TAX_CERTIFICATE",          label: "Tax Certificate",             required: false },
+  { value: "OWNER_ID_PROOF",           label: "Owner ID Proof",              required: false },
+  { value: "ADDRESS_PROOF",            label: "Address Proof",               required: false },
+  { value: "OTHER",                    label: "Other",                       required: false },
 ];
+
+const REQUIRED_DOC_TYPES: DocTypeValue[] = ["REGISTRATION_CERTIFICATE", "LICENSE"];
+const REQUIRED_DOC_TYPE_SET = new Set<DocTypeValue>(REQUIRED_DOC_TYPES);
 
 const KTM_BOUNDS = { minLat: 27.58, maxLat: 27.83, minLng: 85.2, maxLng: 85.52 };
 const KTM_CENTER: [number, number] = [27.7172, 85.324];
-const KHALTI_LOGO_URL = "https://khaltibyime.khalti.com/wp-content/uploads/2025/07/Logo-for-Blog.png";
-const ESEWA_LOGO_URL = "https://esewa.com.np/common/images/esewa_logo.png";
 
-const STYLE_PARTS = [
-  `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+const KHALTI_LOGO_URL = "https://khaltibyime.khalti.com/wp-content/uploads/2025/07/Logo-for-Blog.png";
+const ESEWA_LOGO_URL  = "https://esewa.com.np/common/images/esewa_logo.png";
+const MAX_GYM_PHOTOS  = 12;
+const MAX_GYM_DOCS    = 6;
+
+// Moved out of component — pure function, no closure needed
+const isValidNepalWalletId = (value: string) => /^(98|97|96)\d{8}$/.test(value.trim());
+
+const isInKtm = (lat: number, lng: number) =>
+  lat >= KTM_BOUNDS.minLat && lat <= KTM_BOUNDS.maxLat &&
+  lng >= KTM_BOUNDS.minLng && lng <= KTM_BOUNDS.maxLng;
+
+const isRequiredDocType = (type: DocTypeValue) => REQUIRED_DOC_TYPE_SET.has(type);
+const isSingletonDocType = (type: DocTypeValue) => type !== "OTHER";
+
+const hasPhotoId = (photoId: number | null | undefined): photoId is number =>
+  typeof photoId === "number" && photoId > 0;
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+// Single string — STYLE_PARTS array was an arbitrary split with no benefit
+
+const STYLE = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 :root{
@@ -183,7 +208,7 @@ html{scroll-behavior:smooth}
   --text:#fff;--text-m:#a1a1aa;--text-d:#52525b;
   --orange:#f97316;--orange-glow:rgba(249,115,22,0.3);
   --fire:linear-gradient(135deg,#fcd34d 0%,#fb923c 45%,#ef4444 100%);
-  --rl:1.5rem;--font:'Outfit',-apple-system,sans-serif
+  --font:'Outfit',-apple-system,sans-serif
 }
 body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 .fire-t{background:var(--fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
@@ -268,8 +293,8 @@ body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;ov
 .pill{padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid rgba(255,255,255,.1);background:var(--muted);color:var(--text-m);cursor:pointer;transition:all .14s;user-select:none}
 .pill:hover{border-color:rgba(234,88,12,.5);color:#fff}
 .pill.sel{background:var(--orange);border-color:transparent;color:#fff;box-shadow:0 2px 10px var(--orange-glow)}
-.actions{display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid rgba(255,255,255,.05);margin-top:8px}`,
-  `.btn-back{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-d);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:10px 20px;border-radius:12px;cursor:pointer;transition:all .2s}
+.actions{display:flex;align-items:center;justify-content:space-between;padding-top:18px;border-top:1px solid rgba(255,255,255,.05);margin-top:8px}
+.btn-back{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-d);background:rgba(255,255,255,.03);border:1px solid var(--border);padding:10px 20px;border-radius:12px;cursor:pointer;transition:all .2s}
 .btn-back:hover{color:#fff;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
 .btn-primary{padding:14px 32px;border-radius:14px;background:var(--fire);color:#fff;font-family:var(--font);font-size:13px;font-weight:800;border:none;cursor:pointer;box-shadow:0 10px 30px -10px var(--orange-glow);transition:all .3s;text-transform:uppercase;letter-spacing:.1em}
 .btn-primary:hover{transform:translateY(-3px);box-shadow:0 15px 40px -10px var(--orange-glow)}
@@ -318,10 +343,9 @@ body{font-family:var(--font);background:var(--bg);color:#fff;min-height:100vh;ov
 .spinner{width:14px;height:14px;border:2px solid rgba(249,115,22,.3);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;display:inline-block}
 .loc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-top:4px}
 @media(max-width:640px){.loc-grid{grid-template-columns:1fr}}
-`,
-];
+`;
 
-const STYLE = STYLE_PARTS.join("\n");
+// ─── Small components ─────────────────────────────────────────────────────────
 
 const ChkWhite: FC = () => (
   <svg width="12" height="12" fill="none" viewBox="0 0 13 13">
@@ -329,141 +353,85 @@ const ChkWhite: FC = () => (
   </svg>
 );
 
-const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
-  const mapElRef = useRef<HTMLDivElement>(null);
+const StepErrorBanner: FC<{ message: string }> = ({ message }) => (
+  <div style={{ marginBottom: 18, padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(239,68,68,.28)", background: "rgba(239,68,68,.08)", color: "#fca5a5", fontSize: 12, fontWeight: 700, lineHeight: 1.5 }}>
+    {message}
+  </div>
+);
+
+const StatusBanner: FC<{ title: string; message: string }> = ({ title, message }) => (
+  <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(249,115,22,.28)", background: "rgba(249,115,22,.08)", color: "#fed7aa", lineHeight: 1.6 }}>
+    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#fb923c", marginBottom: 4 }}>{title}</div>
+    <div style={{ fontSize: 12, fontWeight: 600 }}>{message}</div>
+  </div>
+);
+
+const Actions: FC<ActionsProps> = ({ label, step, totalSteps, hideBack = false, disabled = false, onBack, onNext }) => (
+  <div className="actions">
+    {hideBack ? <span /> : (
+      <button className="btn-back" type="button" onClick={onBack} disabled={disabled} style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1 }}>
+        Back
+      </button>
+    )}
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <span className="step-count">Step {step + 1} of {totalSteps}</span>
+      <button className="btn-primary" type="button" onClick={onNext} disabled={disabled} style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1, transform: "none" }}>
+        {label}
+      </button>
+    </div>
+  </div>
+);
+
+// ─── MapSection ───────────────────────────────────────────────────────────────
+
+const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, onLocationPicked }) => {
+  const mapElRef  = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const leafletRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markerRef = useRef<any>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markerRef  = useRef<any>(null);
+  const wrapRef    = useRef<HTMLDivElement>(null);
+  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [query, setQuery] = useState("");
+  const [query,   setQuery]   = useState("");
   const [results, setResults] = useState<NominatimResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showRes, setShowRes] = useState(false);
   const [located, setLocated] = useState("");
-  const [hiIdx, setHiIdx] = useState(-1);
-  const [oob, setOob] = useState(false);
+  const [hiIdx,   setHiIdx]   = useState(-1);
+  const [oob,     setOob]     = useState(false);
 
-  const isInKtm = (lat: number, lng: number) =>
-    lat >= KTM_BOUNDS.minLat &&
-    lat <= KTM_BOUNDS.maxLat &&
-    lng >= KTM_BOUNDS.minLng &&
-    lng <= KTM_BOUNDS.maxLng;
+  const initialMapPosition: [number, number] =
+    initialLatitude !== null && initialLongitude !== null && isInKtm(initialLatitude, initialLongitude)
+      ? [initialLatitude, initialLongitude]
+      : KTM_CENTER;
 
-  useEffect(() => {
-    if (!document.getElementById("leaflet-css")) {
-      const lk = document.createElement("link");
-      lk.id = "leaflet-css";
-      lk.rel = "stylesheet";
-      lk.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(lk);
-    }
+  const lastValidPositionRef = useRef<[number, number]>(initialMapPosition);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const init = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const L = (window as any).L;
-      if (!mapElRef.current || leafletRef.current || !L) return;
-
-      const bounds = L.latLngBounds(
-        [KTM_BOUNDS.minLat, KTM_BOUNDS.minLng],
-        [KTM_BOUNDS.maxLat, KTM_BOUNDS.maxLng],
-      );
-
-      const map = L.map(mapElRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-        maxBounds: bounds,
-        maxBoundsViscosity: 0.9,
-        minZoom: 12,
-      }).setView(KTM_CENTER, 14);
-
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        maxZoom: 19,
-      }).addTo(map);
-
-      const icon = L.divIcon({
-        className: "",
-        html: '<div style="width:26px;height:26px;background:var(--orange);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 12px rgba(249,115,22,.6)"></div>',
-        iconSize: [26, 26],
-        iconAnchor: [13, 26],
-      });
-
-      const marker = L.marker(KTM_CENTER, { draggable: true, icon }).addTo(map);
-      marker.on("dragend", () => {
-        const p = marker.getLatLng();
-        if (!isInKtm(p.lat, p.lng)) {
-          marker.setLatLng(KTM_CENTER);
-          map.flyTo(KTM_CENTER, 14);
-          setOob(true);
-          setTimeout(() => setOob(false), 4000);
-          return;
-        }
-
-        void reverseGeocode(p.lat, p.lng);
-      });
-
-      L.control.zoom({ position: "bottomright" }).addTo(map);
-      leafletRef.current = map;
-      markerRef.current = marker;
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window as any).L) {
-      setTimeout(init, 100);
-      return;
-    }
-
-    const sc = document.createElement("script");
-    sc.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    sc.onload = () => setTimeout(init, 100);
-    document.head.appendChild(sc);
-
-    return () => {
-      if (leafletRef.current) {
-        leafletRef.current.remove();
-        leafletRef.current = null;
-        markerRef.current = null;
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const handleMouseDown = (event: Event) => {
-      if (wrapRef.current && !wrapRef.current.contains(event.target as Node)) {
-        setShowRes(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleMouseDown, true);
-    return () => document.removeEventListener("mousedown", handleMouseDown, true);
-  }, []);
+  const rememberValidPosition = (lat: number, lng: number) => {
+    lastValidPositionRef.current = [lat, lng];
+  };
 
   const fillFromNominatim = (data: NominatimResult) => {
     const address = data.address ?? {};
     const street = [address.road ?? address.pedestrian ?? address.footway ?? "", address.house_number ?? ""]
-      .filter(Boolean)
-      .join(" ");
-
+      .filter(Boolean).join(" ");
     onLocationPicked(null, null, data, {
       street,
-      city: address.city ?? address.town ?? address.village ?? address.county ?? "",
+      city:   address.city ?? address.town ?? address.village ?? address.county ?? "",
       postal: address.postcode ?? "",
     });
   };
 
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
-      const response = await fetch(
+      const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
         { headers: { "Accept-Language": "en", "User-Agent": "FitPal/1.0" } },
       );
-      const data: NominatimResult = await response.json();
+      const data: NominatimResult = await res.json();
       if (!data?.display_name) return;
-
+      rememberValidPosition(lat, lng);
       fillFromNominatim(data);
       const short = data.display_name.split(",").slice(0, 2).join(",").trim();
       setLocated(short);
@@ -474,93 +442,134 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
     }
   };
 
+  useEffect(() => {
+    if (!document.getElementById("leaflet-css")) {
+      const lk = document.createElement("link");
+      lk.id = "leaflet-css"; lk.rel = "stylesheet";
+      lk.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(lk);
+    }
+
+    const init = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const L = (window as any).L;
+      if (!mapElRef.current || leafletRef.current || !L) return;
+
+      const bounds = L.latLngBounds(
+        [KTM_BOUNDS.minLat, KTM_BOUNDS.minLng],
+        [KTM_BOUNDS.maxLat, KTM_BOUNDS.maxLng],
+      );
+      const initial = lastValidPositionRef.current;
+      const map = L.map(mapElRef.current, {
+        zoomControl: false, attributionControl: false,
+        maxBounds: bounds, maxBoundsViscosity: 0.9, minZoom: 12,
+      }).setView(initial, initial[0] === KTM_CENTER[0] && initial[1] === KTM_CENTER[1] ? 14 : 16);
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { maxZoom: 19 }).addTo(map);
+
+      const icon = L.divIcon({
+        className: "",
+        html: '<div style="width:26px;height:26px;background:var(--orange);border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:3px solid #fff;box-shadow:0 2px 12px rgba(249,115,22,.6)"></div>',
+        iconSize: [26, 26], iconAnchor: [13, 26],
+      });
+
+      const marker = L.marker(initial, { draggable: true, icon }).addTo(map);
+      marker.on("dragend", () => {
+        const p = marker.getLatLng();
+        if (!isInKtm(p.lat, p.lng)) {
+          const fallback = lastValidPositionRef.current;
+          marker.setLatLng(fallback);
+          map.flyTo(fallback, fallback[0] === KTM_CENTER[0] && fallback[1] === KTM_CENTER[1] ? 14 : 16);
+          setOob(true);
+          setTimeout(() => setOob(false), 4000);
+          return;
+        }
+        rememberValidPosition(p.lat, p.lng);
+        // Pass lat/lng directly — no need for a createCoordinateResult wrapper
+        onLocationPicked(p.lat, p.lng, { lat: String(p.lat), lon: String(p.lng), display_name: "" });
+        void reverseGeocode(p.lat, p.lng);
+      });
+
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+      leafletRef.current = map;
+      markerRef.current  = marker;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((window as any).L) { setTimeout(init, 100); return; }
+
+    const sc = document.createElement("script");
+    sc.src    = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    sc.onload = () => setTimeout(init, 100);
+    document.head.appendChild(sc);
+
+    return () => {
+      if (leafletRef.current) { leafletRef.current.remove(); leafletRef.current = null; markerRef.current = null; }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (initialLatitude === null || initialLongitude === null || !isInKtm(initialLatitude, initialLongitude) || !leafletRef.current || !markerRef.current) return;
+    rememberValidPosition(initialLatitude, initialLongitude);
+    markerRef.current.setLatLng([initialLatitude, initialLongitude]);
+    leafletRef.current.setView([initialLatitude, initialLongitude], 16, { animate: false });
+  }, [initialLatitude, initialLongitude]);
+
+  useEffect(() => {
+    const handleMouseDown = (e: Event) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setShowRes(false);
+    };
+    document.addEventListener("mousedown", handleMouseDown, true);
+    return () => document.removeEventListener("mousedown", handleMouseDown, true);
+  }, []);
+
   const doSearch = async () => {
     if (!query.trim() || query.trim().length < 2) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-
-    setLoading(true);
-    setShowRes(true);
-    setResults([]);
-    setHiIdx(-1);
-
+    setLoading(true); setShowRes(true); setResults([]); setHiIdx(-1);
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1&accept-language=en&countrycodes=np&viewbox=${KTM_BOUNDS.minLng},${KTM_BOUNDS.maxLat},${KTM_BOUNDS.maxLng},${KTM_BOUNDS.minLat}&bounded=1`;
-      const response = await fetch(url, {
-        headers: { "User-Agent": "FitPal/1.0", "Accept-Language": "en" },
-      });
-      let data: NominatimResult[] = await response.json();
-      data = (data ?? []).filter((item) => isInKtm(parseFloat(item.lat), parseFloat(item.lon)));
-      setResults(data);
-    } catch {
-      // Ignore transient search failures
-    }
-
+      const res  = await fetch(url, { headers: { "User-Agent": "FitPal/1.0", "Accept-Language": "en" } });
+      const data: NominatimResult[] = await res.json();
+      setResults((data ?? []).filter(item => isInKtm(parseFloat(item.lat), parseFloat(item.lon))));
+    } catch { /* Ignore transient search failures */ }
     setLoading(false);
   };
 
   const selectResult = (item: NominatimResult) => {
     const lat = parseFloat(item.lat);
     const lng = parseFloat(item.lon);
-
-    if (!isInKtm(lat, lng)) {
-      setOob(true);
-      setTimeout(() => setOob(false), 4000);
-      return;
-    }
-
+    if (!isInKtm(lat, lng)) { setOob(true); setTimeout(() => setOob(false), 4000); return; }
     if (leafletRef.current && markerRef.current) {
       markerRef.current.setLatLng([lat, lng]);
       leafletRef.current.flyTo([lat, lng], 16, { animate: true, duration: 0.8 });
     }
-
+    rememberValidPosition(lat, lng);
     fillFromNominatim(item);
     const short = item.display_name.split(",").slice(0, 2).join(",").trim();
-    setQuery(short);
-    setLocated(short);
-    setShowRes(false);
-    setResults([]);
+    setQuery(short); setLocated(short); setShowRes(false); setResults([]);
     onLocationPicked(lat, lng, item);
   };
 
-  const handleKey = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (hiIdx >= 0 && results[hiIdx]) {
-        selectResult(results[hiIdx]);
-        return;
-      }
-
-      void doSearch();
-      return;
+  const handleKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (hiIdx >= 0 && results[hiIdx]) { selectResult(results[hiIdx]); return; }
+      void doSearch(); return;
     }
-
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setHiIdx((idx) => Math.min(idx + 1, results.length - 1));
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setHiIdx((idx) => Math.max(idx - 1, 0));
-      return;
-    }
-
-    if (event.key === "Escape") {
-      setShowRes(false);
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setHiIdx(i => Math.min(i + 1, results.length - 1)); return; }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setHiIdx(i => Math.max(i - 1, 0)); return; }
+    if (e.key === "Escape") setShowRes(false);
   };
 
   const handleInput = (value: string) => {
     setQuery(value);
     if (value.trim().length >= 3) {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        void doSearch();
-      }, 600);
+      timerRef.current = setTimeout(() => void doSearch(), 600);
       return;
     }
-
     setShowRes(false);
   };
 
@@ -572,7 +581,8 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
           <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
         <span style={{ color: "#e5e7eb", fontSize: 12 }}>
-          <strong style={{ color: "#f97316" }}>Kathmandu Valley only.</strong> FitPal operates within Kathmandu, Lalitpur and Bhaktapur.
+          <strong style={{ color: "#f97316" }}>Kathmandu Valley only.</strong>{" "}
+          FitPal operates within Kathmandu, Lalitpur and Bhaktapur.
         </span>
       </div>
     </div>
@@ -588,13 +598,10 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
               <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
               <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <input
-              className="map-search-inp"
-              type="text"
-              autoComplete="off"
+            <input className="map-search-inp" type="text" autoComplete="off"
               placeholder="Search address, landmark or area in Kathmandu..."
               value={query}
-              onChange={(event) => handleInput(event.target.value)}
+              onChange={e => handleInput(e.target.value)}
               onKeyDown={handleKey}
             />
             {query && (
@@ -606,9 +613,7 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
             )}
           </div>
           <button className="map-search-btn" type="button" disabled={loading} onClick={() => void doSearch()}>
-            {loading ? (
-              <span className="spinner" />
-            ) : (
+            {loading ? <span className="spinner" /> : (
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                 <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -628,20 +633,17 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
                   <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <span style={{ color: "#e5e7eb", fontSize: 12 }}>
-                  <strong style={{ color: "#f97316" }}>Outside Kathmandu Valley.</strong> FitPal operates within Kathmandu, Lalitpur and Bhaktapur only.
+                  <strong style={{ color: "#f97316" }}>Outside Kathmandu Valley.</strong>{" "}
+                  FitPal operates within Kathmandu, Lalitpur and Bhaktapur only.
                 </span>
               </div>
             )}
             {!loading && results.map((item, idx) => {
               const parts = item.display_name.split(",");
               return (
-                <div
-                  key={`${item.display_name}-${idx}`}
+                <div key={`${item.display_name}-${idx}`}
                   className={`map-result-item${hiIdx === idx ? " highlighted" : ""}`}
-                  onClick={() => selectResult(item)}
-                  onKeyDown={() => undefined}
-                  role="button"
-                  tabIndex={0}
+                  onClick={() => selectResult(item)} onKeyDown={() => undefined} role="button" tabIndex={0}
                 >
                   <svg className="map-result-pin" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
@@ -655,21 +657,10 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
             })}
           </div>
         )}
-
         {oob && <OOBMsg />}
       </div>
 
-      <div
-        ref={mapElRef}
-        style={{
-          height: 300,
-          width: "100%",
-          borderRadius: 16,
-          border: "1px solid rgba(255,255,255,.1)",
-          background: "#0a0a0a",
-          overflow: "hidden",
-        }}
-      />
+      <div ref={mapElRef} style={{ height: 300, width: "100%", borderRadius: 16, border: "1px solid rgba(255,255,255,.1)", background: "#0a0a0a", overflow: "hidden" }} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
         {located && (
           <span className="map-located-badge">
@@ -679,238 +670,171 @@ const MapSection: FC<MapSectionProps> = ({ onLocationPicked }) => {
             {located}
           </span>
         )}
-        <div className="field-hint" style={{ marginTop: 0 }}>Search or drag the marker - coordinates saved automatically</div>
+        <div className="field-hint" style={{ marginTop: 0 }}>Search or drag the marker — coordinates saved automatically</div>
       </div>
     </div>
   );
 };
 
-const Actions: FC<ActionsProps> = ({ label, step, totalSteps, hideBack = false, disabled = false, onBack, onNext }) => (
-  <div className="actions">
-    {hideBack ? <span /> : <button className="btn-back" type="button" onClick={onBack} disabled={disabled} style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.55 : 1 }}>Back</button>}
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <span className="step-count">Step {step + 1} of {totalSteps}</span>
-      <button className="btn-primary" type="button" onClick={onNext} disabled={disabled} style={{ cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.6 : 1, transform: "none" }}>{label}</button>
-    </div>
-  </div>
-);
-
-const StepErrorBanner: FC<{ message: string }> = ({ message }) => (
-  <div style={{ marginBottom: 18, padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(239,68,68,.28)", background: "rgba(239,68,68,.08)", color: "#fca5a5", fontSize: 12, fontWeight: 700, lineHeight: 1.5 }}>
-    {message}
-  </div>
-);
-
-const StatusBanner: FC<{ title: string; message: string }> = ({ title, message }) => (
-  <div
-    style={{
-      marginBottom: 18,
-      padding: "14px 16px",
-      borderRadius: 14,
-      border: "1px solid rgba(249,115,22,.28)",
-      background: "rgba(249,115,22,.08)",
-      color: "#fed7aa",
-      lineHeight: 1.6,
-    }}
-  >
-    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#fb923c", marginBottom: 4 }}>
-      {title}
-    </div>
-    <div style={{ fontSize: 12, fontWeight: 600 }}>{message}</div>
-  </div>
-);
+// ─── Main component ───────────────────────────────────────────────────────────
 
 const FitPalGymSetup: FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const auth = useAuthState();
-  const persistedLogoAssetRef = useRef<{ publicId: string | null; resourceType: string | null }>({
-    publicId: null,
-    resourceType: null,
-  });
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const documentInputRef = useRef<HTMLInputElement>(null);
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const auth      = useAuthState();
 
-  const [step, setStep] = useState(0);
-  const [stepError, setStepError] = useState<string | null>(null);
+  const persistedLogoAssetRef    = useRef<{ publicId: string | null; resourceType: string | null }>({ publicId: null, resourceType: null });
+  const logoInputRef             = useRef<HTMLInputElement>(null);
+  const documentInputRef         = useRef<HTMLInputElement>(null);
+  const photoInputRef            = useRef<HTMLInputElement>(null);
+  // Tracks whether the user navigated here with editSubmission intent.
+  // Stored in a ref so applyProfileState can read it synchronously without
+  // triggering a re-render, and so the value survives the navigate() call
+  // that clears location.state.
+  const editSubmissionRequestedRef = useRef(
+    Boolean((location.state as { editSubmission?: boolean } | null)?.editSubmission),
+  );
+
+  const [step,             setStep]             = useState(0);
+  const [stepError,        setStepError]        = useState<string | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
-  const [isSavingStep, setIsSavingStep] = useState(false);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [isRemovingLogo, setIsRemovingLogo] = useState(false);
+  const [isSavingStep,     setIsSavingStep]     = useState(false);
+  const [isUploadingLogo,  setIsUploadingLogo]  = useState(false);
+  const [isRemovingLogo,   setIsRemovingLogo]   = useState(false);
   const [uploadingDocIndex, setUploadingDocIndex] = useState<number | null>(null);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
-  const [activePhotoId, setActivePhotoId] = useState<number | null>(null);
+  const [activePhotoId,    setActivePhotoId]    = useState<number | null>(null);
   const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);
+
+  // Single approval status — derived booleans below, no redundant state
   const [gymApprovalStatus, setGymApprovalStatus] = useState<GymApprovalStatus>("DRAFT");
-  const [gymSubmittedForReview, setGymSubmittedForReview] = useState(false);
-  const [gymApproved, setGymApproved] = useState(false);
-  const [gymDashboardAccessible, setGymDashboardAccessible] = useState(false);
-  const [gymName, setGymName] = useState("");
-  const [gymType, setGymType] = useState<ApiGymType | null>(null);
-  const [gymRegNo, setGymRegNo] = useState("");
-  const [gymEstablished, setGymEstablished] = useState("");
-  const [gymCapacity, setGymCapacity] = useState("");
+
   const [gymEmailVerified, setGymEmailVerified] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [gymContactEmail, setGymContactEmail] = useState("");
-  const [gymPhone, setGymPhone] = useState("");
-  const [gymWebsite, setGymWebsite] = useState("");
-  const [gymDesc, setGymDesc] = useState("");
-  const [gymLogoUrl, setGymLogoUrl] = useState("");
-  const [gymLogoPublicId, setGymLogoPublicId] = useState("");
+  const [verifying,        setVerifying]        = useState(false);
+  const [gymName,          setGymName]          = useState("");
+  const [gymType,          setGymType]          = useState<ApiGymType | null>(null);
+  const [gymRegNo,         setGymRegNo]         = useState("");
+  const [gymEstablished,   setGymEstablished]   = useState("");
+  const [gymCapacity,      setGymCapacity]      = useState("");
+  const [gymContactEmail,  setGymContactEmail]  = useState("");
+  const [gymPhone,         setGymPhone]         = useState("");
+  const [gymWebsite,       setGymWebsite]       = useState("");
+  const [gymDesc,          setGymDesc]          = useState("");
+  const [gymLogoUrl,       setGymLogoUrl]       = useState("");
+  const [gymLogoPublicId,  setGymLogoPublicId]  = useState("");
   const [gymLogoResourceType, setGymLogoResourceType] = useState("");
-  const [gymAddressLine, setGymAddressLine] = useState("");
-  const [gymCity, setGymCity] = useState("");
-  const [gymCountry, setGymCountry] = useState("Nepal");
-  const [gymPostal, setGymPostal] = useState("");
-  const [gymLatitude, setGymLatitude] = useState<number | null>(null);
-  const [gymLongitude, setGymLongitude] = useState<number | null>(null);
-  const [gymOpens, setGymOpens] = useState("06:00");
-  const [gymCloses, setGymCloses] = useState("22:00");
-  const [esewaEnabled, setEsewaEnabled] = useState(false);
-  const [esewaWalletId, setEsewaWalletId] = useState("");
+  const [gymAddressLine,   setGymAddressLine]   = useState("");
+  const [gymCity,          setGymCity]          = useState("");
+  const [gymCountry,       setGymCountry]       = useState("Nepal");
+  const [gymPostal,        setGymPostal]        = useState("");
+  const [gymLatitude,      setGymLatitude]      = useState<number | null>(null);
+  const [gymLongitude,     setGymLongitude]     = useState<number | null>(null);
+  const [gymOpens,         setGymOpens]         = useState("06:00");
+  const [gymCloses,        setGymCloses]        = useState("22:00");
+  const [esewaEnabled,     setEsewaEnabled]     = useState(false);
+  const [esewaWalletId,    setEsewaWalletId]    = useState("");
   const [esewaAccountName, setEsewaAccountName] = useState("");
-  const [khaltiEnabled, setKhaltiEnabled] = useState(false);
-  const [khaltiWalletId, setKhaltiWalletId] = useState("");
+  const [khaltiEnabled,    setKhaltiEnabled]    = useState(false);
+  const [khaltiWalletId,   setKhaltiWalletId]   = useState("");
   const [khaltiAccountName, setKhaltiAccountName] = useState("");
-  const [docs, setDocs] = useState<DocRow[]>([
+  const [docs,   setDocs]   = useState<DocRow[]>([
     { type: "REGISTRATION_CERTIFICATE", fileName: "", uploaded: false },
-    { type: "LICENSE", fileName: "", uploaded: false },
+    { type: "LICENSE",                  fileName: "", uploaded: false },
   ]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
 
-  const authEmail = auth.email ?? "gym.owner@fitpal.com";
-  const authDisplayName = authEmail
-    .split("@")[0]
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ") || "Gym Owner";
-  const authConfig: AuthConfig = {
-    email: authEmail,
-    displayName: authDisplayName,
-    avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(authDisplayName)}&background=111&color=fb923c`,
-  };
-  const editSubmissionRequested = Boolean((location.state as GymSetupLocationState | null)?.editSubmission);
-  const editSubmissionRequestedRef = useRef(false);
-  const isGymPendingReview = gymApprovalStatus === "PENDING_REVIEW" || gymSubmittedForReview;
-  const isGymApproved = gymApprovalStatus === "APPROVED" || gymApproved || gymDashboardAccessible;
+  // ── Derived auth values ────────────────────────────────────────────────────
+  const authEmail       = auth.email ?? "gym.owner@fitpal.com";
+  const authDisplayName =
+    authEmail.split("@")[0].split(/[._-]+/).filter(Boolean)
+      .map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ") || "Gym Owner";
+  const authAvatarUrl   = `https://ui-avatars.com/api/?name=${encodeURIComponent(authDisplayName)}&background=111&color=fb923c`;
 
-  useEffect(() => {
-    editSubmissionRequestedRef.current = editSubmissionRequested;
-    if (editSubmissionRequested) {
-      setStep(3);
-    }
-  }, [editSubmissionRequested]);
+  // ── Derived approval flags — single source of truth ──────────────────────
+  const isGymPendingReview = gymApprovalStatus === "PENDING_REVIEW";
+  const isGymRejected      = gymApprovalStatus === "REJECTED";
+  const isGymApproved      = gymApprovalStatus === "APPROVED";
+  const hasRequiredDocs = useMemo(
+    () => REQUIRED_DOC_TYPES.every(type => docs.some(doc => doc.type === type && doc.uploaded)),
+    [docs],
+  );
+  const hasRequiredPhotos = photos.length >= 1;
 
-  const resumeStepIndex = (profile: GymProfileResponse) => {
-    if (
-      profile.approved
-      || profile.dashboardAccessible
-      || profile.submittedForReview
-      || profile.approvalStatus === "APPROVED"
-      || profile.approvalStatus === "PENDING_REVIEW"
-    ) {
-      return 4;
-    }
-
-    return Math.max(0, Math.min(profile.onboardingStep ?? 0, 3));
-  };
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const resolveUploadedFileName = (fileUrl?: string | null, fallback = "uploaded-file") => {
     if (!fileUrl) return fallback;
-    const rawFileName = fileUrl.split("/").pop()?.split("?")[0];
-    if (!rawFileName) return fallback;
-    try {
-      return decodeURIComponent(rawFileName);
-    } catch {
-      return rawFileName;
-    }
+    const raw = fileUrl.split("/").pop()?.split("?")[0];
+    if (!raw) return fallback;
+    try { return decodeURIComponent(raw); } catch { return raw; }
   };
 
-  const toDocRow = (document: GymDocumentResponse): DocRow => ({
-    documentId: document.documentId,
-    type: document.documentType as DocTypeValue,
-    fileName: resolveUploadedFileName(document.fileUrl, document.documentType),
-    fileUrl: document.fileUrl,
-    publicId: document.publicId,
-    resourceType: document.resourceType,
-    uploaded: true,
+  const toDocRow = (doc: GymDocumentResponse): DocRow => ({
+    documentId:   doc.documentId,
+    type:         doc.documentType as DocTypeValue,
+    fileName:     resolveUploadedFileName(doc.fileUrl, doc.documentType),
+    fileUrl:      doc.fileUrl,
+    publicId:     doc.publicId,
+    resourceType: doc.resourceType,
+    uploaded:     true,
   });
 
   const buildDocRows = (documents: GymDocumentResponse[]) => {
-    const requiredRows: DocRow[] = (["REGISTRATION_CERTIFICATE", "LICENSE"] as DocTypeValue[]).map((type) => {
-      const existing = documents.find((document) => document.documentType === type);
-      return existing
-        ? toDocRow(existing)
-        : { type, fileName: "", uploaded: false };
+    const requiredRows: DocRow[] = REQUIRED_DOC_TYPES.map(type => {
+      const existing = documents.find(d => d.documentType === type);
+      return existing ? toDocRow(existing) : { type, fileName: "", uploaded: false };
     });
-
     const optionalRows = documents
-      .filter((document) => document.documentType !== "REGISTRATION_CERTIFICATE" && document.documentType !== "LICENSE")
+      .filter(d => !isRequiredDocType(d.documentType as DocTypeValue))
       .map(toDocRow);
-
     return [...requiredRows, ...optionalRows];
   };
 
-  const clearLogoState = () => {
-    setGymLogoUrl("");
-    setGymLogoPublicId("");
-    setGymLogoResourceType("");
-  };
+  const clearLogoState = () => { setGymLogoUrl(""); setGymLogoPublicId(""); setGymLogoResourceType(""); };
 
-  const deleteUploadedAsset = async (publicId?: string | null, resourceType?: string | null) => {
-    if (!publicId) {
-      return;
-    }
-
-    await deleteUploadedAssetApi({
-      publicId,
-      resourceType: resourceType || undefined,
-    });
-  };
-
-  const deleteUploadedAssetSilently = async (publicId?: string | null, resourceType?: string | null) => {
-    try {
-      await deleteUploadedAsset(publicId, resourceType);
-    } catch {
-      // Best-effort cleanup for temporary uploads.
-    }
+  // Collapsed from two functions (deleteUploadedAsset + deleteUploadedAssetSilently)
+  // into one with an optional silent flag
+  const deleteAsset = async (publicId?: string | null, resourceType?: string | null, silent = false) => {
+    if (!publicId) return;
+    try { await deleteUploadedAssetApi({ publicId, resourceType: resourceType || undefined }); }
+    catch (error) { if (!silent) throw error; }
   };
 
   const sortPhotos = (items: PhotoRow[]) =>
     [...items].sort((a, b) => {
-      const orderA = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
-      const orderB = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
-      if (orderA !== orderB) return orderA - orderB;
-      const photoIdA = typeof a.photoId === "number" ? a.photoId : Number.MAX_SAFE_INTEGER;
-      const photoIdB = typeof b.photoId === "number" ? b.photoId : Number.MAX_SAFE_INTEGER;
-      return photoIdA - photoIdB;
+      const oa = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      const ob = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+      if (oa !== ob) return oa - ob;
+      return (a.photoId ?? Number.MAX_SAFE_INTEGER) - (b.photoId ?? Number.MAX_SAFE_INTEGER);
     });
 
-  const hasPhotoId = (photoId: number | null | undefined): photoId is number =>
-    typeof photoId === "number" && Number.isFinite(photoId) && photoId > 0;
+  const syncAuthOnboardingStatus = (
+    profile: Pick<GymProfileResponse, "profileCompleted">,
+  ) => {
+    authStore.updateOnboardingStatus({
+      profileCompleted: profile.profileCompleted,
+      hasSubscription: false,
+      hasActiveSubscription: false,
+    });
+  };
 
-  const toPhotoRow = (photo: GymPhotoResponse): PhotoRow => ({
-    photoId: photo.photoId ?? null,
-    publicId: photo.publicId,
-    resourceType: photo.resourceType,
-    photoUrl: photo.photoUrl,
-    caption: photo.caption ?? "",
-    displayOrder: photo.displayOrder,
-    cover: photo.cover,
+  const toPhotoRow = (p: GymPhotoResponse): PhotoRow => ({
+    photoId:      p.photoId ?? null,
+    publicId:     p.publicId,
+    resourceType: p.resourceType,
+    photoUrl:     p.photoUrl,
+    caption:      p.caption ?? "",
+    displayOrder: p.displayOrder,
+    cover:        p.cover,
   });
 
-  const applyProfileState = (
+  const hydrateProfile = (
     profile: GymProfileResponse,
     documents?: GymDocumentResponse[],
-    gymPhotos?: GymPhotoResponse[]
+    gymPhotos?: GymPhotoResponse[],
   ) => {
+    syncAuthOnboardingStatus(profile);
     setGymApprovalStatus(profile.approvalStatus);
-    setGymSubmittedForReview(profile.submittedForReview);
-    setGymApproved(profile.approved);
-    setGymDashboardAccessible(profile.dashboardAccessible);
     setGymEmailVerified(profile.registeredEmailVerified);
     setGymName(profile.gymName ?? "");
     setGymType(profile.gymType ?? null);
@@ -924,10 +848,7 @@ const FitPalGymSetup: FC = () => {
     setGymLogoUrl(profile.logoUrl ?? "");
     setGymLogoPublicId(profile.logoPublicId ?? "");
     setGymLogoResourceType(profile.logoResourceType ?? "");
-    persistedLogoAssetRef.current = {
-      publicId: profile.logoPublicId ?? null,
-      resourceType: profile.logoResourceType ?? null,
-    };
+    persistedLogoAssetRef.current = { publicId: profile.logoPublicId ?? null, resourceType: profile.logoResourceType ?? null };
     setGymAddressLine(profile.addressLine ?? "");
     setGymCity(profile.city ?? "");
     setGymCountry(profile.country ?? "Nepal");
@@ -936,328 +857,248 @@ const FitPalGymSetup: FC = () => {
     setGymLongitude(profile.longitude ?? null);
     setGymOpens(profile.opensAt ?? "06:00");
     setGymCloses(profile.closesAt ?? "22:00");
-    const savedEsewaWallet = profile.esewaWalletId ?? "";
-    const savedKhaltiWallet = profile.khaltiWalletId ?? "";
-    setEsewaEnabled(Boolean(savedEsewaWallet));
-    setEsewaWalletId(savedEsewaWallet);
+    const savedEsewa  = profile.esewaWalletId  ?? "";
+    const savedKhalti = profile.khaltiWalletId ?? "";
+    setEsewaEnabled(Boolean(savedEsewa));
+    setEsewaWalletId(savedEsewa);
     setEsewaAccountName(profile.esewaAccountName ?? "");
-    setKhaltiEnabled(Boolean(savedKhaltiWallet));
-    setKhaltiWalletId(savedKhaltiWallet);
+    setKhaltiEnabled(Boolean(savedKhalti));
+    setKhaltiWalletId(savedKhalti);
     setKhaltiAccountName(profile.khaltiAccountName ?? "");
-    if (documents) {
-      setDocs(buildDocRows(documents));
-    }
-    if (gymPhotos) {
-      setPhotos(sortPhotos(gymPhotos.map(toPhotoRow)));
-    }
-    if (
-      editSubmissionRequestedRef.current
-      && profile.approvalStatus !== "PENDING_REVIEW"
-      && !profile.submittedForReview
-      && !profile.approved
-      && !profile.dashboardAccessible
-    ) {
-      setStep(3);
-      editSubmissionRequestedRef.current = false;
-      return;
-    }
-    setStep(resumeStepIndex(profile));
+    if (documents) setDocs(buildDocRows(documents));
+    if (gymPhotos)  setPhotos(sortPhotos(gymPhotos.map(toPhotoRow)));
   };
 
-  useEffect(() => {
-    let injectedStyle: HTMLStyleElement | null = null;
-
-    if (!document.getElementById("fitpal-gym-setup-css")) {
-      const style = document.createElement("style");
-      style.id = "fitpal-gym-setup-css";
-      style.textContent = STYLE;
-      document.head.appendChild(style);
-      injectedStyle = style;
+  const resolveStep = (profile: GymProfileResponse): number => {
+    if (editSubmissionRequestedRef.current && profile.approvalStatus === "REJECTED") {
+      editSubmissionRequestedRef.current = false;
+      return DOCUMENTS_STEP_INDEX;
     }
 
-    return () => {
-      injectedStyle?.remove();
-    };
+    editSubmissionRequestedRef.current = false;
+
+    const isComplete =
+      profile.approvalStatus === "APPROVED" ||
+      profile.approvalStatus === "PENDING_REVIEW";
+
+    return isComplete
+      ? FINAL_REVIEW_STEP_INDEX
+      : Math.max(0, Math.min(profile.onboardingStep ?? 0, REVIEW_SUBMIT_STEP_INDEX));
+  };
+
+  // ── Effects ────────────────────────────────────────────────────────────────
+
+  // Inject styles once; clean up on unmount
+  useEffect(() => {
+    if (document.getElementById("fitpal-gym-setup-css")) return;
+    const el = document.createElement("style");
+    el.id = "fitpal-gym-setup-css";
+    el.textContent = STYLE;
+    document.head.appendChild(el);
+    return () => { el.remove(); };
   }, []);
 
+  // Clear location.state so refreshing doesn't re-trigger editSubmission
+  useEffect(() => {
+    if (!editSubmissionRequestedRef.current) return;
+    navigate({ pathname: location.pathname, search: location.search, hash: location.hash },
+      { replace: true, state: null });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load profile on mount / token change
   useEffect(() => {
     if (!auth.accessToken) return;
     let cancelled = false;
-
-    const loadGymProfile = async () => {
+    const load = async () => {
       setIsLoadingProfile(true);
       try {
         const [profile, documents, gymPhotos] = await Promise.all([
-          getMyGymProfileApi(),
-          getMyGymDocumentsApi(),
-          getMyGymPhotosApi(),
+          getMyGymProfileApi(), getMyGymDocumentsApi(), getMyGymPhotosApi(),
         ]);
         if (cancelled) return;
-        applyProfileState(profile, documents, gymPhotos);
+        hydrateProfile(profile, documents, gymPhotos);
+        setStep(resolveStep(profile));
       } catch (error) {
-        if (!cancelled) {
-          toast.error(getApiErrorMessage(error, "Failed to load gym onboarding profile"));
-        }
+        if (!cancelled) toast.error(getApiErrorMessage(error, "Failed to load gym onboarding profile"));
       } finally {
-        if (!cancelled) {
-          setIsLoadingProfile(false);
-        }
+        if (!cancelled) setIsLoadingProfile(false);
       }
     };
-
-    void loadGymProfile();
-    return () => {
-      cancelled = true;
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    void load();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.accessToken]);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [step]);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [step]);
 
-  useEffect(() => {
-    setStepError(null);
-  }, [
-    step,
-    gymEmailVerified,
-    gymName,
-    gymType,
-    gymRegNo,
-    gymEstablished,
-    gymCapacity,
-    gymAddressLine,
-    gymCity,
-    gymCountry,
-    gymPostal,
-    gymLatitude,
-    gymLongitude,
-    gymPhone,
-    gymContactEmail,
-    gymWebsite,
-    gymDesc,
-    gymOpens,
-    gymCloses,
-    esewaEnabled,
-    esewaWalletId,
-    esewaAccountName,
-    khaltiEnabled,
-    khaltiWalletId,
-    khaltiAccountName,
-    docs,
-    photos,
+  // Clear step errors when any relevant value changes
+  useEffect(() => { setStepError(null); }, [
+    step, gymEmailVerified, gymName, gymType, gymRegNo, gymEstablished, gymCapacity,
+    gymAddressLine, gymCity, gymCountry, gymPostal, gymLatitude, gymLongitude,
+    gymPhone, gymContactEmail, gymWebsite, gymDesc, gymOpens, gymCloses,
+    esewaEnabled, esewaWalletId, esewaAccountName,
+    khaltiEnabled, khaltiWalletId, khaltiAccountName,
+    docs, photos,
   ]);
 
-  const stepId = STEPS[step]?.id ?? "gymInfo";
-  const hdr = HEADERS[stepId];
-  const isWide = stepId === "location" || stepId === "gymInfo" || stepId === "payout" || stepId === "docs";
-  const cardMax = isWide ? "860px" : "580px";
-  const maxGymPhotos = 12;
+  // ── Step validation ────────────────────────────────────────────────────────
+  // Each blocker calls the previous one — if a prior step is broken, we surface
+  // a generic "complete step N first" rather than re-running all sub-checks.
+
   const currentYear = new Date().getFullYear();
   const establishedYearValue = Number(gymEstablished);
-  const capacityValue = Number(gymCapacity);
-  const hasRequiredDocuments =
-    docs.some((doc) => doc.type === "REGISTRATION_CERTIFICATE" && doc.uploaded) &&
-    docs.some((doc) => doc.type === "LICENSE" && doc.uploaded);
-  const hasRequiredPhotos = photos.length >= 1;
-  const hasValidOperatingHours = Boolean(gymOpens && gymCloses && gymCloses > gymOpens);
-  const isValidNepalWalletId = (value: string) => /^(98|97|96)\d{8}$/.test(value.trim());
+  const capacityValue        = Number(gymCapacity);
 
-  const getStep1Blocker = () => {
+  const getStep1Blocker = useCallback((): string | null => {
     if (!gymEmailVerified) return "Verify the registered email before continuing to Step 2.";
-    if (!gymName.trim()) return "Gym name is required before continuing to Step 2.";
-    if (!gymType) return "Select a gym type before continuing to Step 2.";
-    if (gymEstablished.trim() && (!Number.isInteger(establishedYearValue) || establishedYearValue < 1900 || establishedYearValue > currentYear)) {
+    if (!gymName.trim())   return "Gym name is required before continuing to Step 2.";
+    if (!gymType)          return "Select a gym type before continuing to Step 2.";
+    if (gymEstablished.trim() && (!Number.isInteger(establishedYearValue) || establishedYearValue < 1900 || establishedYearValue > currentYear))
       return `Established year must be between 1900 and ${currentYear}.`;
-    }
     if (!gymCapacity.trim()) return "Maximum member capacity is required before continuing to Step 2.";
-    if (!Number.isFinite(capacityValue) || capacityValue < 10) {
-      return "Maximum member capacity must be at least 10.";
-    }
+    if (!Number.isFinite(capacityValue) || capacityValue < 10) return "Maximum member capacity must be at least 10.";
     return null;
-  };
+  }, [capacityValue, currentYear, establishedYearValue, gymCapacity, gymEmailVerified, gymEstablished, gymName, gymType]);
 
-  const getStep2Blocker = () => {
-    const step1Blocker = getStep1Blocker();
-    if (step1Blocker) return "Complete Step 1 first. Step 2 stays locked until basics are complete.";
+  const getStep2Blocker = useCallback((): string | null => {
+    if (getStep1Blocker()) return "Complete Step 1 first. Step 2 stays locked until basics are complete.";
     if (!gymAddressLine.trim()) return "Street address is required before continuing to Step 3.";
-    if (!gymCity.trim()) return "City is required before continuing to Step 3.";
-    if (!gymCountry.trim()) return "Country is required before continuing to Step 3.";
+    if (!gymCity.trim())        return "City is required before continuing to Step 3.";
+    if (!gymCountry.trim())     return "Country is required before continuing to Step 3.";
     if (gymLatitude === null || gymLongitude === null) return "Pick the gym location on the map before continuing to Step 3.";
-    if (!gymPhone.trim()) return "Phone number is required before continuing to Step 3.";
-    if (!gymContactEmail.trim()) return "Contact email is required before continuing to Step 3.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gymContactEmail.trim())) {
-      return "Enter a valid contact email before continuing to Step 3.";
-    }
-    if (!hasValidOperatingHours) return "Closing time must be after opening time before continuing to Step 3.";
+    if (!gymPhone.trim())          return "Phone number is required before continuing to Step 3.";
+    if (!gymContactEmail.trim())   return "Contact email is required before continuing to Step 3.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gymContactEmail.trim())) return "Enter a valid contact email before continuing to Step 3.";
+    if (!gymOpens || !gymCloses || gymCloses <= gymOpens) return "Closing time must be after opening time before continuing to Step 3.";
     return null;
-  };
+  }, [getStep1Blocker, gymAddressLine, gymCity, gymCloses, gymContactEmail, gymCountry, gymLatitude, gymLongitude, gymOpens, gymPhone]);
 
-  const getStep3Blocker = () => {
-    const step2Blocker = getStep2Blocker();
-    if (step2Blocker) return "Complete Step 2 first. Payout setup stays locked until location and contact details are complete.";
-
-    const hasCompleteEsewaWallet =
-      esewaEnabled && isValidNepalWalletId(esewaWalletId) && Boolean(esewaAccountName.trim());
-    const hasCompleteKhaltiWallet =
-      khaltiEnabled && isValidNepalWalletId(khaltiWalletId) && Boolean(khaltiAccountName.trim());
-
-    if (hasCompleteEsewaWallet || hasCompleteKhaltiWallet) {
-      return null;
-    }
-
-    if (!esewaEnabled && !khaltiEnabled) {
-      return "Select at least one payout wallet before continuing to Step 4.";
-    }
-
+  const getStep3Blocker = useCallback((): string | null => {
+    if (getStep2Blocker()) return "Complete Step 2 first. Payout setup stays locked until location and contact details are complete.";
+    const eOk = esewaEnabled  && isValidNepalWalletId(esewaWalletId)  && Boolean(esewaAccountName.trim());
+    const kOk = khaltiEnabled && isValidNepalWalletId(khaltiWalletId) && Boolean(khaltiAccountName.trim());
+    if (eOk || kOk) return null;
+    if (!esewaEnabled && !khaltiEnabled) return "Select at least one payout wallet before continuing to Step 4.";
     return "Complete at least one payout wallet with wallet ID and registered name before continuing to Step 4.";
-  };
+  }, [esewaAccountName, esewaEnabled, esewaWalletId, getStep2Blocker, khaltiAccountName, khaltiEnabled, khaltiWalletId]);
 
-  const getStep4Blocker = () => {
-    const step3Blocker = getStep3Blocker();
-    if (step3Blocker) return "Complete Step 3 first. Documents stay locked until payout setup is complete.";
-    if (!hasRequiredDocuments) return "Upload the required Registration Certificate and Operating License before submitting for review.";
-    if (!hasRequiredPhotos) return "Upload at least 1 gym photo before submitting for review.";
+  const getStep4Blocker = useCallback((): string | null => {
+    if (getStep3Blocker()) return "Complete Step 3 first. Documents stay locked until payout setup is complete.";
+    if (!hasRequiredDocs)   return "Upload the required Registration Certificate and Operating License before continuing to Step 5.";
+    if (!hasRequiredPhotos) return "Upload at least 1 gym photo before continuing to Step 5.";
     return null;
-  };
+  }, [getStep3Blocker, hasRequiredDocs, hasRequiredPhotos]);
 
-  const isStep1Complete = getStep1Blocker() === null;
-  const isStep2Complete = getStep2Blocker() === null;
-  const isStep3Complete = getStep3Blocker() === null;
-  const isStep4Complete = getStep4Blocker() === null;
+  const step1Complete = useMemo(
+    () => getStep1Blocker() === null,
+    [getStep1Blocker],
+  );
 
+  const step2Complete = useMemo(
+    () => getStep2Blocker() === null,
+    [getStep2Blocker],
+  );
+
+  const step3Complete = useMemo(
+    () => getStep3Blocker() === null,
+    [getStep3Blocker],
+  );
+
+  const step4Complete = useMemo(
+    () => getStep4Blocker() === null,
+    [getStep4Blocker],
+  );
+
+  // Guard: if the user somehow lands on a step they haven't unlocked, push them back
   useEffect(() => {
-    if (step > 0 && !isStep1Complete) {
-      setStep(0);
-      return;
-    }
-    if (step > 1 && !isStep2Complete) {
-      setStep(1);
-      return;
-    }
-    if (step > 2 && !isStep3Complete) {
-      setStep(2);
-      return;
-    }
-    if (step > 3 && !isStep4Complete) {
-      setStep(3);
-    }
-  }, [step, isStep1Complete, isStep2Complete, isStep3Complete, isStep4Complete]);
+    if (step > 0 && !step1Complete) { setStep(0); return; }
+    if (step > 1 && !step2Complete) { setStep(1); return; }
+    if (step > 2 && !step3Complete) { setStep(2); return; }
+    if (step > 3 && !step4Complete) { setStep(3); return; }
+    if (step > REVIEW_SUBMIT_STEP_INDEX && !isGymPendingReview && !isGymApproved && !isGymRejected)
+      setStep(REVIEW_SUBMIT_STEP_INDEX);
+  }, [step, step1Complete, step2Complete, step3Complete, step4Complete, isGymPendingReview, isGymApproved, isGymRejected]);
 
-  const isBusy = isSavingStep
-    || isUploadingLogo
-    || isRemovingLogo
-    || uploadingDocIndex !== null
-    || isUploadingPhotos
-    || activePhotoId !== null;
+  const isBusy = isSavingStep || isUploadingLogo || isRemovingLogo || uploadingDocIndex !== null || isUploadingPhotos || activePhotoId !== null;
+
+  // ── Step save handlers ─────────────────────────────────────────────────────
 
   const goToLocationStep = async () => {
     if (isBusy) return;
     const blocker = getStep1Blocker();
-    if (blocker) {
-      setStepError(blocker);
-      return;
-    }
-
+    if (blocker) { setStepError(blocker); return; }
     setIsSavingStep(true);
     try {
       const profile = await patchGymBasicsStepApi({
-        gymName: gymName.trim(),
-        gymType: gymType ?? undefined,
+        gymName: gymName.trim(), gymType: gymType ?? undefined,
         establishedAt: gymEstablished.trim() ? establishedYearValue : undefined,
-        registrationNo: gymRegNo.trim() || undefined,
-        maxCapacity: capacityValue,
+        registrationNo: gymRegNo.trim() || undefined, maxCapacity: capacityValue,
       });
-      applyProfileState(profile);
+      hydrateProfile(profile);
+      setStep(1);
       toast.success("Basics saved");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to save basics step"));
-    } finally {
-      setIsSavingStep(false);
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to save basics step")); }
+    finally { setIsSavingStep(false); }
   };
 
   const goToPayoutStep = async () => {
     if (isBusy) return;
     const blocker = getStep2Blocker();
-    if (blocker) {
-      setStepError(blocker);
-      return;
-    }
-
+    if (blocker) { setStepError(blocker); return; }
     setIsSavingStep(true);
     try {
       const profile = await patchGymLocationStepApi({
-        addressLine: gymAddressLine.trim(),
-        city: gymCity.trim(),
-        country: gymCountry.trim(),
+        addressLine: gymAddressLine.trim(), city: gymCity.trim(), country: gymCountry.trim(),
         postalCode: gymPostal.trim() || undefined,
-        latitude: gymLatitude ?? undefined,
-        longitude: gymLongitude ?? undefined,
-        phoneNo: gymPhone.trim(),
-        contactEmail: gymContactEmail.trim(),
+        latitude: gymLatitude ?? undefined, longitude: gymLongitude ?? undefined,
+        phoneNo: gymPhone.trim(), contactEmail: gymContactEmail.trim(),
         description: gymDesc.trim() || undefined,
-        logoUrl: gymLogoUrl || undefined,
-        logoPublicId: gymLogoPublicId || undefined,
-        logoResourceType: gymLogoResourceType || undefined,
+        logoUrl: gymLogoUrl || undefined, logoPublicId: gymLogoPublicId || undefined, logoResourceType: gymLogoResourceType || undefined,
         websiteUrl: gymWebsite.trim() || undefined,
-        opensAt: gymOpens,
-        closesAt: gymCloses,
+        opensAt: gymOpens, closesAt: gymCloses,
       });
-      applyProfileState(profile);
+      hydrateProfile(profile);
+      setStep(2);
       toast.success("Location and contact saved");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to save location step"));
-    } finally {
-      setIsSavingStep(false);
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to save location step")); }
+    finally { setIsSavingStep(false); }
   };
 
   const goToDocumentsStep = async () => {
     if (isBusy) return;
     const blocker = getStep3Blocker();
-    if (blocker) {
-      setStepError(blocker);
-      return;
-    }
-
+    if (blocker) { setStepError(blocker); return; }
     setIsSavingStep(true);
     try {
       const profile = await patchGymPayoutStepApi({
         esewaEnabled,
-        esewaWalletId: esewaEnabled ? esewaWalletId.trim() : undefined,
-        esewaAccountName: esewaEnabled ? (esewaAccountName.trim() || undefined) : undefined,
+        esewaWalletId:    esewaEnabled  ? esewaWalletId.trim()    : undefined,
+        esewaAccountName: esewaEnabled  ? esewaAccountName.trim() || undefined : undefined,
         khaltiEnabled,
-        khaltiWalletId: khaltiEnabled ? khaltiWalletId.trim() : undefined,
-        khaltiAccountName: khaltiEnabled ? (khaltiAccountName.trim() || undefined) : undefined,
+        khaltiWalletId:    khaltiEnabled ? khaltiWalletId.trim()    : undefined,
+        khaltiAccountName: khaltiEnabled ? khaltiAccountName.trim() || undefined : undefined,
       });
-      applyProfileState(profile);
+      hydrateProfile(profile);
+      setStep(DOCUMENTS_STEP_INDEX);
       toast.success("Payout wallets saved");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to save payout wallets"));
-    } finally {
-      setIsSavingStep(false);
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to save payout wallets")); }
+    finally { setIsSavingStep(false); }
   };
 
   const goToReviewStep = async () => {
     if (isBusy) return;
     const blocker = getStep4Blocker();
-    if (blocker) {
-      setStepError(blocker);
-      return;
-    }
-
+    if (blocker) { setStepError(blocker); return; }
     setIsSavingStep(true);
+    const wasRejectedBeforeSubmit = isGymRejected;
     try {
       const profile = await submitGymReviewSubmissionApi();
-      applyProfileState(profile);
-      toast.success(isGymPendingReview ? "Gym resubmitted for review" : "Gym submitted for review");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to submit gym for review"));
-    } finally {
-      setIsSavingStep(false);
-    }
+      hydrateProfile(profile);
+      setStep(resolveStep(profile));
+      toast.success(wasRejectedBeforeSubmit ? "Gym resubmitted for review" : "Gym submitted for review");
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to submit gym for review")); }
+    finally { setIsSavingStep(false); }
   };
 
   const verifyEmail = async () => {
@@ -1267,500 +1108,330 @@ const FitPalGymSetup: FC = () => {
       const status = await verifyGymRegisteredEmailApi();
       setGymEmailVerified(status.registeredEmailVerified);
       toast.success("Registered email verified");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to verify registered email"));
-    } finally {
-      setVerifying(false);
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to verify registered email")); }
+    finally { setVerifying(false); }
   };
+
+  const openEditSubmission = () => { setStepError(null); setStep(DOCUMENTS_STEP_INDEX); };
+
+  // ── Document handlers ──────────────────────────────────────────────────────
 
   const addDoc = () => {
-    if (docs.length >= 6) {
-      setStepError("You can upload at most 6 documents.");
-      return;
-    }
-    const used = docs.map((doc) => doc.type);
-    const next = DOC_TYPES.find((docType) => !docType.required && !used.includes(docType.value));
-    setDocs((prev) => [...prev, { type: (next?.value ?? "OTHER") as DocTypeValue, fileName: "", uploaded: false }]);
+    if (docs.length >= MAX_GYM_DOCS) { setStepError(`You can upload at most ${MAX_GYM_DOCS} documents.`); return; }
+    const used = docs.map(d => d.type);
+    const next = DOC_TYPES.find(t => !isRequiredDocType(t.value) && isSingletonDocType(t.value) && !used.includes(t.value));
+    setDocs(prev => [...prev, { type: (next?.value ?? "OTHER") as DocTypeValue, fileName: "", uploaded: false }]);
   };
 
-  const resetDocRow = (doc: DocRow): DocRow => ({
-    type: doc.type,
-    fileName: "",
-    uploaded: false,
-  });
+  const resetDocRow = (doc: DocRow): DocRow => ({ type: doc.type, fileName: "", uploaded: false });
 
   const removeDoc = async (idx: number) => {
-    const targetDoc = docs[idx];
-    if (!targetDoc) return;
-    const isRequired = targetDoc.type === "REGISTRATION_CERTIFICATE" || targetDoc.type === "LICENSE";
-
-    if (targetDoc.documentId) {
+    const doc = docs[idx];
+    if (!doc) return;
+    const isRequired = isRequiredDocType(doc.type);
+    if (doc.documentId) {
       setUploadingDocIndex(idx);
-      try {
-        await deleteGymDocumentApi(targetDoc.documentId);
-        toast.success("Document removed");
-      } catch (error) {
-        setStepError(getApiErrorMessage(error, "Failed to remove document"));
-        setUploadingDocIndex(null);
-        return;
-      }
+      try { await deleteGymDocumentApi(doc.documentId); toast.success("Document removed"); }
+      catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove document")); setUploadingDocIndex(null); return; }
       setUploadingDocIndex(null);
     }
-
-    setDocs((prev) => {
-      if (isRequired) {
-        return prev.map((doc, index) => (index === idx ? resetDocRow(doc) : doc));
-      }
-      return prev.filter((_, index) => index !== idx);
-    });
+    setDocs(prev => isRequired
+      ? prev.map((d, i) => i === idx ? resetDocRow(d) : d)
+      : prev.filter((_, i) => i !== idx)
+    );
   };
 
   const setDocType = (idx: number, value: DocTypeValue) => {
-    setDocs((prev) => prev.map((doc, index) => (index === idx ? { ...doc, type: value } : doc)));
+    if (isRequiredDocType(value)) return;
+    if (isSingletonDocType(value) && docs.some((doc, docIdx) => docIdx !== idx && doc.type === value)) {
+      const label = DOC_TYPES.find(type => type.value === value)?.label ?? value;
+      setStepError(`${label} has already been added.`);
+      return;
+    }
+    setDocs(prev => prev.map((d, i) => i === idx ? { ...d, type: value } : d));
   };
 
-  const openLogoPicker = () => {
-    if (isUploadingLogo || isRemovingLogo) return;
-    logoInputRef.current?.click();
-  };
+  const openLogoPicker = () => { if (isUploadingLogo || isRemovingLogo) return; logoInputRef.current?.click(); };
 
-  const handleLogoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleLogoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    const previousLogoPublicId = gymLogoPublicId;
-    const previousLogoResourceType = gymLogoResourceType;
-    const persistedLogoPublicId = persistedLogoAssetRef.current.publicId;
-
+    const prevId = gymLogoPublicId;
+    const prevRt = gymLogoResourceType;
+    const persistedId = persistedLogoAssetRef.current.publicId;
     setIsUploadingLogo(true);
     try {
-      const uploadedAsset: DocumentUploadResponse = await uploadImageFileApi(file, "fitpal/gym-logos");
-      setGymLogoUrl(uploadedAsset.secureUrl || uploadedAsset.url);
-      setGymLogoPublicId(uploadedAsset.publicId);
-      setGymLogoResourceType(uploadedAsset.resourceType);
-
-      if (previousLogoPublicId && previousLogoPublicId !== persistedLogoPublicId) {
-        await deleteUploadedAssetSilently(previousLogoPublicId, previousLogoResourceType);
-      }
-
+      const asset: DocumentUploadResponse = await uploadImageFileApi(file, "fitpal/gym-logos");
+      setGymLogoUrl(asset.secureUrl || asset.url);
+      setGymLogoPublicId(asset.publicId);
+      setGymLogoResourceType(asset.resourceType);
+      if (prevId && prevId !== persistedId) await deleteAsset(prevId, prevRt, true);
       toast.success("Logo uploaded");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to upload logo"));
-    } finally {
-      setIsUploadingLogo(false);
-      event.target.value = "";
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to upload logo")); }
+    finally { setIsUploadingLogo(false); e.target.value = ""; }
   };
 
   const handleLogoRemoved = async () => {
-    if (!gymLogoUrl || isUploadingLogo || isRemovingLogo) {
-      return;
-    }
-
-    const currentLogoPublicId = gymLogoPublicId;
-    const currentLogoResourceType = gymLogoResourceType;
-    const persistedLogoPublicId = persistedLogoAssetRef.current.publicId;
-    const shouldDeleteTemporaryAsset = Boolean(
-      currentLogoPublicId && currentLogoPublicId !== persistedLogoPublicId
-    );
-
+    if (!gymLogoUrl || isUploadingLogo || isRemovingLogo) return;
+    const id = gymLogoPublicId;
+    const rt = gymLogoResourceType;
+    const isTemp = Boolean(id && id !== persistedLogoAssetRef.current.publicId);
     setIsRemovingLogo(true);
     try {
-      if (shouldDeleteTemporaryAsset) {
-        await deleteUploadedAsset(currentLogoPublicId, currentLogoResourceType);
-      }
-
+      if (isTemp) await deleteAsset(id, rt);
       clearLogoState();
-      toast.success(
-        shouldDeleteTemporaryAsset
-          ? "Logo removed"
-          : "Logo cleared. Save location step to persist the change."
-      );
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to remove logo"));
-    } finally {
-      setIsRemovingLogo(false);
-    }
+      toast.success(isTemp ? "Logo removed" : "Logo cleared. Save location step to persist the change.");
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove logo")); }
+    finally { setIsRemovingLogo(false); }
   };
 
-  const openDocumentPicker = (idx: number) => {
-    setActiveDocumentIndex(idx);
-    documentInputRef.current?.click();
-  };
+  const openDocumentPicker = (idx: number) => { setActiveDocumentIndex(idx); documentInputRef.current?.click(); };
 
-  const handleDocumentSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleDocumentSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file        = e.target.files?.[0];
     const targetIndex = activeDocumentIndex;
-    event.target.value = "";
-
-    if (!file || targetIndex === null) {
-      return;
-    }
-
-    const targetDoc = docs[targetIndex];
-    if (!targetDoc) {
-      return;
-    }
-
-    const previousOtherDocumentId = targetDoc.type === "OTHER" ? targetDoc.documentId : undefined;
+    e.target.value    = "";
+    if (!file || targetIndex === null) return;
+    const doc = docs[targetIndex];
+    if (!doc) return;
+    const previousOtherDocumentId = doc.type === "OTHER" ? doc.documentId : undefined;
     setUploadingDocIndex(targetIndex);
-    let uploadedAsset: DocumentUploadResponse | null = null;
+    let asset: DocumentUploadResponse | null = null;
     try {
-      uploadedAsset = await uploadDocumentFileApi(file, "fitpal/gym-documents");
-      const savedDocument = await upsertGymDocumentApi({
-        documentType: targetDoc.type,
-        publicId: uploadedAsset.publicId,
-        resourceType: uploadedAsset.resourceType,
-        fileUrl: uploadedAsset.secureUrl || uploadedAsset.url,
-      });
-
-      if (previousOtherDocumentId && previousOtherDocumentId !== savedDocument.documentId) {
-        try {
-          await deleteGymDocumentApi(previousOtherDocumentId);
-        } catch {
-          toast.error("New document was saved, but the previous optional document could not be removed.");
-        }
+      asset = await uploadDocumentFileApi(file, "fitpal/gym-documents");
+      const saved = await upsertGymDocumentApi({ documentType: doc.type, publicId: asset.publicId, resourceType: asset.resourceType, fileUrl: asset.secureUrl || asset.url });
+      if (previousOtherDocumentId && previousOtherDocumentId !== saved.documentId) {
+        try { await deleteGymDocumentApi(previousOtherDocumentId); }
+        catch { toast.error("New document was saved, but the previous optional document could not be removed."); }
       }
-
-      setDocs((prev) => prev.map((doc, index) => (
-        index === targetIndex
-          ? {
-              ...doc,
-              documentId: savedDocument.documentId,
-              fileName: file.name,
-              fileUrl: savedDocument.fileUrl,
-              publicId: savedDocument.publicId,
-              resourceType: savedDocument.resourceType,
-              uploaded: true,
-            }
-          : doc
-      )));
+      setDocs(prev => prev.map((d, i) => i === targetIndex
+        ? { ...d, documentId: saved.documentId, fileName: file.name, fileUrl: saved.fileUrl, publicId: saved.publicId, resourceType: saved.resourceType, uploaded: true }
+        : d
+      ));
       toast.success("Document uploaded");
     } catch (error) {
-      if (uploadedAsset?.publicId) {
-        await deleteUploadedAssetSilently(uploadedAsset.publicId, uploadedAsset.resourceType);
-      }
+      await deleteAsset(asset?.publicId, asset?.resourceType, true);
       setStepError(getApiErrorMessage(error, "Failed to upload document"));
-    } finally {
-      setUploadingDocIndex(null);
-      setActiveDocumentIndex(null);
-    }
+    } finally { setUploadingDocIndex(null); setActiveDocumentIndex(null); }
   };
 
+  // ── Photo handlers ─────────────────────────────────────────────────────────
+
   const openPhotoPicker = () => {
-    if (isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos) return;
+    if (isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS) return;
     photoInputRef.current?.click();
   };
 
-  const handlePhotoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files ?? []);
-    event.target.value = "";
-
-    if (selectedFiles.length === 0) {
-      return;
-    }
-
-    const remainingSlots = Math.max(maxGymPhotos - photos.length, 0);
-    if (remainingSlots <= 0) {
-      setStepError(`You can upload at most ${maxGymPhotos} photos.`);
-      return;
-    }
-
-    const filesToUpload = selectedFiles.slice(0, remainingSlots);
-    if (filesToUpload.length < selectedFiles.length) {
-      toast.info(`Only ${remainingSlots} photo(s) were queued. Maximum is ${maxGymPhotos}.`);
-    }
-
+  const handlePhotoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (!selectedFiles.length) return;
+    const slots = Math.max(MAX_GYM_PHOTOS - photos.length, 0);
+    if (slots <= 0) { setStepError(`You can upload at most ${MAX_GYM_PHOTOS} photos.`); return; }
+    const filesToUpload = selectedFiles.slice(0, slots);
+    if (filesToUpload.length < selectedFiles.length)
+      toast.info(`Only ${slots} photo(s) were queued. Maximum is ${MAX_GYM_PHOTOS}.`);
     setIsUploadingPhotos(true);
     let nextPhotos = [...photos];
     let uploadCount = 0;
-
     try {
       for (const file of filesToUpload) {
-        if (!file.type.startsWith("image/")) {
-          setStepError(`${file.name} is not an image file.`);
-          continue;
-        }
-
-        let uploadedAsset: DocumentUploadResponse | null = null;
+        if (!file.type.startsWith("image/")) { setStepError(`${file.name} is not an image file.`); continue; }
+        let asset: DocumentUploadResponse | null = null;
         try {
-          uploadedAsset = await uploadImageFileApi(file, "fitpal/gym-photos");
-          let createdPhoto = await createGymPhotoApi({
-            publicId: uploadedAsset.publicId,
-            resourceType: uploadedAsset.resourceType,
-            photoUrl: uploadedAsset.secureUrl || uploadedAsset.url,
-            caption: "",
-            cover: !nextPhotos.some((photo) => photo.cover),
+          asset = await uploadImageFileApi(file, "fitpal/gym-photos");
+          let created = await createGymPhotoApi({
+            publicId: asset.publicId, resourceType: asset.resourceType,
+            photoUrl: asset.secureUrl || asset.url, caption: "",
+            cover: !nextPhotos.some(p => p.cover),
           });
-
-          if (!hasPhotoId(createdPhoto.photoId)) {
-            const refreshedPhotos = await getMyGymPhotosApi();
-            const matchedPhoto = refreshedPhotos.find((photo) => photo.publicId === createdPhoto.publicId);
-            if (matchedPhoto) {
-              createdPhoto = matchedPhoto;
-            }
+          if (!hasPhotoId(created.photoId)) {
+            const refreshed = await getMyGymPhotosApi();
+            const match = refreshed.find(p => p.publicId === created.publicId);
+            if (match) created = match;
           }
-
-          if (!hasPhotoId(createdPhoto.photoId)) {
-            throw new Error("Photo is still syncing. Refresh once and try again.");
-          }
-
-          nextPhotos = sortPhotos([...nextPhotos, toPhotoRow(createdPhoto)]);
-          uploadCount += 1;
+          if (!hasPhotoId(created.photoId)) throw new Error("Photo is still syncing. Refresh once and try again.");
+          nextPhotos = sortPhotos([...nextPhotos, toPhotoRow(created)]);
+          uploadCount++;
         } catch (error) {
-          await deleteUploadedAssetSilently(uploadedAsset?.publicId, uploadedAsset?.resourceType);
+          await deleteAsset(asset?.publicId, asset?.resourceType, true);
           setStepError(getApiErrorMessage(error, `Failed to upload photo: ${file.name}`));
         }
       }
-
       setPhotos(nextPhotos);
-      if (uploadCount > 0) {
-        toast.success(`${uploadCount} photo${uploadCount > 1 ? "s" : ""} uploaded`);
-      }
-    } finally {
-      setIsUploadingPhotos(false);
-    }
+      if (uploadCount > 0) toast.success(`${uploadCount} photo${uploadCount > 1 ? "s" : ""} uploaded`);
+    } finally { setIsUploadingPhotos(false); }
   };
 
   const setCoverPhoto = async (photoId: number | null) => {
-    if (!hasPhotoId(photoId)) {
-      setStepError("Photo is still syncing. Refresh once and try again.");
-      return;
-    }
-
+    if (!hasPhotoId(photoId)) { setStepError("Photo is still syncing. Refresh once and try again."); return; }
     if (activePhotoId !== null || isUploadingPhotos) return;
-
     setActivePhotoId(photoId);
     try {
-      const updatedPhoto = await updateGymPhotoApi(photoId, { cover: true });
-      setPhotos((prev) =>
-        sortPhotos(
-          prev.map((photo) =>
-            photo.photoId === updatedPhoto.photoId
-              ? toPhotoRow(updatedPhoto)
-              : { ...photo, cover: false }
-          )
-        )
-      );
+      const updated = await updateGymPhotoApi(photoId, { cover: true });
+      setPhotos(prev => sortPhotos(prev.map(p => p.photoId === updated.photoId ? toPhotoRow(updated) : { ...p, cover: false })));
       toast.success("Cover photo updated");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to update cover photo"));
-    } finally {
-      setActivePhotoId(null);
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to update cover photo")); }
+    finally { setActivePhotoId(null); }
   };
 
   const removePhoto = async (photoId: number | null) => {
-    if (!hasPhotoId(photoId)) {
-      setStepError("Photo is still syncing. Refresh once and try again.");
-      return;
-    }
-
+    if (!hasPhotoId(photoId)) { setStepError("Photo is still syncing. Refresh once and try again."); return; }
     if (activePhotoId !== null || isUploadingPhotos) return;
-
-    const currentPhotos = photos;
-    const deletingPhoto = currentPhotos.find((photo) => photo.photoId === photoId);
-
+    const deletingPhoto = photos.find(p => p.photoId === photoId);
     setActivePhotoId(photoId);
     try {
       await deleteGymPhotoApi(photoId);
-      let remainingPhotos = currentPhotos.filter((photo) => photo.photoId !== photoId);
-
-      const fallbackCoverCandidate = remainingPhotos.find((photo) => hasPhotoId(photo.photoId));
-      if (deletingPhoto?.cover && fallbackCoverCandidate && hasPhotoId(fallbackCoverCandidate.photoId)) {
-        const fallbackCover = await updateGymPhotoApi(fallbackCoverCandidate.photoId, { cover: true });
-        remainingPhotos = remainingPhotos.map((photo) =>
-          photo.photoId === fallbackCover.photoId
-            ? toPhotoRow(fallbackCover)
-            : { ...photo, cover: false }
-        );
+      let remaining = photos.filter(p => p.photoId !== photoId);
+      const fallback = remaining.find(p => hasPhotoId(p.photoId));
+      if (deletingPhoto?.cover && fallback && hasPhotoId(fallback.photoId)) {
+        const updated = await updateGymPhotoApi(fallback.photoId, { cover: true });
+        remaining = remaining.map(p => p.photoId === updated.photoId ? toPhotoRow(updated) : { ...p, cover: false });
       }
-
-      setPhotos(sortPhotos(remainingPhotos));
+      setPhotos(sortPhotos(remaining));
       toast.success("Photo removed");
-    } catch (error) {
-      setStepError(getApiErrorMessage(error, "Failed to remove photo"));
-    } finally {
-      setActivePhotoId(null);
-    }
+    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove photo")); }
+    finally { setActivePhotoId(null); }
   };
 
-  const onLocationPicked = useCallback((
-    lat: number | null,
-    lng: number | null,
-    _data: NominatimResult,
-    fields?: FillFields,
-  ) => {
+  const onLocationPicked = useCallback((lat: number | null, lng: number | null, _data: NominatimResult, fields?: FillFields) => {
     if (lat !== null) setGymLatitude(lat);
     if (lng !== null) setGymLongitude(lng);
     if (!fields) return;
     if (fields.street) setGymAddressLine(fields.street);
-    if (fields.city) setGymCity(fields.city);
+    if (fields.city)   setGymCity(fields.city);
     if (fields.postal) setGymPostal(fields.postal);
   }, []);
 
+  // ── Render helpers ─────────────────────────────────────────────────────────
+
   const renderTrack = () => (
     <div className="progress-track">
-      {STEPS.map((currentStep, index) => {
-        const done = index < step;
-        const active = index === step;
-
+      {STEPS.map((s, idx) => {
+        const done   = idx < step;
+        const active = idx === step;
         return (
-          <span key={currentStep.id} style={{ display: "contents" }}>
+          <span key={s.id} style={{ display: "contents" }}>
             <div className="pt-step">
               <div className={`pt-dot${done ? " done" : active ? " active" : ""}`}>
-                {done ? <ChkWhite /> : index + 1}
+                {done ? <ChkWhite /> : idx + 1}
               </div>
-              <div className={`pt-label${active ? " active" : ""}`}>{currentStep.label}</div>
+              <div className={`pt-label${active ? " active" : ""}`}>{s.label}</div>
             </div>
-            {index < STEPS.length - 1 && <div className={`pt-line${index < step ? " done" : ""}`} />}
+            {idx < STEPS.length - 1 && <div className={`pt-line${idx < step ? " done" : ""}`} />}
           </span>
         );
       })}
     </div>
   );
 
+  // ── Screen renders ─────────────────────────────────────────────────────────
+
   const renderGymInfoScreen = () => (
-    <div className="screen animate-[screenFadeIn_0.2s_ease-out]">
+    <div className="screen">
       {stepError && <StepErrorBanner message={stepError} />}
-      <input
-        ref={logoInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        style={{ display: "none" }}
-        onChange={handleLogoSelected}
-      />
-      
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "start" }} className="lg:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
-        
-        {/* Left Column: Owner Meta & Logo Upload */}
+      <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: "none" }} onChange={handleLogoSelected} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "start" }}
+        className="lg:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
+
+        {/* Left: Owner Meta & Logo */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Owner Details Card */}
+          {/* Owner card */}
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px", background: "#101010", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "1.35rem", overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 40, height: 40, borderRadius: "50%", border: "2px solid var(--orange)", padding: 2, overflow: "hidden", flexShrink: 0 }}>
-                <img src={authConfig.avatarUrl} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                <img src={authAvatarUrl} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{authConfig.displayName}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{authDisplayName}</div>
                 <div style={{ fontSize: 11, color: "#4ade80", marginTop: 2, fontWeight: 600 }}>Registered Account</div>
               </div>
               <div className="auth-badge gym" style={{ alignSelf: "flex-start", marginTop: 4 }}>Owner</div>
             </div>
-            
             <div style={{ padding: "10px 12px", background: "rgba(255,255,255,0.03)", border: `1px solid ${gymEmailVerified ? "rgba(52,211,153,.3)" : "rgba(255,255,255,.06)"}`, borderRadius: 12, display: "flex", alignItems: "center", gap: 8 }}>
-               <div style={{ flex: 1, minWidth: 0 }}>
-                 <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--text-d)", marginBottom: 4 }}>Login Email</div>
-                 <div style={{ fontSize: 12, color: gymEmailVerified ? "#4ade80" : "#9ca3af", overflow: "hidden", textOverflow: "ellipsis" }}>{authConfig.email}</div>
-               </div>
-               {!gymEmailVerified && (
-                 <button type="button" onClick={verifyEmail} disabled={verifying} className="av-btn" style={{ margin: 0 }}>
-                    {verifying ? "..." : "Verify"}
-                 </button>
-               )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".1em", color: "var(--text-d)", marginBottom: 4 }}>Login Email</div>
+                <div style={{ fontSize: 12, color: gymEmailVerified ? "#4ade80" : "#9ca3af", overflow: "hidden", textOverflow: "ellipsis" }}>{authEmail}</div>
+              </div>
+              {!gymEmailVerified && (
+                <button type="button" onClick={verifyEmail} disabled={verifying} className="av-btn" style={{ margin: 0 }}>
+                  {verifying ? "..." : "Verify"}
+                </button>
+              )}
             </div>
           </div>
-          
-          {/* Gym Logo Upload Card */}
+
+          {/* Logo card */}
           <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "20px", background: "linear-gradient(180deg, rgba(120,63,23,0.32) 0%, rgba(27,18,11,0.96) 58%, rgba(15,15,15,1) 100%)", border: "1px solid rgba(249,115,22,0.2)", borderRadius: "1.45rem", alignItems: "center", textAlign: "center", boxShadow: "inset 0 1px 0 rgba(255,214,170,0.08)" }}>
-             <div style={{ position: "relative", width: 96, height: 96, marginBottom: 12 }}>
-               <div style={{ width: "100%", height: "100%", borderRadius: "50%", border: "2px solid var(--orange)", padding: 4, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)" }}>
-                 {gymLogoUrl ? (
-                   <img
-                    src={gymLogoUrl}
-                    alt="Gym Logo"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: "50%",
-                      objectFit: "contain",
-                      objectPosition: "center",
-                      background: "rgba(0,0,0,0.22)",
-                      padding: 8,
-                    }}
-                  />
-                 ) : (
-                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#4b5563", display: "block" }}>
-                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                     <circle cx="12" cy="13" r="4" />
-                   </svg>
-                 )}
-               </div>
-                 {gymLogoUrl ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleLogoRemoved()}
-                    disabled={isUploadingLogo || isRemovingLogo}
-                    aria-label="Remove gym logo"
-                    style={{ position: "absolute", top: 0, right: 0, width: 28, height: 28, borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.8)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: isUploadingLogo || isRemovingLogo ? "not-allowed" : "pointer", transition: "all .2s", zIndex: 1 }}
-                    onMouseOver={(event) => { event.currentTarget.style.borderColor = "rgba(248,113,113,0.5)"; event.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
-                    onMouseOut={(event) => { event.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; event.currentTarget.style.background = "rgba(0,0,0,0.8)"; }}
-                  >
-                    <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
-                      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                 ) : null}
+            <div style={{ position: "relative", width: 96, height: 96, marginBottom: 12 }}>
+              <div style={{ width: "100%", height: "100%", borderRadius: "50%", border: "2px solid var(--orange)", padding: 4, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)" }}>
+                {gymLogoUrl ? (
+                  <img src={gymLogoUrl} alt="Gym Logo" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "contain", objectPosition: "center", background: "rgba(0,0,0,0.22)", padding: 8 }} />
+                ) : (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#4b5563", display: "block" }}>
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                )}
               </div>
-             <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginBottom: 4 }}>Gym Logo</div>
-             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, textAlign: "center" }}>JPG or PNG - Max 2MB<br/>Used as your public profile photo.</div>
-             <button type="button" onClick={openLogoPicker} disabled={isUploadingLogo || isRemovingLogo} style={{ padding: "8px 16px", borderRadius: "0.9rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", cursor: isUploadingLogo || isRemovingLogo ? "not-allowed" : "pointer", transition: "all 0.2s" }} onMouseOver={(e) => e.currentTarget.style.background="rgba(255,255,255,0.1)"} onMouseOut={(e) => e.currentTarget.style.background="rgba(255,255,255,0.05)"}>
-               {isUploadingLogo ? "Uploading..." : isRemovingLogo ? "Removing..." : gymLogoUrl ? "Change Logo" : "Upload Logo"}
-             </button>
-           </div>
+              {gymLogoUrl && (
+                <button type="button" onClick={() => void handleLogoRemoved()} disabled={isUploadingLogo || isRemovingLogo} aria-label="Remove gym logo"
+                  style={{ position: "absolute", top: 0, right: 0, width: 28, height: 28, borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.8)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: isUploadingLogo || isRemovingLogo ? "not-allowed" : "pointer", transition: "all .2s", zIndex: 1 }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = "rgba(248,113,113,0.5)"; e.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
+                  onMouseOut={e  => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.background = "rgba(0,0,0,0.8)"; }}
+                >
+                  <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
+                    <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", marginBottom: 4 }}>Gym Logo</div>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, textAlign: "center" }}>JPG or PNG - Max 2MB<br />Used as your public profile photo.</div>
+            <button type="button" onClick={openLogoPicker} disabled={isUploadingLogo || isRemovingLogo}
+              style={{ padding: "8px 16px", borderRadius: "0.9rem", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", cursor: isUploadingLogo || isRemovingLogo ? "not-allowed" : "pointer", transition: "all 0.2s" }}
+              onMouseOver={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
+              onMouseOut={e  => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+            >
+              {isUploadingLogo ? "Uploading..." : isRemovingLogo ? "Removing..." : gymLogoUrl ? "Change Logo" : "Upload Logo"}
+            </button>
+          </div>
         </div>
 
-        {/* Right Column: Gym Details Form */}
+        {/* Right: Gym Details */}
         <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div className="sec-label" style={{ marginBottom: 14 }}>Core Gym Details</div>
-
           <div className="field">
             <label>Gym name <span style={{ color: "#ef4444" }}>*</span></label>
-            <input type="text" placeholder="e.g. FitZone Kathmandu" value={gymName} onChange={(event) => setGymName(event.target.value)} />
+            <input type="text" placeholder="e.g. FitZone Kathmandu" value={gymName} onChange={e => setGymName(e.target.value)} />
           </div>
-
           <div className="field">
             <label>Gym type <span style={{ color: "#ef4444" }}>*</span></label>
             <div className="pill-group">
-              {GYM_TYPES.map((type) => (
-                <div key={type} className={`pill${gymType === type ? " sel" : ""}`} onClick={() => setGymType((current) => current === type ? null : type as ApiGymType)}>
+              {GYM_TYPES.map(type => (
+                <div key={type} className={`pill${gymType === type ? " sel" : ""}`}
+                  onClick={() => setGymType(cur => cur === type ? null : type as ApiGymType)}>
                   {type}
                 </div>
               ))}
             </div>
           </div>
-
           <div className="frow">
             <div className="field">
               <label>Registration No.</label>
-              <input type="text" placeholder="e.g. 123456/079/080" value={gymRegNo} onChange={(event) => setGymRegNo(event.target.value)} />
+              <input type="text" placeholder="e.g. 123456/079/080" value={gymRegNo} onChange={e => setGymRegNo(e.target.value)} />
             </div>
             <div className="field">
               <label>Established Year <span style={{ color: "var(--text-d)" }}>optional</span></label>
-              <NumberInput
-                placeholder="e.g. 2018"
-                min={1900}
-                max={currentYear}
-                step={1}
-                value={gymEstablished}
-                onChange={(event) => setGymEstablished(event.target.value)}
-              />
+              <NumberInput placeholder="e.g. 2018" min={1900} max={currentYear} step={1} value={gymEstablished} onChange={e => setGymEstablished(e.target.value)} />
             </div>
           </div>
-
           <div className="field" style={{ flex: 1 }}>
             <label>Maximum Member Capacity <span style={{ color: "#ef4444" }}>*</span></label>
-            <NumberInput
-              placeholder="e.g. 150"
-              min={10}
-              step={1}
-              value={gymCapacity}
-              onChange={(event) => setGymCapacity(event.target.value)}
-            />
+            <NumberInput placeholder="e.g. 150" min={10} step={1} value={gymCapacity} onChange={e => setGymCapacity(e.target.value)} />
             <div className="field-hint">Total concurrent members your facility can safely accommodate.</div>
           </div>
-          
           <div style={{ alignSelf: "flex-end", width: "100%" }}>
             <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} hideBack disabled={isBusy} onBack={() => undefined} onNext={goToLocationStep} />
           </div>
@@ -1770,86 +1441,77 @@ const FitPalGymSetup: FC = () => {
   );
 
   const renderLocationScreen = () => (
-    <div className="screen animate-[screenFadeIn_0.2s_ease-out]">
+    <div className="screen">
       {stepError && <StepErrorBanner message={stepError} />}
-      
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "start" }} className="lg:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
-        
-        {/* Left Column: Map Picker */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px", alignItems: "start" }}
+        className="lg:grid-cols-[minmax(18rem,23rem)_minmax(0,1fr)]">
+
+        {/* Left: Map */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px", background: "var(--muted)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "1.45rem" }}>
-             <MapSection onLocationPicked={onLocationPicked} />
+            <MapSection initialLatitude={gymLatitude} initialLongitude={gymLongitude} onLocationPicked={onLocationPicked} />
           </div>
         </div>
 
-        {/* Right Column: Address and Contact details */}
+        {/* Right: Address + Contact */}
         <div style={{ display: "flex", flexDirection: "column" }}>
-          
           <div style={{ display: "flex", flexDirection: "column", marginBottom: 16 }}>
             <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--orange)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              Address Details<span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
+              Address Details <span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
             </div>
             <div className="field">
               <label>Street address <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="text" placeholder="123 Durbar Marg" value={gymAddressLine} onChange={(event) => setGymAddressLine(event.target.value)} />
+              <input type="text" placeholder="123 Durbar Marg" value={gymAddressLine} onChange={e => setGymAddressLine(e.target.value)} />
             </div>
             <div className="frow">
               <div className="field">
                 <label>City <span style={{ color: "#ef4444" }}>*</span></label>
-                <input type="text" placeholder="Kathmandu" value={gymCity} onChange={(event) => setGymCity(event.target.value)} />
+                <input type="text" placeholder="Kathmandu" value={gymCity} onChange={e => setGymCity(e.target.value)} />
               </div>
               <div className="field">
                 <label>Postal code</label>
-                <input type="text" placeholder="44600" value={gymPostal} onChange={(event) => setGymPostal(event.target.value)} />
+                <input type="text" placeholder="44600" value={gymPostal} onChange={e => setGymPostal(e.target.value)} />
               </div>
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Country <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="text" placeholder="Nepal" value={gymCountry} onChange={(event) => setGymCountry(event.target.value)} />
+              <input type="text" placeholder="Nepal" value={gymCountry} onChange={e => setGymCountry(e.target.value)} />
             </div>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--orange)", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-              Contact and Operating Hours<span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
+              Contact and Operating Hours <span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
             </div>
             <div className="field">
               <label>Phone number <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="tel" placeholder="+977 01-xxxxxxx" value={gymPhone} onChange={(event) => setGymPhone(event.target.value)} />
+              <input type="tel" placeholder="+977 01-xxxxxxx" value={gymPhone} onChange={e => setGymPhone(e.target.value)} />
             </div>
             <div className="field">
               <label>Contact email <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="email" placeholder="public@yourgym.com" value={gymContactEmail} onChange={(event) => setGymContactEmail(event.target.value)} />
-              <div className="field-hint">Shown to members - separate from your login email</div>
+              <input type="email" placeholder="public@yourgym.com" value={gymContactEmail} onChange={e => setGymContactEmail(e.target.value)} />
+              <div className="field-hint">Shown to members — separate from your login email</div>
             </div>
             <div className="field">
               <label>Website <span style={{ color: "var(--text-d)" }}>optional</span></label>
-              <input type="url" placeholder="https://yourgym.com" value={gymWebsite} onChange={(event) => setGymWebsite(event.target.value)} />
+              <input type="url" placeholder="https://yourgym.com" value={gymWebsite} onChange={e => setGymWebsite(e.target.value)} />
             </div>
             <div className="frow">
               <div className="field">
                 <label>Opens at <span style={{ color: "#ef4444" }}>*</span></label>
-                <TimeInput
-                  className="w-full"
-                  value={gymOpens}
-                  onChange={(event) => setGymOpens(event.target.value)}
-                />
+                <TimeInput className="w-full" value={gymOpens} onChange={e => setGymOpens(e.target.value)} />
               </div>
               <div className="field">
                 <label>Closes at <span style={{ color: "#ef4444" }}>*</span></label>
-                <TimeInput
-                  className="w-full"
-                  value={gymCloses}
-                  onChange={(event) => setGymCloses(event.target.value)}
-                />
+                <TimeInput className="w-full" value={gymCloses} onChange={e => setGymCloses(e.target.value)} />
               </div>
             </div>
             <div className="field" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <label>Description <span style={{ color: "var(--text-d)" }}>optional</span></label>
-              <textarea placeholder="Describe your facilities, equipment, and what makes your gym unique..." value={gymDesc} onChange={(event) => setGymDesc(event.target.value)} style={{ flex: 1, minHeight: 80, resize: "none" }} />
+              <textarea placeholder="Describe your facilities, equipment, and what makes your gym unique..." value={gymDesc} onChange={e => setGymDesc(e.target.value)} style={{ flex: 1, minHeight: 80, resize: "none" }} />
             </div>
           </div>
-          
+
           <div style={{ alignSelf: "flex-end", width: "100%", marginTop: "8px" }}>
             <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(0)} onNext={goToPayoutStep} />
           </div>
@@ -1862,21 +1524,28 @@ const FitPalGymSetup: FC = () => {
     const esewaWalletValid = isValidNepalWalletId(esewaWalletId);
     const khaltiWalletValid = isValidNepalWalletId(khaltiWalletId);
 
+    // Shared styles for the provider containers to avoid repetition
+    const providerBox = (enabled: boolean, accentRgb: string) => ({
+      border: `1px solid ${enabled ? `rgba(${accentRgb},.4)` : "rgba(255,255,255,.08)"}`,
+      borderRadius: 16,
+      background: enabled ? `rgba(${accentRgb},.04)` : "rgba(255,255,255,.02)",
+      overflow: "hidden",
+      transition: "all .2s",
+      marginBottom: 12,
+    });
+
     return (
       <div className="screen">
         {stepError && <StepErrorBanner message={stepError} />}
-
         <div className="sec-label" style={{ marginBottom: 10 }}>Payout Wallet</div>
         <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>
           Link the wallet where FitPal sends your revenue share. You can enable one or both.
         </p>
 
-        <div style={{ border: `1px solid ${esewaEnabled ? "rgba(96,187,70,.4)" : "rgba(255,255,255,.08)"}`, borderRadius: 16, background: esewaEnabled ? "rgba(96,187,70,.04)" : "rgba(255,255,255,.02)", overflow: "hidden", transition: "all .2s", marginBottom: 12 }}>
-          <button
-            type="button"
-            onClick={() => setEsewaEnabled((prev) => !prev)}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}
-          >
+        {/* eSewa */}
+        <div style={providerBox(esewaEnabled, "96,187,70")}>
+          <button type="button" onClick={() => setEsewaEnabled(p => !p)}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}>
             <div style={{ width: 112, height: 56, borderRadius: 14, background: "rgba(96,187,70,.14)", border: "1px solid rgba(96,187,70,.22)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", overflow: "hidden", flexShrink: 0 }}>
               <img src={ESEWA_LOGO_URL} alt="eSewa" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
@@ -1885,55 +1554,31 @@ const FitPalGymSetup: FC = () => {
               <div style={{ fontSize: 11, color: "var(--text-d)", marginTop: 2 }}>Manual admin verification before first payout</div>
             </div>
             <div style={{ width: 22, height: 22, borderRadius: "50%", border: `1.5px solid ${esewaEnabled ? "#60BB46" : "rgba(255,255,255,.15)"}`, background: esewaEnabled ? "#60BB46" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
-              {esewaEnabled && (
-                <svg width="10" height="10" fill="none" viewBox="0 0 24 24">
-                  <path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              )}
+              {esewaEnabled && <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" /></svg>}
             </div>
           </button>
-
           {esewaEnabled && (
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
               <div className="field" style={{ marginBottom: 12 }}>
                 <label>eSewa ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
-                <input
-                  type="text"
-                  maxLength={10}
-                  placeholder="98XXXXXXXX"
-                  value={esewaWalletId}
-                  onChange={(event) => setEsewaWalletId(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                <input type="text" maxLength={10} placeholder="98XXXXXXXX" value={esewaWalletId}
+                  onChange={e => setEsewaWalletId(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   style={{ background: "rgba(255,255,255,.04)", borderColor: esewaWalletId && !esewaWalletValid ? "rgba(239,68,68,.5)" : esewaWalletValid ? "rgba(96,187,70,.45)" : "rgba(255,255,255,.08)" }}
                 />
-                {esewaWalletId && !esewaWalletValid && (
-                  <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>
-                )}
+                {esewaWalletId && !esewaWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <input
-                  type="text"
-                  placeholder="Full name on eSewa account"
-                  value={esewaAccountName}
-                  onChange={(event) => setEsewaAccountName(event.target.value)}
-                  style={{ background: "rgba(255,255,255,.04)" }}
-                />
+                <input type="text" placeholder="Full name on eSewa account" value={esewaAccountName} onChange={e => setEsewaAccountName(e.target.value)} style={{ background: "rgba(255,255,255,.04)" }} />
               </div>
             </div>
           )}
         </div>
 
-        <div style={{ border: `1px solid ${khaltiEnabled ? "rgba(139,92,246,.4)" : "rgba(255,255,255,.08)"}`, borderRadius: 16, background: khaltiEnabled ? "rgba(92,45,145,.05)" : "rgba(255,255,255,.02)", overflow: "hidden", transition: "all .2s", marginBottom: 12 }}>
-          <button
-            type="button"
-            onClick={() => {
-              setKhaltiEnabled((prev) => {
-                const next = !prev;
-                return next;
-              });
-            }}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}
-          >
+        {/* Khalti */}
+        <div style={providerBox(khaltiEnabled, "139,92,246")}>
+          <button type="button" onClick={() => setKhaltiEnabled(p => !p)}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}>
             <div style={{ width: 112, height: 56, borderRadius: 14, background: "rgba(92,45,145,.16)", border: "1px solid rgba(139,92,246,.32)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", overflow: "hidden", flexShrink: 0 }}>
               <img src={KHALTI_LOGO_URL} alt="Khalti" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
             </div>
@@ -1942,45 +1587,22 @@ const FitPalGymSetup: FC = () => {
               <div style={{ fontSize: 11, color: "var(--text-d)", marginTop: 2 }}>Wallet will be reviewed during approval</div>
             </div>
             <div style={{ width: 22, height: 22, borderRadius: "50%", border: `1.5px solid ${khaltiEnabled ? "#8b5cf6" : "rgba(255,255,255,.15)"}`, background: khaltiEnabled ? "#8b5cf6" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .2s" }}>
-              {khaltiEnabled && (
-                <svg width="10" height="10" fill="none" viewBox="0 0 24 24">
-                  <path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              )}
+              {khaltiEnabled && <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#fff" strokeWidth="3" strokeLinecap="round" /></svg>}
             </div>
           </button>
-
           {khaltiEnabled && (
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
               <div className="field" style={{ marginBottom: 12 }}>
                 <label>Khalti ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
-                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
-                    <input
-                      type="text"
-                      maxLength={10}
-                      placeholder="98XXXXXXXX"
-                      value={khaltiWalletId}
-                      onChange={(event) => {
-                        setKhaltiWalletId(event.target.value.replace(/\D/g, "").slice(0, 10));
-                      }}
-                      style={{ width: "100%", background: "rgba(255,255,255,.04)", borderColor: khaltiWalletId && !khaltiWalletValid ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.08)" }}
-                    />
-                    {khaltiWalletId && !khaltiWalletValid && (
-                      <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>
-                    )}
-                  </div>
-                </div>
+                <input type="text" maxLength={10} placeholder="98XXXXXXXX" value={khaltiWalletId}
+                  onChange={e => setKhaltiWalletId(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  style={{ width: "100%", background: "rgba(255,255,255,.04)", borderColor: khaltiWalletId && !khaltiWalletValid ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.08)" }}
+                />
+                {khaltiWalletId && !khaltiWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <input
-                  type="text"
-                  placeholder="Full name on Khalti account"
-                  value={khaltiAccountName}
-                  onChange={(event) => setKhaltiAccountName(event.target.value)}
-                  style={{ background: "rgba(255,255,255,.04)" }}
-                />
+                <input type="text" placeholder="Full name on Khalti account" value={khaltiAccountName} onChange={e => setKhaltiAccountName(e.target.value)} style={{ background: "rgba(255,255,255,.04)" }} />
               </div>
             </div>
           )}
@@ -1993,9 +1615,7 @@ const FitPalGymSetup: FC = () => {
           </svg>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#93c5fd", marginBottom: 4 }}>How payouts work</div>
-            <div style={{ fontSize: 12, color: "var(--text-m)", lineHeight: 1.7 }}>
-              Members pay FitPal subscriptions directly. FitPal sends your gym&apos;s revenue share to the wallet(s) you connect here.
-            </div>
+            <div style={{ fontSize: 12, color: "var(--text-m)", lineHeight: 1.7 }}>Members pay FitPal subscriptions directly. FitPal sends your gym&apos;s revenue share to the wallet(s) you connect here.</div>
           </div>
         </div>
 
@@ -2004,265 +1624,195 @@ const FitPalGymSetup: FC = () => {
     );
   };
 
-  const renderDocsScreen = () => {
-    return (
-      <div className="screen">
-        {stepError && <StepErrorBanner message={stepError} />}
-        <input
-          ref={documentInputRef}
-          type="file"
-          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
-          style={{ display: "none" }}
-          onChange={handleDocumentSelected}
-        />
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: "none" }}
-          onChange={handlePhotoSelected}
-        />
-        <div className="sec-label">Verification Documents</div>
-        <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>
-          All documents are reviewed by our team and never shared publicly. Uploads are encrypted.
-        </p>
+  const renderDocsScreen = () => (
+    <div className="screen">
+      {stepError && <StepErrorBanner message={stepError} />}
+      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" style={{ display: "none" }} onChange={handleDocumentSelected} />
+      <input ref={photoInputRef}    type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoSelected} />
 
-        {docs.map((doc, idx) => {
-          const isRequired = doc.type === "REGISTRATION_CERTIFICATE" || doc.type === "LICENSE";
-          const docLabel = (DOC_TYPES.find((docType) => docType.value === doc.type) ?? { label: doc.type }).label;
+      <div className="sec-label">Verification Documents</div>
+      <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>All documents are reviewed by our team and never shared publicly. Uploads are encrypted.</p>
 
-          return (
-            <div key={`${doc.type}-${idx}`} style={{ background: "var(--muted)", border: `1px solid ${isRequired ? "rgba(249,115,22,.15)" : "rgba(255,255,255,.06)"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12, position: "relative" }}>
-              {isRequired && (
-                <div style={{ position: "absolute", top: -1, right: 14, fontSize: 8, fontWeight: 900, color: "var(--orange)", background: "var(--muted)", padding: "2px 8px", borderRadius: "0 0 8px 8px", border: "1px solid rgba(249,115,22,.2)", borderTop: "none", textTransform: "uppercase", letterSpacing: ".08em" }}>
-                  Required
-                </div>
-              )}
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, position: "relative" }}>
-                  <select
-                    disabled={isRequired || doc.uploaded}
-                    value={doc.type}
-                    onChange={(event) => setDocType(idx, event.target.value as DocTypeValue)}
-                    style={{ width: "100%", padding: "11px 32px 11px 14px", background: isRequired ? "rgba(249,115,22,.06)" : "rgba(255,255,255,.04)", border: `1px solid ${isRequired ? "rgba(249,115,22,.2)" : "rgba(255,255,255,.08)"}`, borderRadius: 10, color: isRequired ? "var(--orange)" : "#e5e7eb", fontFamily: "var(--font)", fontSize: 13, fontWeight: 600, outline: "none", appearance: "none", WebkitAppearance: "none", cursor: isRequired || doc.uploaded ? "default" : "pointer" }}
-                  >
-                    {isRequired ? (
-                      <option value={doc.type}>{docLabel}</option>
-                    ) : (
-                      DOC_TYPES.filter((docType) => !docType.required).map((docType) => (
-                        <option key={docType.value} value={docType.value}>{docType.label}</option>
-                      ))
-                    )}
-                  </select>
-                  <svg style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#4b5563" }} width="10" height="6" fill="none" viewBox="0 0 10 6">
-                    <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
-                </div>
-                {!isRequired && (
-                  <button
-                    type="button"
-                    onClick={() => removeDoc(idx)}
-                    style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", color: "#4b5563", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}
-                    onMouseOver={(event) => { const button = event.currentTarget; button.style.background = "rgba(239,68,68,.1)"; button.style.borderColor = "rgba(239,68,68,.25)"; button.style.color = "#ef4444"; }}
-                    onMouseOut={(event) => { const button = event.currentTarget; button.style.background = "rgba(255,255,255,.02)"; button.style.borderColor = "rgba(255,255,255,.07)"; button.style.color = "#4b5563"; }}
-                  >
-                    <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
-                      <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                )}
+      {docs.map((doc, idx) => {
+        const isRequired = isRequiredDocType(doc.type);
+        const docLabel   = (DOC_TYPES.find(t => t.value === doc.type) ?? { label: doc.type }).label;
+        const optionalDocTypes = DOC_TYPES.filter(type =>
+          !isRequiredDocType(type.value) &&
+          (type.value === doc.type || !isSingletonDocType(type.value) || !docs.some((existingDoc, existingIdx) => existingIdx !== idx && existingDoc.type === type.value))
+        );
+        return (
+          <div key={`${doc.type}-${idx}`} style={{ background: "var(--muted)", border: `1px solid ${isRequired ? "rgba(249,115,22,.15)" : "rgba(255,255,255,.06)"}`, borderRadius: 14, padding: "14px 16px", marginBottom: 12, position: "relative" }}>
+            {isRequired && (
+              <div style={{ position: "absolute", top: -1, right: 14, fontSize: 8, fontWeight: 900, color: "var(--orange)", background: "var(--muted)", padding: "2px 8px", borderRadius: "0 0 8px 8px", border: "1px solid rgba(249,115,22,.2)", borderTop: "none", textTransform: "uppercase", letterSpacing: ".08em" }}>Required</div>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, position: "relative" }}>
+                <select disabled={isRequired || doc.uploaded} value={doc.type} onChange={e => setDocType(idx, e.target.value as DocTypeValue)}
+                  style={{ width: "100%", padding: "11px 32px 11px 14px", background: isRequired ? "rgba(249,115,22,.06)" : "rgba(255,255,255,.04)", border: `1px solid ${isRequired ? "rgba(249,115,22,.2)" : "rgba(255,255,255,.08)"}`, borderRadius: 10, color: isRequired ? "var(--orange)" : "#e5e7eb", fontFamily: "var(--font)", fontSize: 13, fontWeight: 600, outline: "none", appearance: "none", WebkitAppearance: "none", cursor: isRequired || doc.uploaded ? "default" : "pointer" }}>
+                  {isRequired
+                    ? <option value={doc.type}>{docLabel}</option>
+                    : optionalDocTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)
+                  }
+                </select>
+                <svg style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "#4b5563" }} width="10" height="6" fill="none" viewBox="0 0 10 6">
+                  <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
               </div>
-
-              {doc.uploaded ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", background: "rgba(52,211,153,.06)", border: "1.5px solid rgba(52,211,153,.2)", borderRadius: 12, marginTop: 10 }}>
-                  <svg style={{ flexShrink: 0, color: "#4ade80" }} width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#4ade80", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.fileName}</span>
-                  <button
-                    type="button"
-                    onClick={() => void removeDoc(idx)}
-                    disabled={uploadingDocIndex === idx}
-                    style={{ flexShrink: 0, background: "none", border: "none", cursor: uploadingDocIndex === idx ? "not-allowed" : "pointer", color: "#fca5a5", fontSize: 10, fontWeight: 700, fontFamily: "var(--font)", textTransform: "uppercase", letterSpacing: ".06em", padding: "2px 6px", borderRadius: 6 }}
-                    onMouseOver={(event) => { event.currentTarget.style.color = "#ef4444"; }}
-                    onMouseOut={(event) => { event.currentTarget.style.color = "#fca5a5"; }}
-                  >
-                    {uploadingDocIndex === idx ? "..." : "Remove"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openDocumentPicker(idx)}
-                    style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", color: "#4b5563", fontSize: 10, fontWeight: 700, fontFamily: "var(--font)", textTransform: "uppercase", letterSpacing: ".06em", padding: "2px 6px", borderRadius: 6 }}
-                    onMouseOver={(event) => { event.currentTarget.style.color = "#ef4444"; }}
-                    onMouseOut={(event) => { event.currentTarget.style.color = "#4b5563"; }}
-                  >
-                    Replace
-                  </button>
-                </div>
-              ) : (
-                <div
-                  style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: 20, background: "rgba(255,255,255,.02)", border: "1.5px dashed rgba(255,255,255,.09)", borderRadius: 12, cursor: "pointer", transition: "all .18s", marginTop: 10 }}
-                  onClick={() => openDocumentPicker(idx)}
-                  onKeyDown={() => undefined}
-                  role="button"
-                  tabIndex={0}
-                  onMouseOver={(event) => { const box = event.currentTarget; box.style.borderColor = "rgba(249,115,22,.4)"; box.style.background = "rgba(249,115,22,.03)"; }}
-                  onMouseOut={(event) => { const box = event.currentTarget; box.style.borderColor = "rgba(255,255,255,.09)"; box.style.background = "rgba(255,255,255,.02)"; }}
+              {!isRequired && (
+                <button type="button" onClick={() => removeDoc(idx)}
+                  style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 9, border: "1px solid rgba(255,255,255,.07)", background: "rgba(255,255,255,.02)", color: "#4b5563", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .15s" }}
+                  onMouseOver={e => { e.currentTarget.style.background = "rgba(239,68,68,.1)"; e.currentTarget.style.borderColor = "rgba(239,68,68,.25)"; e.currentTarget.style.color = "#ef4444"; }}
+                  onMouseOut={e  => { e.currentTarget.style.background = "rgba(255,255,255,.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,.07)"; e.currentTarget.style.color = "#4b5563"; }}
                 >
-                  <svg style={{ color: "#4b5563" }} width="20" height="20" fill="none" viewBox="0 0 20 20">
-                    <path d="M10 13V7m0 0L7 10m3-3 3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    <rect x="2.5" y="2.5" width="15" height="15" rx="3.5" stroke="currentColor" strokeWidth="1.4" />
-                  </svg>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "#4b5563" }}>
-                    {uploadingDocIndex === idx ? "Uploading..." : "Click to upload"}
-                  </span>
-                  <span style={{ fontSize: 10, color: "#374151", fontWeight: 600 }}>PDF / JPG / PNG - Max 10MB</span>
-                </div>
+                  <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+                </button>
               )}
             </div>
-          );
-        })}
 
-        <button
-          type="button"
-          onClick={addDoc}
-          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center", padding: 12, borderRadius: 12, border: "1.5px dashed rgba(249,115,22,.25)", background: "rgba(249,115,22,.03)", color: "var(--orange)", fontFamily: "var(--font)", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all .18s", textTransform: "uppercase", letterSpacing: ".07em", marginTop: 4 }}
-          onMouseOver={(event) => { event.currentTarget.style.background = "rgba(249,115,22,.08)"; event.currentTarget.style.borderColor = "rgba(249,115,22,.45)"; }}
-          onMouseOut={(event) => { event.currentTarget.style.background = "rgba(249,115,22,.03)"; event.currentTarget.style.borderColor = "rgba(249,115,22,.25)"; }}
-        >
-          <svg width="13" height="13" fill="none" viewBox="0 0 14 14">
-            <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          Add Document
+            {doc.uploaded ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 16px", background: "rgba(52,211,153,.06)", border: "1.5px solid rgba(52,211,153,.2)", borderRadius: 12, marginTop: 10 }}>
+                <svg style={{ flexShrink: 0, color: "#4ade80" }} width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#4ade80", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.fileName}</span>
+                <button type="button" onClick={() => void removeDoc(idx)} disabled={uploadingDocIndex === idx}
+                  style={{ flexShrink: 0, background: "none", border: "none", cursor: uploadingDocIndex === idx ? "not-allowed" : "pointer", color: "#fca5a5", fontSize: 10, fontWeight: 700, fontFamily: "var(--font)", textTransform: "uppercase", letterSpacing: ".06em", padding: "2px 6px", borderRadius: 6 }}
+                  onMouseOver={e => e.currentTarget.style.color = "#ef4444"}
+                  onMouseOut={e  => e.currentTarget.style.color = "#fca5a5"}
+                >{uploadingDocIndex === idx ? "..." : "Remove"}</button>
+                <button type="button" onClick={() => openDocumentPicker(idx)}
+                  style={{ flexShrink: 0, background: "none", border: "none", cursor: "pointer", color: "#4b5563", fontSize: 10, fontWeight: 700, fontFamily: "var(--font)", textTransform: "uppercase", letterSpacing: ".06em", padding: "2px 6px", borderRadius: 6 }}
+                  onMouseOver={e => e.currentTarget.style.color = "#ef4444"}
+                  onMouseOut={e  => e.currentTarget.style.color = "#4b5563"}
+                >Replace</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: 20, background: "rgba(255,255,255,.02)", border: "1.5px dashed rgba(255,255,255,.09)", borderRadius: 12, cursor: "pointer", transition: "all .18s", marginTop: 10 }}
+                onClick={() => openDocumentPicker(idx)} onKeyDown={() => undefined} role="button" tabIndex={0}
+                onMouseOver={e => { e.currentTarget.style.borderColor = "rgba(249,115,22,.4)"; e.currentTarget.style.background = "rgba(249,115,22,.03)"; }}
+                onMouseOut={e  => { e.currentTarget.style.borderColor = "rgba(255,255,255,.09)"; e.currentTarget.style.background = "rgba(255,255,255,.02)"; }}
+              >
+                <svg style={{ color: "#4b5563" }} width="20" height="20" fill="none" viewBox="0 0 20 20">
+                  <path d="M10 13V7m0 0L7 10m3-3 3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  <rect x="2.5" y="2.5" width="15" height="15" rx="3.5" stroke="currentColor" strokeWidth="1.4" />
+                </svg>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#4b5563" }}>{uploadingDocIndex === idx ? "Uploading..." : "Click to upload"}</span>
+                <span style={{ fontSize: 10, color: "#374151", fontWeight: 600 }}>PDF / JPG / PNG - Max 10MB</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <button type="button" onClick={addDoc}
+        style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", justifyContent: "center", padding: 12, borderRadius: 12, border: "1.5px dashed rgba(249,115,22,.25)", background: "rgba(249,115,22,.03)", color: "var(--orange)", fontFamily: "var(--font)", fontSize: 12, fontWeight: 700, cursor: "pointer", transition: "all .18s", textTransform: "uppercase", letterSpacing: ".07em", marginTop: 4 }}
+        onMouseOver={e => { e.currentTarget.style.background = "rgba(249,115,22,.08)"; e.currentTarget.style.borderColor = "rgba(249,115,22,.45)"; }}
+        onMouseOut={e  => { e.currentTarget.style.background = "rgba(249,115,22,.03)"; e.currentTarget.style.borderColor = "rgba(249,115,22,.25)"; }}
+      >
+        <svg width="13" height="13" fill="none" viewBox="0 0 14 14"><path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+        Add Document
+      </button>
+
+      {/* Photos section */}
+      <div className="sec-label green" style={{ marginTop: 24 }}>Gym Photos</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 10, fontSize: 12, color: "var(--text-m)" }}>
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style={{ color: "var(--orange)", flexShrink: 0 }}>
+          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        At least 1 photo is required. You can upload up to {MAX_GYM_PHOTOS} photos.
+      </div>
+
+      <button type="button" onClick={openPhotoPicker} disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS}
+        style={{ width: "100%", marginTop: 12, padding: "16px 14px", borderRadius: 12, border: "1.5px dashed rgba(249,115,22,.25)", background: "rgba(249,115,22,.03)", color: "var(--text-m)", cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS ? "not-allowed" : "pointer", fontFamily: "var(--font)", textAlign: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{isUploadingPhotos ? "Uploading photos..." : "Drop photos here or click to browse"}</div>
+        <div style={{ fontSize: 11, marginTop: 4, color: "#4b5563" }}>JPG, PNG, WEBP - first photo becomes cover</div>
+      </button>
+
+      {photos.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10, marginTop: 12 }}>
+          {photos.map(photo => (
+            <div key={photo.publicId} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,.02)" }}>
+              <div style={{ position: "relative", width: "100%", height: 100, background: "#0d0d0d" }}>
+                <img src={photo.photoUrl} alt="Gym" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                {photo.cover && (
+                  <div style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", background: "rgba(16,185,129,.92)", color: "#fff", borderRadius: 999, padding: "3px 8px" }}>Cover</div>
+                )}
+                <button type="button" onClick={() => void removePhoto(photo.photoId)} disabled={activePhotoId !== null || !hasPhotoId(photo.photoId)} aria-label="Remove gym photo"
+                  style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.8)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", transition: "all .2s", zIndex: 1, opacity: activePhotoId === photo.photoId ? 0.65 : 1 }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = "rgba(248,113,113,0.5)"; e.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
+                  onMouseOut={e  => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.background = "rgba(0,0,0,0.8)"; }}
+                >
+                  {!hasPhotoId(photo.photoId) || activePhotoId === photo.photoId
+                    ? <span style={{ fontSize: 10, fontWeight: 900, lineHeight: 1 }}>...</span>
+                    : <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+                  }
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 6, padding: 8 }}>
+                <button type="button" onClick={() => void setCoverPhoto(photo.photoId)} disabled={photo.cover || activePhotoId !== null || !hasPhotoId(photo.photoId)}
+                  style={{ flex: 1, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "#e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: photo.cover || activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}>
+                  {photo.cover ? "Cover" : !hasPhotoId(photo.photoId) ? "Syncing" : "Set Cover"}
+                </button>
+                <button type="button" onClick={() => void removePhoto(photo.photoId)} disabled={activePhotoId !== null || !hasPhotoId(photo.photoId)}
+                  style={{ border: "1px solid rgba(239,68,68,.35)", background: "rgba(239,68,68,.08)", color: "#fca5a5", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}>
+                  {!hasPhotoId(photo.photoId) ? "Syncing" : activePhotoId === photo.photoId ? "..." : "Remove"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, fontSize: 11, color: "var(--text-d)" }}>
+        <span><strong style={{ color: "var(--text-m)" }}>{photos.length}</strong> / {MAX_GYM_PHOTOS} photos</span>
+        <button type="button" onClick={openPhotoPicker} disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS}
+          style={{ color: "var(--orange)", background: "rgba(249,115,22,.08)", border: "1px solid rgba(249,115,22,.2)", borderRadius: 8, padding: "5px 12px", cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS ? "not-allowed" : "pointer", fontFamily: "var(--font)", fontSize: 11, fontWeight: 700 }}>
+          + Add More
         </button>
+      </div>
 
-        <div className="sec-label green" style={{ marginTop: 24 }}>Gym Photos</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 10, fontSize: 12, color: "var(--text-m)" }}>
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style={{ color: "var(--orange)", flexShrink: 0 }}>
+      {hasRequiredDocs && hasRequiredPhotos ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", borderRadius: 12, marginTop: 16 }}>
+          <svg style={{ color: "#4ade80", flexShrink: 0 }} width="15" height="15" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80" }}>All required documents uploaded and at least 1 photo added. Ready to submit.</span>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 12, marginTop: 16 }}>
+          <svg style={{ color: "#52525b", flexShrink: 0 }} width="15" height="15" fill="none" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
             <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          At least 1 photo is required. You can upload up to {maxGymPhotos} photos.
+          <span style={{ fontSize: 12, fontWeight: 500, color: "#52525b" }}>Upload required documents and at least one gym photo to continue.</span>
         </div>
+      )}
 
-        <button
-          type="button"
-          onClick={openPhotoPicker}
-          disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos}
-          style={{
-            width: "100%",
-            marginTop: 12,
-            padding: "16px 14px",
-            borderRadius: 12,
-            border: "1.5px dashed rgba(249,115,22,.25)",
-            background: "rgba(249,115,22,.03)",
-            color: "var(--text-m)",
-            cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos ? "not-allowed" : "pointer",
-            fontFamily: "var(--font)",
-            textAlign: "center",
-          }}
-        >
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
-            {isUploadingPhotos ? "Uploading photos..." : "Drop photos here or click to browse"}
-          </div>
-          <div style={{ fontSize: 11, marginTop: 4, color: "#4b5563" }}>
-            JPG, PNG, WEBP - first photo becomes cover
-          </div>
-        </button>
+      <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(2)} onNext={() => setStep(REVIEW_SUBMIT_STEP_INDEX)} />
+    </div>
+  );
 
-        {photos.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10, marginTop: 12 }}>
-            {photos.map((photo) => (
-              <div key={photo.photoId ?? photo.publicId} style={{ border: "1px solid rgba(255,255,255,.08)", borderRadius: 12, overflow: "hidden", background: "rgba(255,255,255,.02)" }}>
-                <div style={{ position: "relative", width: "100%", height: 100, background: "#0d0d0d" }}>
-                  <img src={photo.photoUrl} alt="Gym" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  {photo.cover && (
-                    <div style={{ position: "absolute", top: 8, left: 8, fontSize: 9, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", background: "rgba(16,185,129,.92)", color: "#fff", borderRadius: 999, padding: "3px 8px" }}>
-                      Cover
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void removePhoto(photo.photoId)}
-                    disabled={activePhotoId !== null || !hasPhotoId(photo.photoId)}
-                    aria-label="Remove gym photo"
-                    style={{ position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.8)", color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", transition: "all .2s", zIndex: 1, opacity: activePhotoId === photo.photoId ? 0.65 : 1 }}
-                    onMouseOver={(event) => { event.currentTarget.style.borderColor = "rgba(248,113,113,0.5)"; event.currentTarget.style.background = "rgba(239,68,68,0.2)"; }}
-                    onMouseOut={(event) => { event.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; event.currentTarget.style.background = "rgba(0,0,0,0.8)"; }}
-                  >
-                    {!hasPhotoId(photo.photoId) || activePhotoId === photo.photoId ? (
-                      <span style={{ fontSize: 10, fontWeight: 900, lineHeight: 1 }}>...</span>
-                    ) : (
-                      <svg width="12" height="12" fill="none" viewBox="0 0 14 14">
-                        <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                      </svg>
-                    )}
-                  </button>
-                </div>
-                <div style={{ display: "flex", gap: 6, padding: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => void setCoverPhoto(photo.photoId)}
-                    disabled={photo.cover || activePhotoId !== null || !hasPhotoId(photo.photoId)}
-                    style={{ flex: 1, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.04)", color: "#e5e7eb", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: photo.cover || activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
-                  >
-                    {photo.cover ? "Cover" : !hasPhotoId(photo.photoId) ? "Syncing" : "Set Cover"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void removePhoto(photo.photoId)}
-                    disabled={activePhotoId !== null || !hasPhotoId(photo.photoId)}
-                    style={{ border: "1px solid rgba(239,68,68,.35)", background: "rgba(239,68,68,.08)", color: "#fca5a5", borderRadius: 8, fontSize: 10, fontWeight: 700, padding: "6px 8px", cursor: activePhotoId !== null || !hasPhotoId(photo.photoId) ? "not-allowed" : "pointer", textTransform: "uppercase", letterSpacing: ".05em" }}
-                  >
-                    {!hasPhotoId(photo.photoId) ? "Syncing" : activePhotoId === photo.photoId ? "..." : "Remove"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, fontSize: 11, color: "var(--text-d)" }}>
-          <span><strong style={{ color: "var(--text-m)" }}>{photos.length}</strong> / {maxGymPhotos} photos</span>
-          <button
-            type="button"
-            onClick={openPhotoPicker}
-            disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos}
-            style={{ color: "var(--orange)", background: "rgba(249,115,22,.08)", border: "1px solid rgba(249,115,22,.2)", borderRadius: 8, padding: "5px 12px", cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= maxGymPhotos ? "not-allowed" : "pointer", fontFamily: "var(--font)", fontSize: 11, fontWeight: 700 }}
-          >
-            + Add More
-          </button>
-        </div>
-
-        {hasRequiredDocuments && hasRequiredPhotos ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(52,211,153,.06)", border: "1px solid rgba(52,211,153,.2)", borderRadius: 12, marginTop: 16 }}>
-            <svg style={{ color: "#4ade80", flexShrink: 0 }} width="15" height="15" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#4ade80" }}>All required documents uploaded and at least 1 photo added. Ready to submit.</span>
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 12, marginTop: 16 }}>
-            <svg style={{ color: "#52525b", flexShrink: 0 }} width="15" height="15" fill="none" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-              <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#52525b" }}>Upload required documents and at least one gym photo to continue.</span>
-          </div>
-        )}
-
-        <Actions
-          label={isGymPendingReview ? "Resubmit for Review" : "Submit for Review"}
-          step={step}
-          totalSteps={STEPS.length}
-          disabled={isBusy}
-          onBack={() => setStep(2)}
-          onNext={goToReviewStep}
-        />
+  const renderReviewSubmitScreen = () => (
+    <div className="screen">
+      {stepError && <StepErrorBanner message={stepError} />}
+      <div style={{ border: "1px solid rgba(249,115,22,.25)", background: "rgba(249,115,22,.08)", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+        <p style={{ margin: 0, color: "#fb923c", fontSize: 13, fontWeight: 800, letterSpacing: ".03em", textTransform: "uppercase" }}>Please Check Again</p>
+        <p style={{ margin: "8px 0 0", color: "#f5f5f5", fontSize: 12 }}>Confirm your details, payouts, documents, and photos before submission. Once submitted, your data cannot be changed until admin review is completed or rejected.</p>
       </div>
-    );
-  };
+      <div style={{ border: "1px solid rgba(255,255,255,.08)", background: "rgba(255,255,255,.02)", borderRadius: 14, padding: "14px 16px", display: "grid", gap: 10, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 12, color: "var(--text-m)" }}>Required Documents</span>
+          <strong style={{ fontSize: 12, color: "#fff" }}>{hasRequiredDocs ? "Complete" : "Missing"}</strong>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 12, color: "var(--text-m)" }}>Gym Photos</span>
+          <strong style={{ fontSize: 12, color: "#fff" }}>{hasRequiredPhotos ? `Complete (${photos.length})` : "Missing"}</strong>
+        </div>
+      </div>
+      <Actions label={isGymRejected ? "Resubmit for Review" : "Submit for Review"} step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(DOCUMENTS_STEP_INDEX)} onNext={goToReviewStep} />
+    </div>
+  );
 
   const renderGymDoneScreen = () => (
     <div className="screen done-wrap">
@@ -2272,28 +1822,24 @@ const FitPalGymSetup: FC = () => {
           <path d="M18 12v7l5 2.5" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" />
         </svg>
       </div>
-      <div className="done-title">{isGymApproved ? "Gym Approved" : "Pending Review"}</div>
+      <div className="done-title">
+        {isGymApproved ? "Gym Approved" : isGymRejected ? "Changes Requested" : "Pending Review"}
+      </div>
       <div className="done-sub">
         {isGymApproved ? (
-          <>
-            Your gym has been approved and can now access the dashboard.
-          </>
+          <>Your gym has been approved and can now access the dashboard.</>
+        ) : isGymRejected ? (
+          <>Your submission was sent back for updates. Please edit your details, fix the requested items, and submit for review again.</>
         ) : (
-          <>
-            Thank you for submitting your application for our platform. Our team will review this application within <strong style={{ color: "var(--orange)" }}>1-2 business days</strong>, and confirmation will be shown on this page.
-          </>
+          <>Thank you for submitting your application for our platform. Our team will review this application within <strong style={{ color: "var(--orange)" }}>1-2 business days</strong>, and confirmation will be shown on this page.</>
         )}
       </div>
       <div className="done-actions">
-        {!isGymApproved ? (
-          <button
-            className="corner-action-btn"
-            type="button"
-            onClick={() => navigate(GYM_PROFILE_SETUP_ROUTE, { replace: true, state: { editSubmission: true } })}
-          >
+        {isGymRejected && (
+          <button className="corner-action-btn" type="button" onClick={openEditSubmission}>
             <span>Edit Submission</span>
           </button>
-        ) : null}
+        )}
         <button className="done-btn" type="button" onClick={() => window.location.reload()}>
           <svg width="15" height="15" fill="none" viewBox="0 0 24 24">
             <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -2307,120 +1853,48 @@ const FitPalGymSetup: FC = () => {
   const renderLoadingScreen = () => (
     <div className="screen" style={{ minHeight: 320, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--orange)", fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em" }}>
-        <span className="spinner" />
-        Loading gym profile
+        <span className="spinner" />Loading gym profile
       </div>
     </div>
   );
 
-  const SIDEBAR_ITEMS: SidebarItem[] = [
-    { label: "Dashboard", icon: <><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" /><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" /><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" /><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="2" /></> },
-    { label: "Gyms", icon: <><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /></> },
-    { label: "Routines", icon: <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 000 4h6a2 2 0 000-4M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /> },
-    { label: "Exercises", icon: <path d="M6 4v4m0 0v4m0-4H4m2 0h2M18 4v4m0 0v4m0-4h-2m2 0h2M4 14h2m0 0v4m0-4v-2m0 6h2M16 14h2m0 0v4m0-4v-2m0 6h2M8 12h8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /> },
-  ];
+  const stepId  = STEPS[step]?.id ?? "gymInfo";
+  const hdr     = HEADERS[stepId];
+  const isWide  = stepId === "location" || stepId === "gymInfo" || stepId === "payout" || stepId === "docs";
+  const cardMax = isWide ? "860px" : "580px";
 
   const renderCurrentScreen = () => {
-    if (isLoadingProfile) {
-      return renderLoadingScreen();
-    }
-
+    if (isLoadingProfile) return renderLoadingScreen();
     switch (stepId) {
-      case "gymInfo":
-        return renderGymInfoScreen();
-      case "location":
-        return renderLocationScreen();
-      case "payout":
-        return renderPayoutScreen();
-      case "docs":
-        return renderDocsScreen();
-      case "gymDone":
-        return renderGymDoneScreen();
-      default:
-        return renderGymInfoScreen();
+      case "gymInfo":      return renderGymInfoScreen();
+      case "location":     return renderLocationScreen();
+      case "payout":       return renderPayoutScreen();
+      case "docs":         return renderDocsScreen();
+      case "reviewSubmit": return renderReviewSubmitScreen();
+      case "gymDone":      return renderGymDoneScreen();
+      default:             return renderGymInfoScreen();
     }
   };
 
-  const handleSidebarClick = (label: string) => {
-    if (label === "Profile") {
-      navigate("/dashboard", { state: { activeSection: "profile" } });
+  const handleShellSectionChange = (section: string) => {
+    if (section === "gymProfile") {
+      navigate("/gym-profile-setup");
       return;
     }
 
-    navigate("/dashboard");
+    navigate("/dashboard", { state: { activeSection: section } });
   };
 
   return (
-    <>
-      <nav className="dash-nav">
-        <a className="nav-logo" href="/dashboard">
-          <img src="/logo.svg" alt="FitPal Logo" style={{ width: 48, height: 48, flexShrink: 0 }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="nav-logo-text"><span className="fire-t">Fit</span>Pal</span>
-            <span style={{ fontSize: 8, fontWeight: 900, color: "#fbbf24", background: "rgba(249,115,22,.1)", border: "1px solid rgba(249,115,22,.3)", borderRadius: 6, padding: "3px 8px", textTransform: "uppercase", letterSpacing: ".08em" }}>Gym</span>
-          </div>
-        </a>
-        <div className="nav-search">
-          <svg className="nav-si" width="15" height="15" fill="none" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
-            <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          <input type="text" placeholder="Search routines..." />
-        </div>
-        <div className="nav-right">
-          <button className="nav-bell" type="button">
-            <svg width="22" height="22" fill="none" viewBox="0 0 24 24">
-              <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="nav-bell-dot" />
-          </button>
-          <button className="nav-checkin" type="button">Check In</button>
-          <div className="nav-div" />
-          <div className="nav-user">
-            <div className="nav-ui">
-              <p className="nav-un">{authConfig.displayName}</p>
-              <p className="nav-ur">Gym Owner</p>
-            </div>
-            <div className="nav-av"><img src={authConfig.avatarUrl} alt="" /></div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="shell">
-        <aside className="dash-sidebar">
-          <nav className="sb-nav">
-            {SIDEBAR_ITEMS.map(({ label, icon }) => (
-              <button key={label} className="sb-btn" type="button" onClick={() => handleSidebarClick(label)}>
-                <svg fill="none" viewBox="0 0 24 24">{icon}</svg>
-                <span>{label}</span>
-              </button>
-            ))}
-            <button className="sb-btn active" type="button" onClick={() => handleSidebarClick("Profile")}>
-              <svg fill="none" viewBox="0 0 24 24">
-                <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" />
-                <path d="M4 20c0-4.418 3.582-7 8-7s8 2.582 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <span>Profile</span>
-            </button>
-          </nav>
-          <div className="sb-bottom">
-            <button className="sb-btn" type="button" onClick={() => navigate("/profile")}>
-              <svg fill="none" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="2" />
-              </svg>
-              <span>Settings</span>
-            </button>
-            <button className="sb-btn logout" type="button" onClick={() => navigate("/logout")}>
-              <svg fill="none" viewBox="0 0 24 24">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span>Logout</span>
-            </button>
-          </div>
-        </aside>
-
-        <main className="content">
+    <DefaultLayout
+      role="GYM"
+      activeSection="gymProfile"
+      onSectionChange={handleShellSectionChange}
+      onPrimaryAction={() => navigate("/gym-profile-setup")}
+      onProfileClick={() => navigate("/gym-profile-setup")}
+      contentClassName="p-0"
+    >
+        <div className="content">
           <div className="progress-header" style={{ maxWidth: cardMax }}>
             <div className="progress-kicker">
               <div className="progress-kicker-line" />FitPal Profile Setup
@@ -2431,20 +1905,24 @@ const FitPalGymSetup: FC = () => {
           </div>
 
           <div className="card" style={{ maxWidth: cardMax }}>
-            {isGymPendingReview && stepId !== "gymDone" ? (
+            {(isGymPendingReview || isGymRejected) && stepId !== "gymDone" && (
               <StatusBanner
-                title="Submission Under Review"
-                message="You can still update your gym information. As soon as you save a change, the backend moves this application back to draft and you will need to resubmit it for review."
+                title={isGymRejected ? "Application Rejected — Editing Enabled" : "Submission Under Review"}
+                message={isGymRejected
+                  ? "You can now edit and fix the issues. Any save will reset your application to Draft and require resubmission."
+                  : "Save actions are blocked until an admin rejects the application."}
               />
-            ) : null}
+            )}
             {renderCurrentScreen()}
           </div>
+
           <p style={{ marginTop: 14, fontSize: 11, color: "#374151", textAlign: "center", position: "relative", zIndex: 1 }}>
-            By continuing you agree to our <a href="#" style={{ color: "var(--orange)", textDecoration: "none" }}>Terms</a> and <a href="#" style={{ color: "var(--orange)", textDecoration: "none" }}>Privacy Policy</a>
+            By continuing you agree to our{" "}
+            <a href="#" style={{ color: "var(--orange)", textDecoration: "none" }}>Terms</a>{" "}and{" "}
+            <a href="#" style={{ color: "var(--orange)", textDecoration: "none" }}>Privacy Policy</a>
           </p>
-        </main>
-      </div>
-    </>
+        </div>
+    </DefaultLayout>
   );
 };
 

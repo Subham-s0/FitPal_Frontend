@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthState } from "@/hooks/useAuth";
 import {
   getDashboardPrimaryActionLabel,
+  getDashboardRoleBadgeLabel,
   getDashboardRole,
   getDashboardRoleLabel,
   getDashboardSearchPlaceholder,
@@ -21,6 +22,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
   const roleValue = role ?? auth.role;
   const dashboardRole = getDashboardRole(roleValue);
   const displayName = getDisplayNameFromEmail(auth.email, roleValue);
+  const roleBadgeLabel = getDashboardRoleBadgeLabel(roleValue);
   const roleLabel = getDashboardRoleLabel(roleValue);
   const primaryActionLabel = getDashboardPrimaryActionLabel(roleValue);
   const searchPlaceholder = getDashboardSearchPlaceholder(roleValue);
@@ -34,7 +36,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
     }
 
     if (dashboardRole === "GYM") {
-      navigate("/dashboard", { state: { activeSection: "profile" } });
+      navigate("/dashboard", { state: { activeSection: "gymProfile" } });
       return;
     }
 
@@ -53,7 +55,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
     }
 
     if (dashboardRole === "GYM") {
-      navigate("/dashboard", { state: { activeSection: "profile" } });
+      navigate("/dashboard", { state: { activeSection: "gymProfile" } });
       return;
     }
 
@@ -74,15 +76,9 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
             <span className="text-xl font-bold text-white">
               <span className="text-gradient-fire">Fit</span>Pal
             </span>
-            {dashboardRole === "ADMIN" ? (
-              <span className="hidden rounded-md border border-orange-500/30 px-2 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-orange-300/80 sm:inline-flex">
-                Admin
-              </span>
-            ) : dashboardRole === "GYM" ? (
-              <span className="hidden rounded-md border border-orange-500/30 px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-orange-300/80 sm:inline-flex">
-                Gym
-              </span>
-            ) : null}
+            <span className="hidden rounded-md border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300/80 sm:inline-flex">
+              {roleBadgeLabel}
+            </span>
           </div>
         </a>
       </div>
