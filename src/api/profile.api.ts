@@ -54,6 +54,25 @@ export async function getMyGymPhotosApi(): Promise<GymPhotoResponse[]> {
   return response.data;
 }
 
+/** POST /api/gyms/me/profile/logo */
+export async function uploadGymLogoApi(file: File): Promise<GymProfileResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await apiClient.post<GymProfileResponse>("/gyms/me/profile/logo", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
+}
+
+/** DELETE /api/gyms/me/profile/logo */
+export async function deleteGymLogoApi(): Promise<GymProfileResponse> {
+  const response = await apiClient.delete<GymProfileResponse>("/gyms/me/profile/logo");
+  return response.data;
+}
+
 /** POST /api/gyms/me/profile/verify-registered-email */
 export async function verifyGymRegisteredEmailApi(): Promise<GymProfileSetupStatusResponse> {
   const response = await apiClient.post<GymProfileSetupStatusResponse>(

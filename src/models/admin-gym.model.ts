@@ -35,22 +35,32 @@ export interface AdminGymSummaryResponse {
   gymId: number;
   accountId: number;
   registeredEmail: string;
+  contactEmail: string | null;
   gymName: string | null;
   gymType: GymType | null;
   approvalStatus: GymApprovalStatus;
   minimumAccessTier: AccessTier;
   checkInEnabled: boolean;
-  allowedCheckInRadiusMeters: number;
+  allowedCheckInRadiusMeters: number | null;
   onboardingStep: number | null;
   registeredEmailVerified: boolean;
   submittedForReview: boolean;
   approved: boolean;
   dashboardAccessible: boolean;
+  logoUrl: string | null;
+  addressLine: string | null;
   city: string | null;
   country: string | null;
   documentCount: number;
+  maxDocuments: number;
   requiredDocumentsUploaded: boolean;
   readyForReviewSubmission: boolean;
+  esewaWalletId: string | null;
+  esewaAccountName: string | null;
+  esewaWalletVerified: boolean;
+  khaltiWalletId: string | null;
+  khaltiAccountName: string | null;
+  khaltiWalletVerified: boolean;
   registeredAt: string;
 }
 

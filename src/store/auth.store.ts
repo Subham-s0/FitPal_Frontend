@@ -9,6 +9,9 @@ export interface AuthState {
   role: string | null;
   providers: string[];
   profileCompleted: boolean;
+  emailVerified: boolean;
+  submittedForReview: boolean;
+  approved: boolean;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
 }
@@ -20,6 +23,9 @@ const defaultState: AuthState = {
   role: null,
   providers: [],
   profileCompleted: false,
+  emailVerified: false,
+  submittedForReview: false,
+  approved: false,
   hasSubscription: false,
   hasActiveSubscription: false,
 };
@@ -34,6 +40,9 @@ const getInitialState = (): AuthState => {
         ...parsed,
         providers: Array.isArray(parsed.providers) ? parsed.providers : [],
         profileCompleted: Boolean(parsed.profileCompleted),
+        emailVerified: Boolean(parsed.emailVerified),
+        submittedForReview: Boolean(parsed.submittedForReview),
+        approved: Boolean(parsed.approved),
         hasSubscription: Boolean(parsed.hasSubscription),
         hasActiveSubscription: Boolean(parsed.hasActiveSubscription),
       };
@@ -65,6 +74,9 @@ export const authStore = {
       role: payload.role,
       providers: payload.providers,
       profileCompleted: payload.profileCompleted,
+      emailVerified: payload.emailVerified,
+      submittedForReview: payload.submittedForReview,
+      approved: payload.approved,
       hasSubscription: payload.hasSubscription,
       hasActiveSubscription: payload.hasActiveSubscription,
     };
@@ -80,10 +92,16 @@ export const authStore = {
     profileCompleted: boolean;
     hasSubscription: boolean;
     hasActiveSubscription: boolean;
+    emailVerified?: boolean;
+    submittedForReview?: boolean;
+    approved?: boolean;
   }) => {
     currentState = {
       ...currentState,
       profileCompleted: payload.profileCompleted,
+      emailVerified: payload.emailVerified ?? currentState.emailVerified,
+      submittedForReview: payload.submittedForReview ?? currentState.submittedForReview,
+      approved: payload.approved ?? currentState.approved,
       hasSubscription: payload.hasSubscription,
       hasActiveSubscription: payload.hasActiveSubscription,
     };

@@ -12,7 +12,6 @@ import {
   MessageSquare,
   QrCode,
   Settings,
-  User,
   Users,
 } from "lucide-react";
 
@@ -31,7 +30,6 @@ const MEMBER_NAV_ITEMS: DashboardNavItem[] = [
   { id: "routines", label: "Routines", icon: ClipboardList },
   { id: "exercises", label: "Exercises", icon: Dumbbell },
   { id: "workouts", label: "Workouts", icon: Activity },
-  { id: "profile", label: "Profile", icon: User },
 ];
 
 const GYM_NAV_ITEMS: DashboardNavItem[] = [

@@ -93,9 +93,6 @@ export interface UpdateGymLocationStepRequest {
   phoneNo?: string;
   contactEmail?: string;
   description?: string;
-  logoUrl?: string;
-  logoPublicId?: string;
-  logoResourceType?: string;
   websiteUrl?: string;
   opensAt?: string;
   closesAt?: string;
@@ -141,7 +138,7 @@ export interface GymProfileResponse {
   gymType: GymType | null;
   minimumAccessTier: AccessTier;
   checkInEnabled: boolean;
-  allowedCheckInRadiusMeters: number;
+  allowedCheckInRadiusMeters: number | null;
   establishedAt: number | null;
   registrationNo: string | null;
   maxCapacity: number | null;

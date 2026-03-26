@@ -100,7 +100,7 @@ const normalizePlanType = (p: string | null | undefined) => p?.trim().toLowerCas
 const buildFrontendCallbackUrl = (pathname: string) => new URL(pathname, window.location.origin).toString();
 const formatCurrencyAmount = (amount: number) =>
   new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
-const TEN_DIGIT_PHONE_REGEX = /^[0-9]{10}$/;
+const NEPAL_MOBILE_REGEX = /^(98|97)\d{8}$/;
 const SIMPLE_EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const syncAuthOnboardingStatus = (profile: Pick<UserProfileResponse, "profileCompleted" | "hasSubscription" | "hasActiveSubscription">) => {
@@ -308,7 +308,7 @@ const ProfileSetup = () => {
       }
       if (userData.phone) {
         const phone = userData.phone.trim();
-        if (!TEN_DIGIT_PHONE_REGEX.test(phone)) nextErrors.phone = "Must be exactly 10 digits";
+        if (!NEPAL_MOBILE_REGEX.test(phone)) nextErrors.phone = "Must start with 98 or 97 and be exactly 10 digits";
       }
     }
     if (step === "goals") {
@@ -336,7 +336,7 @@ const ProfileSetup = () => {
     if (!name) nextErrors.name = "Name is required";
     if (!email) nextErrors.email = "Email is required";
     else if (!SIMPLE_EMAIL_REGEX.test(email)) nextErrors.email = "Enter a valid email";
-    if (!TEN_DIGIT_PHONE_REGEX.test(phone)) nextErrors.phone = "Phone must be exactly 10 digits";
+    if (!NEPAL_MOBILE_REGEX.test(phone)) nextErrors.phone = "Phone must start with 98 or 97 and be exactly 10 digits";
 
     setKhaltiBillingErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -550,7 +550,7 @@ const ProfileSetup = () => {
         <TextInput
           type="tel"
           inputMode="numeric"
-          pattern="[0-9]{10}"
+          pattern="(98|97)[0-9]{8}"
           maxLength={10}
           placeholder="98xxxxxxxx"
           value={userData.phone}
@@ -752,11 +752,11 @@ const ProfileSetup = () => {
                       onChange={(e) => setKhaltiBillingField("email", e.target.value)}
                     />
                   </Field>
-                  <Field label="Phone (10 digits)" error={khaltiBillingErrors.phone}>
+                  <Field label="Phone (98/97 + 8 digits)" error={khaltiBillingErrors.phone}>
                     <TextInput
                       type="tel"
                       inputMode="numeric"
-                      pattern="[0-9]{10}"
+                      pattern="(98|97)[0-9]{8}"
                       maxLength={10}
                       placeholder="98xxxxxxxx"
                       value={khaltiBilling.phone}

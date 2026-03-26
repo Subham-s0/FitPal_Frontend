@@ -70,6 +70,7 @@ const REQUIRED_DOCS = ["REGISTRATION_CERTIFICATE", "LICENSE"] as const;
 const DEFAULT_MAP_CENTER: [number, number] = [27.7172, 85.324];
 const DEFAULT_MAP_ZOOM = 15;
 const EMPTY_MAP_ZOOM = 13;
+const DEFAULT_MAX_DOCUMENTS = 6;
 const FIRE          = "linear-gradient(135deg,#FACC15 0%,#FF9900 45%,#FF6A00 100%)";
 const fireStyle     = {
   background: FIRE,
@@ -398,6 +399,7 @@ function AdminLocationMap({
 interface DetailProps {
   gymId: number;
   approvalStatus: GymApprovalStatus;
+  registeredAt?: string | null;
   draftReview: AdminGymReviewResponse | null;
   isLoading: boolean;
   isMutating: boolean;
@@ -416,7 +418,7 @@ interface DetailProps {
 }
 
 function DetailPanel({
-                       gymId, approvalStatus, draftReview: r, isLoading, isMutating,
+                       gymId, approvalStatus, registeredAt, draftReview: r, isLoading, isMutating,
                        onUpdateProfile, onUpdateDocStatus, onUpdatePayoutVerified, onUpdatePhotoCaption,
                        onSaveLocation, onSaveAccess, onSaveDocuments, onSavePayout, onSavePhotoCaption,
                        onViewProfile,
@@ -450,6 +452,8 @@ function DetailPanel({
   const tierKey = p.minimumAccessTier ?? "BASIC";
   const tier    = TIERS[tierKey] ?? TIERS.BASIC;
   const isApproved = approvalStatus === "APPROVED";
+  const isPendingReview = approvalStatus === "PENDING_REVIEW";
+  const isRejected = approvalStatus === "REJECTED";
 
   const [editMode, setEditMode] = useState(!isApproved);
   useEffect(() => {
@@ -499,7 +503,7 @@ function DetailPanel({
               <DI label="Capacity">      {p.maxCapacity ? `${p.maxCapacity} members` : "—"}</DI>
               <DI label="Established">   {p.establishedAt ? String(p.establishedAt) : "—"}</DI>
               <DI label="Hours">         {p.opensAt && p.closesAt ? `${p.opensAt} – ${p.closesAt}` : "—"}</DI>
-              <DI label="Registered">    {fmtDate(p.registeredAt)}</DI>
+              <DI label="Registered">    {fmtDate(registeredAt)}</DI>
               {p.websiteUrl && (
                   <DI label="Website">
                     <a href={p.websiteUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline break-all">{p.websiteUrl}</a>
@@ -611,7 +615,7 @@ function DetailPanel({
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : isPendingReview ? (
               <div className="bg-[rgba(255,106,0,0.04)] border border-[rgba(255,106,0,0.28)] rounded-2xl p-[18px_20px]">
                 <div className="flex items-center gap-2.5 mb-4">
                   <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white whitespace-nowrap">Final Decision</span>
@@ -654,6 +658,21 @@ function DetailPanel({
                           className="flex-[2] flex items-center justify-center gap-1.5 py-[10px] rounded-[10px] bg-green-400 text-[#071a0f] hover:bg-green-300 text-[11px] font-black uppercase tracking-[0.07em] transition-all disabled:opacity-35 disabled:cursor-not-allowed">
                     {isMutating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" strokeWidth={2.5} />}Approve Gym
                   </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[rgba(239,68,68,0.05)] border border-red-500/20 rounded-2xl p-[18px_20px]">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white whitespace-nowrap">
+                    {isRejected ? "Rejected" : "Review Status"}
+                  </span>
+                  <div className="flex-1 h-px bg-white/[0.05] min-w-0" />
+                </div>
+                <div className="flex items-start gap-2 p-[11px_13px] rounded-[10px] bg-[hsl(0,0%,9%)] border border-[hsl(0,0%,18%)] text-[11px] text-[hsl(0,0%,55%)]">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-red-400" />
+                  <span>
+                    Final approval decisions are only available while a gym is in pending review. This gym must return to pending review before it can be approved or rejected again.
+                  </span>
                 </div>
               </div>
             )}
@@ -1184,6 +1203,15 @@ export default function ManageGyms() {
   const refresh  = async () => { await Promise.all([gymsQ.refetch(), countsQ.refetch()]); if (expandedId) await reviewQ.refetch(); toast.success("Refreshed"); };
 
   const switchTab = (s: GymApprovalStatus) => { setActiveStatus(s); setExpandedId(null); setFilterOpen(false); };
+  const clearFilters = () => {
+    setSearchInput("");
+    setDebounced("");
+    setSortIdx(0);
+    setActiveStatus("PENDING_REVIEW");
+    setFilterOpen(false);
+    setExpandedId(null);
+    setPage(0);
+  };
 
   const handleQuickViewProfile = (gymId: number, gymName: string) => {
     setExpandedId(gymId);
@@ -1200,26 +1228,25 @@ export default function ManageGyms() {
     { key: "REJECTED"       as GymApprovalStatus, label: "Rejected", activeCls: "bg-[hsl(0,0%,9%)] text-red-400 border-red-500/20",       ctCls: "bg-red-500/15 text-red-400"       },
   ];
 
-  const COL_W = ["22%","9%","12%","15%","8%","9%","11%","8%","6%"];
+  const COL_W = ["18%","9%","15%","15%","9%","10%","10%","8%","6%"];
+  const colStyle = (i: number) => ({ width: COL_W[i] });
 
   return (
       <div className="space-y-5 font-['Outfit',system-ui,sans-serif]">
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-500 mb-1">Gym Management</p>
-            <h1 className="text-[22px] font-black tracking-tight text-white">
+            <h1 className="text-[32px] font-black tracking-tight text-white">
               Manage <span style={fireStyle}>Gyms</span>
             </h1>
-            <p className="text-[12px] text-[hsl(0,0%,65%)] mt-1">Review onboarding submissions and make final approval decisions.</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-orange-500/25 bg-orange-500/10 text-orange-400">
+          <span className="px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border border-orange-500/25 bg-orange-500/10 text-orange-400">
             {pendingCt} Pending
           </span>
             <button type="button" onClick={() => void refresh()} disabled={gymsQ.isFetching || countsQ.isFetching}
-                    className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-[hsl(0,0%,55%)] hover:text-white hover:border-white/20 text-[11px] font-bold transition-all disabled:opacity-50">
-              {gymsQ.isFetching || countsQ.isFetching ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
+                    className="flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-[hsl(0,0%,55%)] hover:text-white hover:border-white/20 text-[12px] font-bold transition-all disabled:opacity-50">
+              {gymsQ.isFetching || countsQ.isFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
               Refresh
             </button>
           </div>
@@ -1227,21 +1254,21 @@ export default function ManageGyms() {
 
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="relative flex-1 max-w-[300px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(0,0%,35%)] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(0,0%,35%)] pointer-events-none" />
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
-                   placeholder="Search gym, owner, city…"
-                   className="w-full pl-9 pr-4 py-2 bg-[hsl(0,0%,7%)] border border-[hsl(0,0%,18%)] rounded-full text-[12px] font-medium text-white placeholder:text-[hsl(0,0%,35%)] outline-none focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)] transition-all"
+                   placeholder="Search gym, email, address…"
+                   className="w-full pl-9 pr-4 py-2 bg-[hsl(0,0%,7%)] border border-[hsl(0,0%,18%)] rounded-full text-[13px] font-medium text-white placeholder:text-[hsl(0,0%,35%)] outline-none focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)] transition-all"
             />
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button type="button" onClick={() => setSortIdx(i => (i + 1) % SORTS.length)}
-                    className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[11px] font-bold transition-all ${sortIdx !== 0 ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "bg-[hsl(0,0%,7%)] border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:border-orange-500/30 hover:text-orange-400"}`}>
-              <SortIcon className="w-3 h-3" />{sortMode.label}
+                    className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${sortIdx !== 0 ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "bg-[hsl(0,0%,7%)] border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:border-orange-500/30 hover:text-orange-400"}`}>
+              <SortIcon className="w-3.5 h-3.5" />{sortMode.label}
             </button>
             <div ref={filterRef} className="relative">
               <button type="button" onClick={() => setFilterOpen(v => !v)}
-                      className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[11px] font-bold transition-all ${filterOpen ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "bg-[hsl(0,0%,7%)] border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:border-orange-500/30 hover:text-orange-400"}`}>
-                <SlidersHorizontal className="w-3.5 h-3.5" />Filter
+                      className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${filterOpen ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "bg-[hsl(0,0%,7%)] border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:border-orange-500/30 hover:text-orange-400"}`}>
+                <SlidersHorizontal className="w-4 h-4" />Filter
               </button>
               {filterOpen && (
                   <div className="absolute top-[calc(100%+8px)] right-0 bg-[hsl(0,0%,7%)] border border-[hsl(0,0%,18%)] rounded-2xl p-1.5 min-w-[200px] z-50 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
@@ -1257,45 +1284,49 @@ export default function ManageGyms() {
               )}
             </div>
             <Select value={String(pageSize)} onValueChange={v => setPageSize(Number(v))}>
-              <SelectTrigger className="h-[34px] rounded-full border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-[hsl(0,0%,55%)] text-[11px] font-bold w-auto px-3.5 focus:ring-orange-500/30">
+              <SelectTrigger className="h-[34px] rounded-full border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-[hsl(0,0%,55%)] text-[12px] font-bold w-auto px-3.5 focus:ring-orange-500/30">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)] text-white">
-                {PAGE_SIZES.map(v => <SelectItem key={v} value={v} className="text-[11px] focus:bg-white/[0.06]">{v} / page</SelectItem>)}
+                {PAGE_SIZES.map(v => <SelectItem key={v} value={v} className="text-[12px] focus:bg-white/[0.06]">{v} / page</SelectItem>)}
               </SelectContent>
             </Select>
-            <button type="button" onClick={() => setSearchInput("")}
-                    className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-[hsl(0,0%,55%)] hover:border-orange-500/30 hover:text-orange-400 text-[11px] font-bold transition-all ${searchInput ? "opacity-100" : "opacity-50"}`}>
-              <X className="w-3 h-3" />Clear
+            <button type="button" onClick={clearFilters}
+                    className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-[12px] font-bold transition-all hover:border-orange-500/30 hover:text-orange-400 ${
+                      (searchInput || sortIdx !== 0 || activeStatus !== "PENDING_REVIEW" || filterOpen)
+                        ? "text-orange-400 border-orange-500/30"
+                        : "text-[hsl(0,0%,55%)] opacity-50"
+                    }`}>
+              <X className="w-3.5 h-3.5" />Clear
             </button>
           </div>
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="flex gap-0.5 p-1 bg-[hsl(0,0%,7%)] border border-[hsl(0,0%,18%)] rounded-xl">
+          <div className="flex gap-0.5 p-1 bg-[hsl(0,0%,7%)] border border-[hsl(0,0%,18%)] rounded-full">
             {TABS.map(({ key, label, activeCls, ctCls }) => {
               const active = activeStatus === key;
               return (
                   <button key={key} type="button" onClick={() => switchTab(key)}
-                          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all ${active ? activeCls : "bg-transparent border-transparent text-[hsl(0,0%,35%)] hover:text-[hsl(0,0%,55%)]"}`}>
+                          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full border text-[12px] font-bold uppercase tracking-wider transition-all ${active ? activeCls : "bg-transparent border-transparent text-[hsl(0,0%,35%)] hover:text-[hsl(0,0%,55%)]"}`}>
                     {label}
-                    <span className={`text-[9px] font-black min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center ${active ? ctCls : "bg-white/[0.06] text-[hsl(0,0%,35%)]"}`}>
+                    <span className={`text-[10px] font-black min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center ${active ? ctCls : "bg-white/[0.06] text-[hsl(0,0%,35%)]"}`}>
                   {countMap[key]}
                 </span>
                   </button>
               );
             })}
           </div>
-          {total > 0 && <span className="text-[11px] text-[hsl(0,0%,35%)]">{total} gym{total !== 1 ? "s" : ""}</span>}
+          {total > 0 && <span className="text-[12px] text-[hsl(0,0%,35%)]">{total} gym{total !== 1 ? "s" : ""}</span>}
         </div>
 
         <div className="bg-[hsl(0,0%,7%)] border border-[hsl(0,0%,18%)] rounded-[18px] overflow-hidden">
           <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
             <thead>
             <tr className="bg-[hsl(0,0%,9%)] border-b border-[hsl(0,0%,18%)]">
-              {["Gym","Type","City","Owner","Check-ins","Status","Documents","Payout",""].map((h, i) => (
-                  <th key={i} style={{ width: COL_W[i] }}
-                      className="px-3.5 py-2.5 text-left text-[8px] font-black uppercase tracking-[0.14em] text-[hsl(0,0%,35%)] first:pl-5">{h}</th>
+              {["Gym","Type","Address","Email","Registered","Status","Documents","Payout",""].map((h, i) => (
+                  <th key={i} style={colStyle(i)}
+                      className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] text-[hsl(0,0%,35%)] first:pl-5">{h}</th>
               ))}
             </tr>
             </thead>
@@ -1303,13 +1334,13 @@ export default function ManageGyms() {
             {gymsQ.isLoading ? (
                 <tr><td colSpan={9} className="py-16 text-center">
                   <Loader2 className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
-                  <div className="text-[12px] text-[hsl(0,0%,35%)]">Loading gyms…</div>
+                  <div className="text-[13px] text-[hsl(0,0%,35%)]">Loading gyms…</div>
                 </td></tr>
             ) : display.length === 0 ? (
                 <tr><td colSpan={9} className="py-16 text-center">
                   <Search className="w-8 h-8 text-[hsl(0,0%,35%)] mx-auto mb-2" strokeWidth={1.5} />
-                  <div className="text-[15px] font-bold text-[hsl(0,0%,55%)]">{debounced ? "No results found" : "No gyms here"}</div>
-                  <div className="text-[12px] text-[hsl(0,0%,35%)] mt-1">{debounced ? `Nothing matches "${debounced}"` : "This list is currently empty"}</div>
+                  <div className="text-[16px] font-bold text-[hsl(0,0%,55%)]">{debounced ? "No results found" : "No gyms here"}</div>
+                  <div className="text-[13px] text-[hsl(0,0%,35%)] mt-1">{debounced ? `Nothing matches "${debounced}"` : "This list is currently empty"}</div>
                 </td></tr>
             ) : display.flatMap(gym => {
               const isExp = expandedId === gym.gymId;
@@ -1322,43 +1353,45 @@ export default function ManageGyms() {
               const eVer = eHas && gym.esewaWalletVerified;
               const kVer = kHas && gym.khaltiWalletVerified;
               const anyV = eVer || kVer;
-              const bothV= eVer && kVer;
-              const noPay= !eHas && !kHas;
+              const noPay = !eHas && !kHas;
+              const addressLine = gym.addressLine?.trim() || "—";
+              const addressMeta = [gym.city, gym.country].filter(Boolean).join(", ") || "Location not provided";
+              const contactEmail = gym.contactEmail?.trim() || "No contact email";
+              const payoutMeta = [eHas ? "eSewa" : null, kHas ? "Khalti" : null].filter(Boolean).join(" + ") || "No payout wallet";
 
               return [
                 <tr key={gym.gymId}
                     className={`border-b border-[hsl(0,0%,10%)] last:border-0 transition-colors ${isExp ? "bg-orange-500/[0.05]" : "hover:bg-white/[0.025]"}`}>
 
-                  <td className="p-0">
-                    <div className="flex items-center gap-2.5 px-3.5 py-3 pl-5 cursor-pointer"
+                  <td className="p-0" style={colStyle(0)}>
+                    <div className="flex items-center gap-2.5 px-3.5 py-3.5 pl-5 cursor-pointer"
                          onClick={() => setExpandedId(isExp ? null : gym.gymId)}>
                       {gym.logoUrl
-                          ? <img src={gym.logoUrl} alt={gym.gymName ?? ""} className="w-9 h-9 rounded-[10px] object-cover flex-shrink-0 border border-orange-500/25" />
-                          : <div className="w-9 h-9 rounded-[10px] bg-orange-500/10 border border-orange-500/25 flex items-center justify-center text-[11px] font-black text-orange-400 flex-shrink-0">{initials(gym.gymName)}</div>}
+                          ? <img src={gym.logoUrl} alt={gym.gymName ?? ""} className="w-10 h-10 rounded-[10px] object-cover flex-shrink-0 border border-orange-500/25" />
+                          : <div className="w-10 h-10 rounded-[10px] bg-orange-500/10 border border-orange-500/25 flex items-center justify-center text-[12px] font-black text-orange-400 flex-shrink-0">{initials(gym.gymName)}</div>}
                       <div className="min-w-0">
-                        <div className="text-[13px] font-bold truncate">{gym.gymName ?? "—"}</div>
-                        <div className="text-[10px] text-[hsl(0,0%,35%)] truncate mt-0.5">#{gym.gymId} · {fmtDate(gym.registeredAt)}</div>
+                        <div className="text-[14px] font-bold truncate">{gym.gymName ?? "—"}</div>
+                        <div className="text-[11px] text-[hsl(0,0%,35%)] truncate mt-0.5">#{gym.gymId}</div>
                       </div>
                     </div>
                   </td>
 
-                  <td className="px-3.5 py-3 text-[11px] text-[hsl(0,0%,55%)] font-medium truncate">{gym.gymType ?? "—"}</td>
-                  <td className="px-3.5 py-3 text-[11px] text-[hsl(0,0%,55%)] truncate">{gym.city ?? "—"}</td>
-
-                  <td className="px-3.5 py-3">
-                    <div className="text-[11px] font-bold truncate">{gym.ownerName ?? "—"}</div>
-                    <div className="text-[10px] text-[hsl(0,0%,35%)] truncate mt-0.5">{gym.registeredEmail ?? "—"}</div>
+                  <td className="px-3.5 py-3.5 text-[12px] text-[hsl(0,0%,55%)] font-medium truncate" style={colStyle(1)}>{gym.gymType ?? "—"}</td>
+                  <td className="px-3.5 py-3.5" style={colStyle(2)}>
+                    <div className="text-[12px] font-bold truncate">{addressLine}</div>
+                    <div className="text-[11px] text-[hsl(0,0%,35%)] truncate mt-0.5">{addressMeta}</div>
                   </td>
 
-                  <td className="px-3.5 py-3">
-                    {(gym.totalCheckIns ?? 0) > 0
-                        ? <span className="text-[13px] font-black" style={fireStyle}>{gym.totalCheckIns!.toLocaleString()}</span>
-                        : <span className="text-[hsl(0,0%,35%)]">—</span>}
+                  <td className="px-3.5 py-3.5" style={colStyle(3)}>
+                    <div className="text-[12px] font-bold truncate">{gym.registeredEmail ?? "—"}</div>
+                    <div className="text-[11px] text-[hsl(0,0%,35%)] truncate mt-0.5">{contactEmail}</div>
                   </td>
 
-                  <td className="px-3.5 py-3"><ApprovalPill status={gym.approvalStatus} /></td>
+                  <td className="px-3.5 py-3.5 text-[12px] text-[hsl(0,0%,55%)] truncate" style={colStyle(4)}>{fmtDate(gym.registeredAt)}</td>
 
-                  <td className="px-3.5 py-3">
+                  <td className="px-3.5 py-3.5" style={colStyle(5)}><ApprovalPill status={gym.approvalStatus} /></td>
+
+                  <td className="px-3.5 py-3.5" style={colStyle(6)}>
                     {docTotal > 0 && (
                         <div className="flex gap-[3px] flex-wrap max-w-[52px] mb-1">
                           {Array.from({ length: docTotal }, (_, i) => (
@@ -1367,27 +1400,28 @@ export default function ManageGyms() {
                         </div>
                     )}
                     <div className="flex items-center gap-1">
-                      <span className={`text-[9px] font-bold ${
+                      <span className={`text-[10px] font-bold ${
                           !gym.requiredDocumentsUploaded ? "text-yellow-400"
                               : gym.readyForReviewSubmission ? "text-green-400"
                                   : "text-green-400"
                       }`}>
                         {gym.requiredDocumentsUploaded ? "Req. OK" : "Pending"}
                       </span>
-                      {docTotal > 0 && <span className="text-[9px] text-[hsl(0,0%,35%)]">{docTotal}/{gym.maxDocuments ?? 6}</span>}
+                      {docTotal > 0 && <span className="text-[10px] text-[hsl(0,0%,35%)]">{docTotal}/{gym.maxDocuments}</span>}
                     </div>
                   </td>
 
-                  <td className="px-3.5 py-3">
+                  <td className="px-3.5 py-3.5" style={colStyle(7)}>
                     {noPay
-                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-500/10 text-red-400 border border-red-500/25"><span className="w-1.5 h-1.5 rounded-full bg-red-400" />None</span>
+                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-red-500/10 text-red-400 border border-red-500/25"><span className="w-1.5 h-1.5 rounded-full bg-red-400" />None</span>
                         : anyV
-                            ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-green-500/10 text-green-400 border border-green-500/25"><span className="w-1.5 h-1.5 rounded-full bg-green-400" />{bothV ? "Both" : "1 verified"}</span>
-                            : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-yellow-500/10 text-yellow-400 border border-yellow-500/25"><span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />Unverified</span>}
+                            ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-green-500/10 text-green-400 border border-green-500/25"><span className="w-1.5 h-1.5 rounded-full bg-green-400" />Verified</span>
+                            : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-yellow-500/10 text-yellow-400 border border-yellow-500/25"><span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />Unverified</span>}
+                    <div className="text-[10px] text-[hsl(0,0%,35%)] truncate mt-1 max-w-full">{payoutMeta}</div>
                   </td>
 
-                  <td className="px-2 py-3">
-                    <div className="flex items-center justify-center gap-1.5">
+                  <td className="px-2 py-3.5" style={colStyle(8)}>
+                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         {(gym.approvalStatus === "APPROVED" || gym.approvalStatus === "REJECTED") && (
                           <ApprovalDropdown
                               gymId={gym.gymId}
@@ -1411,6 +1445,7 @@ export default function ManageGyms() {
                         <DetailPanel
                             gymId={gym.gymId}
                           approvalStatus={gym.approvalStatus}
+                            registeredAt={gym.registeredAt}
                             draftReview={draftReview}
                             isLoading={reviewQ.isLoading}
                             isMutating={isMutating}

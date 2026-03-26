@@ -3,7 +3,6 @@ import type {
   ChangeEvent,
   FC,
   KeyboardEvent as ReactKeyboardEvent,
-  ReactNode,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -12,6 +11,7 @@ import DefaultLayout from "@/components/DefaultLayout";
 import { NumberInput } from "@/components/ui/number-input";
 import { TimeInput } from "@/components/ui/time-picker";
 import {
+  deleteGymLogoApi,
   deleteUploadedAssetApi,
   deleteGymDocumentApi,
   deleteGymPhotoApi,
@@ -24,6 +24,7 @@ import {
   patchGymPayoutStepApi,
   submitGymReviewSubmissionApi,
   uploadDocumentFileApi,
+  uploadGymLogoApi,
   uploadImageFileApi,
   updateGymPhotoApi,
   upsertGymDocumentApi,
@@ -89,7 +90,7 @@ interface PhotoRow {
   cover: boolean;
 }
 
-interface NominatimAddress {
+interface LocationAddress {
   road?: string;
   pedestrian?: string;
   footway?: string;
@@ -101,11 +102,33 @@ interface NominatimAddress {
   postcode?: string;
 }
 
-interface NominatimResult {
+interface LocationResult {
   lat: string;
   lon: string;
   display_name: string;
-  address?: NominatimAddress;
+  address?: LocationAddress;
+}
+
+interface PhotonProperties {
+  name?: string;
+  street?: string;
+  housenumber?: string;
+  city?: string;
+  district?: string;
+  county?: string;
+  postcode?: string;
+  country?: string;
+}
+
+interface PhotonFeature {
+  geometry?: {
+    coordinates?: [number, number];
+  };
+  properties?: PhotonProperties;
+}
+
+interface PhotonResponse {
+  features?: PhotonFeature[];
 }
 
 interface FillFields {
@@ -120,7 +143,7 @@ interface MapSectionProps {
   onLocationPicked: (
     lat: number | null,
     lng: number | null,
-    data: NominatimResult,
+    data: LocationResult,
     fields?: FillFields,
   ) => void;
 }
@@ -135,6 +158,30 @@ interface ActionsProps {
   onNext: () => void;
 }
 
+type GymFieldKey =
+  | "gymEmailVerified"
+  | "gymName"
+  | "gymType"
+  | "gymEstablished"
+  | "gymCapacity"
+  | "gymAddressLine"
+  | "gymCity"
+  | "gymCountry"
+  | "gymCoordinates"
+  | "gymPhone"
+  | "gymContactEmail"
+  | "gymOpens"
+  | "gymCloses"
+  | "esewaWalletId"
+  | "esewaAccountName"
+  | "khaltiWalletId"
+  | "khaltiAccountName"
+  | "payoutSelection"
+  | "documents"
+  | "photos";
+
+type GymFieldErrors = Partial<Record<GymFieldKey, string>>;
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEPS: StepDef[] = [
@@ -145,6 +192,8 @@ const STEPS: StepDef[] = [
   { id: "reviewSubmit", label: "Please Check Again" },
   { id: "gymDone", label: "Under Review" },
 ];
+
+const TRACK_STEPS: StepDef[] = STEPS.filter(step => step.id !== "reviewSubmit");
 
 // Derived step indices — no magic numbers scattered through the file
 const DOCUMENTS_STEP_INDEX    = STEPS.findIndex(s => s.id === "docs");
@@ -181,9 +230,42 @@ const KHALTI_LOGO_URL = "https://khaltibyime.khalti.com/wp-content/uploads/2025/
 const ESEWA_LOGO_URL  = "https://esewa.com.np/common/images/esewa_logo.png";
 const MAX_GYM_PHOTOS  = 12;
 const MAX_GYM_DOCS    = 6;
+const LOCATION_SEARCH_MIN_CHARS = 3;
+
+const STEP1_FIELD_KEYS: readonly GymFieldKey[] = [
+  "gymEmailVerified",
+  "gymName",
+  "gymType",
+  "gymEstablished",
+  "gymCapacity",
+];
+
+const STEP2_FIELD_KEYS: readonly GymFieldKey[] = [
+  "gymAddressLine",
+  "gymCity",
+  "gymCountry",
+  "gymCoordinates",
+  "gymPhone",
+  "gymContactEmail",
+  "gymOpens",
+  "gymCloses",
+];
+
+const STEP3_FIELD_KEYS: readonly GymFieldKey[] = [
+  "payoutSelection",
+  "esewaWalletId",
+  "esewaAccountName",
+  "khaltiWalletId",
+  "khaltiAccountName",
+];
+
+const STEP4_FIELD_KEYS: readonly GymFieldKey[] = [
+  "documents",
+  "photos",
+];
 
 // Moved out of component — pure function, no closure needed
-const isValidNepalWalletId = (value: string) => /^(98|97|96)\d{8}$/.test(value.trim());
+const isValidNepalMobileNumber = (value: string) => /^(98|97)\d{8}$/.test(value.trim());
 
 const isInKtm = (lat: number, lng: number) =>
   lat >= KTM_BOUNDS.minLat && lat <= KTM_BOUNDS.maxLat &&
@@ -194,6 +276,59 @@ const isSingletonDocType = (type: DocTypeValue) => type !== "OTHER";
 
 const hasPhotoId = (photoId: number | null | undefined): photoId is number =>
   typeof photoId === "number" && photoId > 0;
+
+// Helper: Validate wallet provider (reduces duplicate eSewa/Khalti validation)
+const validateWalletProvider = (
+  enabled: boolean,
+  walletId: string,
+  accountName: string,
+  providerName: string
+): { walletIdError?: string; accountNameError?: string } => {
+  if (!enabled) return {};
+  
+  const errors: { walletIdError?: string; accountNameError?: string } = {};
+  
+  if (!walletId.trim()) {
+    errors.walletIdError = `${providerName} wallet number is required.`;
+  } else if (!isValidNepalMobileNumber(walletId)) {
+    errors.walletIdError = "Must start with 98 or 97 followed by 8 digits.";
+  }
+  
+  if (!accountName.trim()) {
+    errors.accountNameError = `${providerName} account name is required.`;
+  }
+  
+  return errors;
+};
+
+const photonFeatureToLocationResult = (feature: PhotonFeature): LocationResult | null => {
+  const coordinates = feature.geometry?.coordinates;
+  if (!coordinates || coordinates.length < 2) return null;
+
+  const [lon, lat] = coordinates;
+  const properties = feature.properties ?? {};
+  const streetLine = [properties.street ?? "", properties.housenumber ?? ""].filter(Boolean).join(" ").trim();
+  const city = properties.city ?? properties.district ?? properties.county ?? "";
+  const displayName = [
+    properties.name ?? "",
+    streetLine,
+    city,
+    properties.country ?? "",
+  ].filter(Boolean).join(", ");
+
+  return {
+    lat: String(lat),
+    lon: String(lon),
+    display_name: displayName || `${lat}, ${lon}`,
+    address: {
+      road: properties.street,
+      house_number: properties.housenumber,
+      city: properties.city,
+      county: properties.district ?? properties.county,
+      postcode: properties.postcode,
+    },
+  };
+};
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 // Single string — STYLE_PARTS array was an arbitrary split with no benefit
@@ -359,6 +494,14 @@ const StepErrorBanner: FC<{ message: string }> = ({ message }) => (
   </div>
 );
 
+const FieldError: FC<{ message?: string }> = ({ message }) => (
+  message ? (
+    <div style={{ fontSize: 11, color: "#fca5a5", marginTop: 5, marginLeft: 3, fontWeight: 600, lineHeight: 1.45 }}>
+      {message}
+    </div>
+  ) : null
+);
+
 const StatusBanner: FC<{ title: string; message: string }> = ({ title, message }) => (
   <div style={{ marginBottom: 18, padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(249,115,22,.28)", background: "rgba(249,115,22,.08)", color: "#fed7aa", lineHeight: 1.6 }}>
     <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: ".08em", textTransform: "uppercase", color: "#fb923c", marginBottom: 4 }}>{title}</div>
@@ -394,7 +537,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [query,   setQuery]   = useState("");
-  const [results, setResults] = useState<NominatimResult[]>([]);
+  const [results, setResults] = useState<LocationResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showRes, setShowRes] = useState(false);
   const [located, setLocated] = useState("");
@@ -412,10 +555,16 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
     lastValidPositionRef.current = [lat, lng];
   };
 
-  const fillFromNominatim = (data: NominatimResult) => {
+  // Helper: Show out-of-bounds error (reduces duplicate OOB logic)
+  const showOutOfBoundsError = useCallback(() => {
+    setOob(true);
+    setTimeout(() => setOob(false), 4000);
+  }, []);
+
+  const applyResolvedAddress = (data: LocationResult) => {
     const address = data.address ?? {};
     const street = [address.road ?? address.pedestrian ?? address.footway ?? "", address.house_number ?? ""]
-      .filter(Boolean).join(" ");
+      .filter(Boolean).join(" ").trim() || data.display_name.split(",")[0]?.trim() || "";
     onLocationPicked(null, null, data, {
       street,
       city:   address.city ?? address.town ?? address.village ?? address.county ?? "",
@@ -425,20 +574,27 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
 
   const reverseGeocode = async (lat: number, lng: number) => {
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-        { headers: { "Accept-Language": "en", "User-Agent": "FitPal/1.0" } },
-      );
-      const data: NominatimResult = await res.json();
-      if (!data?.display_name) return;
+      const url = new URL("https://photon.komoot.io/reverse");
+      url.searchParams.set("lat", String(lat));
+      url.searchParams.set("lon", String(lng));
+      url.searchParams.set("limit", "1");
+      url.searchParams.set("lang", "en");
+
+      const res = await fetch(url.toString());
+      const data: PhotonResponse = await res.json();
+      const resolved = (data.features ?? [])
+        .map(photonFeatureToLocationResult)
+        .find((item): item is LocationResult =>
+          item !== null && isInKtm(parseFloat(item.lat), parseFloat(item.lon)));
+      if (!resolved?.display_name) return;
       rememberValidPosition(lat, lng);
-      fillFromNominatim(data);
-      const short = data.display_name.split(",").slice(0, 2).join(",").trim();
+      applyResolvedAddress(resolved);
+      const short = resolved.display_name.split(",").slice(0, 2).join(",").trim();
       setLocated(short);
       setQuery(short);
-      onLocationPicked(lat, lng, data);
+      onLocationPicked(lat, lng, resolved);
     } catch {
-      // Ignore transient reverse geocode failures
+      // Ignore transient reverse lookup failures
     }
   };
 
@@ -480,12 +636,10 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
           const fallback = lastValidPositionRef.current;
           marker.setLatLng(fallback);
           map.flyTo(fallback, fallback[0] === KTM_CENTER[0] && fallback[1] === KTM_CENTER[1] ? 14 : 16);
-          setOob(true);
-          setTimeout(() => setOob(false), 4000);
+          showOutOfBoundsError();
           return;
         }
         rememberValidPosition(p.lat, p.lng);
-        // Pass lat/lng directly — no need for a createCoordinateResult wrapper
         onLocationPicked(p.lat, p.lng, { lat: String(p.lat), lon: String(p.lng), display_name: "" });
         void reverseGeocode(p.lat, p.lng);
       });
@@ -524,32 +678,47 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
     return () => document.removeEventListener("mousedown", handleMouseDown, true);
   }, []);
 
-  const doSearch = async () => {
-    if (!query.trim() || query.trim().length < 2) return;
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+
+  const doSearch = async (searchTerm = query) => {
+    const trimmedQuery = searchTerm.trim();
+    if (trimmedQuery.length < LOCATION_SEARCH_MIN_CHARS) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     setLoading(true); setShowRes(true); setResults([]); setHiIdx(-1);
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10&addressdetails=1&accept-language=en&countrycodes=np&viewbox=${KTM_BOUNDS.minLng},${KTM_BOUNDS.maxLat},${KTM_BOUNDS.maxLng},${KTM_BOUNDS.minLat}&bounded=1`;
-      const res  = await fetch(url, { headers: { "User-Agent": "FitPal/1.0", "Accept-Language": "en" } });
-      const data: NominatimResult[] = await res.json();
-      setResults((data ?? []).filter(item => isInKtm(parseFloat(item.lat), parseFloat(item.lon))));
+      const url = new URL("https://photon.komoot.io/api/");
+      url.searchParams.set("q", trimmedQuery);
+      url.searchParams.set("bbox", `${KTM_BOUNDS.minLng},${KTM_BOUNDS.minLat},${KTM_BOUNDS.maxLng},${KTM_BOUNDS.maxLat}`);
+      url.searchParams.set("limit", "8");
+      url.searchParams.set("lang", "en");
+
+      const res = await fetch(url.toString());
+      const data: PhotonResponse = await res.json();
+      const nextResults = (data.features ?? [])
+        .map(photonFeatureToLocationResult)
+        .filter((item): item is LocationResult =>
+          item !== null && isInKtm(parseFloat(item.lat), parseFloat(item.lon)));
+      setResults(nextResults);
     } catch { /* Ignore transient search failures */ }
     setLoading(false);
   };
 
-  const selectResult = (item: NominatimResult) => {
+  const selectResult = (item: LocationResult) => {
     const lat = parseFloat(item.lat);
     const lng = parseFloat(item.lon);
-    if (!isInKtm(lat, lng)) { setOob(true); setTimeout(() => setOob(false), 4000); return; }
+    if (!isInKtm(lat, lng)) { showOutOfBoundsError(); return; }
     if (leafletRef.current && markerRef.current) {
       markerRef.current.setLatLng([lat, lng]);
       leafletRef.current.flyTo([lat, lng], 16, { animate: true, duration: 0.8 });
     }
     rememberValidPosition(lat, lng);
-    fillFromNominatim(item);
+    applyResolvedAddress(item);
     const short = item.display_name.split(",").slice(0, 2).join(",").trim();
     setQuery(short); setLocated(short); setShowRes(false); setResults([]);
     onLocationPicked(lat, lng, item);
+    void reverseGeocode(lat, lng);
   };
 
   const handleKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
@@ -565,11 +734,13 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
 
   const handleInput = (value: string) => {
     setQuery(value);
-    if (value.trim().length >= 3) {
+    if (value.trim().length >= LOCATION_SEARCH_MIN_CHARS) {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => void doSearch(), 600);
+      timerRef.current = setTimeout(() => void doSearch(value), 350);
       return;
     }
+    setResults([]);
+    setHiIdx(-1);
     setShowRes(false);
   };
 
@@ -612,7 +783,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
               </button>
             )}
           </div>
-          <button className="map-search-btn" type="button" disabled={loading} onClick={() => void doSearch()}>
+          <button className="map-search-btn" type="button" disabled={loading || query.trim().length < LOCATION_SEARCH_MIN_CHARS} onClick={() => void doSearch()}>
             {loading ? <span className="spinner" /> : (
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
@@ -633,8 +804,8 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
                   <path d="M12 8v4M12 16h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
                 <span style={{ color: "#e5e7eb", fontSize: 12 }}>
-                  <strong style={{ color: "#f97316" }}>Outside Kathmandu Valley.</strong>{" "}
-                  FitPal operates within Kathmandu, Lalitpur and Bhaktapur only.
+                  <strong style={{ color: "#f97316" }}>No matching location found.</strong>{" "}
+                  Try a more specific Kathmandu Valley landmark, street, or area name.
                 </span>
               </div>
             )}
@@ -670,7 +841,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
             {located}
           </span>
         )}
-        <div className="field-hint" style={{ marginTop: 0 }}>Search or drag the marker — coordinates saved automatically</div>
+        <div className="field-hint" style={{ marginTop: 0 }}>Type at least 3 characters or drag the marker — coordinates save automatically</div>
       </div>
     </div>
   );
@@ -683,7 +854,6 @@ const FitPalGymSetup: FC = () => {
   const location  = useLocation();
   const auth      = useAuthState();
 
-  const persistedLogoAssetRef    = useRef<{ publicId: string | null; resourceType: string | null }>({ publicId: null, resourceType: null });
   const logoInputRef             = useRef<HTMLInputElement>(null);
   const documentInputRef         = useRef<HTMLInputElement>(null);
   const photoInputRef            = useRef<HTMLInputElement>(null);
@@ -697,6 +867,7 @@ const FitPalGymSetup: FC = () => {
 
   const [step,             setStep]             = useState(0);
   const [stepError,        setStepError]        = useState<string | null>(null);
+  const [fieldErrors,      setFieldErrors]      = useState<GymFieldErrors>({});
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSavingStep,     setIsSavingStep]     = useState(false);
   const [isUploadingLogo,  setIsUploadingLogo]  = useState(false);
@@ -790,8 +961,6 @@ const FitPalGymSetup: FC = () => {
     return [...requiredRows, ...optionalRows];
   };
 
-  const clearLogoState = () => { setGymLogoUrl(""); setGymLogoPublicId(""); setGymLogoResourceType(""); };
-
   // Collapsed from two functions (deleteUploadedAsset + deleteUploadedAssetSilently)
   // into one with an optional silent flag
   const deleteAsset = async (publicId?: string | null, resourceType?: string | null, silent = false) => {
@@ -799,6 +968,30 @@ const FitPalGymSetup: FC = () => {
     try { await deleteUploadedAssetApi({ publicId, resourceType: resourceType || undefined }); }
     catch (error) { if (!silent) throw error; }
   };
+
+  const clearFieldError = useCallback((...keys: GymFieldKey[]) => {
+    setFieldErrors(prev => {
+      if (!keys.some(key => prev[key])) return prev;
+      const next = { ...prev };
+      keys.forEach(key => { delete next[key]; });
+      return next;
+    });
+  }, []);
+
+  const replaceFieldErrors = useCallback((keys: readonly GymFieldKey[], nextErrors: GymFieldErrors) => {
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      keys.forEach(key => { delete next[key]; });
+      Object.entries(nextErrors).forEach(([key, message]) => {
+        if (message) next[key as GymFieldKey] = message;
+      });
+      return next;
+    });
+  }, []);
+
+  const firstFieldError = (errors: GymFieldErrors): string | null => Object.values(errors)[0] ?? null;
+  const hasFieldErrors = (errors: GymFieldErrors): boolean => Object.keys(errors).length > 0;
+  const inputErrorStyle = (key: GymFieldKey) => fieldErrors[key] ? { borderColor: "rgba(239,68,68,.5)" } : undefined;
 
   const sortPhotos = (items: PhotoRow[]) =>
     [...items].sort((a, b) => {
@@ -809,13 +1002,26 @@ const FitPalGymSetup: FC = () => {
     });
 
   const syncAuthOnboardingStatus = (
-    profile: Pick<GymProfileResponse, "profileCompleted">,
+    profile: Pick<GymProfileResponse, "profileCompleted" | "registeredEmailVerified" | "submittedForReview" | "approved">,
   ) => {
     authStore.updateOnboardingStatus({
       profileCompleted: profile.profileCompleted,
+      emailVerified: profile.registeredEmailVerified,
+      submittedForReview: profile.submittedForReview,
+      approved: profile.approved,
       hasSubscription: false,
       hasActiveSubscription: false,
     });
+  };
+
+  const syncLogoProfileState = (
+    profile: Pick<GymProfileResponse, "approvalStatus" | "profileCompleted" | "registeredEmailVerified" | "submittedForReview" | "approved" | "logoUrl" | "logoPublicId" | "logoResourceType">,
+  ) => {
+    syncAuthOnboardingStatus(profile);
+    setGymApprovalStatus(profile.approvalStatus);
+    setGymLogoUrl(profile.logoUrl ?? "");
+    setGymLogoPublicId(profile.logoPublicId ?? "");
+    setGymLogoResourceType(profile.logoResourceType ?? "");
   };
 
   const toPhotoRow = (p: GymPhotoResponse): PhotoRow => ({
@@ -848,7 +1054,6 @@ const FitPalGymSetup: FC = () => {
     setGymLogoUrl(profile.logoUrl ?? "");
     setGymLogoPublicId(profile.logoPublicId ?? "");
     setGymLogoResourceType(profile.logoResourceType ?? "");
-    persistedLogoAssetRef.current = { publicId: profile.logoPublicId ?? null, resourceType: profile.logoResourceType ?? null };
     setGymAddressLine(profile.addressLine ?? "");
     setGymCity(profile.city ?? "");
     setGymCountry(profile.country ?? "Nepal");
@@ -931,16 +1136,30 @@ const FitPalGymSetup: FC = () => {
   }, [auth.accessToken]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [step]);
+  useEffect(() => { setFieldErrors({}); }, [step]);
 
   // Clear step errors when any relevant value changes
   useEffect(() => { setStepError(null); }, [
     step, gymEmailVerified, gymName, gymType, gymRegNo, gymEstablished, gymCapacity,
+    gymLogoUrl, gymLogoPublicId, gymLogoResourceType,
     gymAddressLine, gymCity, gymCountry, gymPostal, gymLatitude, gymLongitude,
     gymPhone, gymContactEmail, gymWebsite, gymDesc, gymOpens, gymCloses,
     esewaEnabled, esewaWalletId, esewaAccountName,
     khaltiEnabled, khaltiWalletId, khaltiAccountName,
     docs, photos,
   ]);
+
+  useEffect(() => {
+    if (gymEmailVerified) clearFieldError("gymEmailVerified");
+  }, [clearFieldError, gymEmailVerified]);
+
+  useEffect(() => {
+    if (hasRequiredDocs) clearFieldError("documents");
+  }, [clearFieldError, hasRequiredDocs]);
+
+  useEffect(() => {
+    if (hasRequiredPhotos) clearFieldError("photos");
+  }, [clearFieldError, hasRequiredPhotos]);
 
   // ── Step validation ────────────────────────────────────────────────────────
   // Each blocker calls the previous one — if a prior step is broken, we surface
@@ -950,45 +1169,109 @@ const FitPalGymSetup: FC = () => {
   const establishedYearValue = Number(gymEstablished);
   const capacityValue        = Number(gymCapacity);
 
-  const getStep1Blocker = useCallback((): string | null => {
-    if (!gymEmailVerified) return "Verify the registered email before continuing to Step 2.";
-    if (!gymName.trim())   return "Gym name is required before continuing to Step 2.";
-    if (!gymType)          return "Select a gym type before continuing to Step 2.";
-    if (gymEstablished.trim() && (!Number.isInteger(establishedYearValue) || establishedYearValue < 1900 || establishedYearValue > currentYear))
-      return `Established year must be between 1900 and ${currentYear}.`;
-    if (!gymCapacity.trim()) return "Maximum member capacity is required before continuing to Step 2.";
-    if (!Number.isFinite(capacityValue) || capacityValue < 10) return "Maximum member capacity must be at least 10.";
-    return null;
+  const collectStep1FieldErrors = useCallback((): GymFieldErrors => {
+    const errors: GymFieldErrors = {};
+    if (!gymEmailVerified) errors.gymEmailVerified = "Verify the registered email to continue.";
+    if (!gymName.trim()) errors.gymName = "Gym name is required.";
+    if (!gymType) errors.gymType = "Select a gym type.";
+    if (gymEstablished.trim() && (!Number.isInteger(establishedYearValue) || establishedYearValue < 1900 || establishedYearValue > currentYear)) {
+      errors.gymEstablished = `Established year must be between 1900 and ${currentYear}.`;
+    }
+    if (!gymCapacity.trim()) errors.gymCapacity = "Maximum member capacity is required.";
+    else if (!Number.isFinite(capacityValue) || capacityValue < 10) errors.gymCapacity = "Maximum member capacity must be at least 10.";
+    return errors;
   }, [capacityValue, currentYear, establishedYearValue, gymCapacity, gymEmailVerified, gymEstablished, gymName, gymType]);
 
+  const collectStep2FieldErrors = useCallback((): GymFieldErrors => {
+    const errors: GymFieldErrors = {};
+    if (!gymAddressLine.trim()) errors.gymAddressLine = "Street address is required.";
+    if (!gymCity.trim()) errors.gymCity = "City is required.";
+    if (!gymCountry.trim()) errors.gymCountry = "Country is required.";
+    if (gymLatitude === null || gymLongitude === null) errors.gymCoordinates = "Pick the gym location on the map.";
+    if (!gymPhone.trim()) errors.gymPhone = "Phone number is required.";
+    else if (!isValidNepalMobileNumber(gymPhone)) errors.gymPhone = "Phone number must start with 98 or 97 and be exactly 10 digits.";
+    if (!gymContactEmail.trim()) errors.gymContactEmail = "Contact email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gymContactEmail.trim())) errors.gymContactEmail = "Enter a valid contact email.";
+    if (!gymOpens) errors.gymOpens = "Opening time is required.";
+    if (!gymCloses) errors.gymCloses = "Closing time is required.";
+    else if (gymOpens && gymCloses <= gymOpens) errors.gymCloses = "Closing time must be after opening time.";
+    return errors;
+  }, [gymAddressLine, gymCity, gymCloses, gymContactEmail, gymCountry, gymLatitude, gymLongitude, gymOpens, gymPhone]);
+
+  const collectStep3FieldErrors = useCallback((): GymFieldErrors => {
+    const errors: GymFieldErrors = {};
+    const hasCompleteEsewaWallet = esewaEnabled && isValidNepalMobileNumber(esewaWalletId) && Boolean(esewaAccountName.trim());
+    const hasCompleteKhaltiWallet = khaltiEnabled && isValidNepalMobileNumber(khaltiWalletId) && Boolean(khaltiAccountName.trim());
+
+    if (hasCompleteEsewaWallet || hasCompleteKhaltiWallet) {
+      return errors;
+    }
+
+    if (!esewaEnabled && !khaltiEnabled) {
+      errors.payoutSelection = "Select at least one payout wallet.";
+      return errors;
+    }
+
+    // Use helper to validate wallet providers
+    const esewaErrors = validateWalletProvider(esewaEnabled, esewaWalletId, esewaAccountName, "eSewa");
+    if (esewaErrors.walletIdError) errors.esewaWalletId = esewaErrors.walletIdError;
+    if (esewaErrors.accountNameError) errors.esewaAccountName = esewaErrors.accountNameError;
+
+    const khaltiErrors = validateWalletProvider(khaltiEnabled, khaltiWalletId, khaltiAccountName, "Khalti");
+    if (khaltiErrors.walletIdError) errors.khaltiWalletId = khaltiErrors.walletIdError;
+    if (khaltiErrors.accountNameError) errors.khaltiAccountName = khaltiErrors.accountNameError;
+
+    return errors;
+  }, [esewaAccountName, esewaEnabled, esewaWalletId, khaltiAccountName, khaltiEnabled, khaltiWalletId]);
+
+  const collectStep4FieldErrors = useCallback((): GymFieldErrors => {
+    const errors: GymFieldErrors = {};
+    if (!hasRequiredDocs) errors.documents = "Upload the required Registration Certificate and Operating License.";
+    if (!hasRequiredPhotos) errors.photos = "Upload at least 1 gym photo.";
+    return errors;
+  }, [hasRequiredDocs, hasRequiredPhotos]);
+
+  // Step blocker configuration (reduces duplicate step blocker logic)
+  const STEP_BLOCKERS = useMemo(() => [
+    {
+      check: () => firstFieldError(collectStep1FieldErrors()),
+      message: null as string | null,
+    },
+    {
+      check: () => firstFieldError(collectStep2FieldErrors()),
+      message: "Complete Step 1 first. Step 2 stays locked until basics are complete.",
+    },
+    {
+      check: () => firstFieldError(collectStep3FieldErrors()),
+      message: "Complete Step 2 first. Payout setup stays locked until location and contact details are complete.",
+    },
+    {
+      check: () => firstFieldError(collectStep4FieldErrors()),
+      message: "Complete Step 3 first. Documents stay locked until payout setup is complete.",
+    },
+  ], [collectStep1FieldErrors, collectStep2FieldErrors, collectStep3FieldErrors, collectStep4FieldErrors]);
+
+  const getStep1Blocker = useCallback((): string | null => {
+    return STEP_BLOCKERS[0].check();
+  }, [STEP_BLOCKERS]);
+
   const getStep2Blocker = useCallback((): string | null => {
-    if (getStep1Blocker()) return "Complete Step 1 first. Step 2 stays locked until basics are complete.";
-    if (!gymAddressLine.trim()) return "Street address is required before continuing to Step 3.";
-    if (!gymCity.trim())        return "City is required before continuing to Step 3.";
-    if (!gymCountry.trim())     return "Country is required before continuing to Step 3.";
-    if (gymLatitude === null || gymLongitude === null) return "Pick the gym location on the map before continuing to Step 3.";
-    if (!gymPhone.trim())          return "Phone number is required before continuing to Step 3.";
-    if (!gymContactEmail.trim())   return "Contact email is required before continuing to Step 3.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gymContactEmail.trim())) return "Enter a valid contact email before continuing to Step 3.";
-    if (!gymOpens || !gymCloses || gymCloses <= gymOpens) return "Closing time must be after opening time before continuing to Step 3.";
-    return null;
-  }, [getStep1Blocker, gymAddressLine, gymCity, gymCloses, gymContactEmail, gymCountry, gymLatitude, gymLongitude, gymOpens, gymPhone]);
+    const step1Error = getStep1Blocker();
+    if (step1Error) return STEP_BLOCKERS[1].message;
+    return STEP_BLOCKERS[1].check();
+  }, [STEP_BLOCKERS, getStep1Blocker]);
 
   const getStep3Blocker = useCallback((): string | null => {
-    if (getStep2Blocker()) return "Complete Step 2 first. Payout setup stays locked until location and contact details are complete.";
-    const eOk = esewaEnabled  && isValidNepalWalletId(esewaWalletId)  && Boolean(esewaAccountName.trim());
-    const kOk = khaltiEnabled && isValidNepalWalletId(khaltiWalletId) && Boolean(khaltiAccountName.trim());
-    if (eOk || kOk) return null;
-    if (!esewaEnabled && !khaltiEnabled) return "Select at least one payout wallet before continuing to Step 4.";
-    return "Complete at least one payout wallet with wallet ID and registered name before continuing to Step 4.";
-  }, [esewaAccountName, esewaEnabled, esewaWalletId, getStep2Blocker, khaltiAccountName, khaltiEnabled, khaltiWalletId]);
+    const step2Error = getStep2Blocker();
+    if (step2Error) return STEP_BLOCKERS[2].message;
+    return STEP_BLOCKERS[2].check();
+  }, [STEP_BLOCKERS, getStep2Blocker]);
 
   const getStep4Blocker = useCallback((): string | null => {
-    if (getStep3Blocker()) return "Complete Step 3 first. Documents stay locked until payout setup is complete.";
-    if (!hasRequiredDocs)   return "Upload the required Registration Certificate and Operating License before continuing to Step 5.";
-    if (!hasRequiredPhotos) return "Upload at least 1 gym photo before continuing to Step 5.";
-    return null;
-  }, [getStep3Blocker, hasRequiredDocs, hasRequiredPhotos]);
+    const step3Error = getStep3Blocker();
+    if (step3Error) return STEP_BLOCKERS[3].message;
+    return STEP_BLOCKERS[3].check();
+  }, [STEP_BLOCKERS, getStep3Blocker]);
 
   const step1Complete = useMemo(
     () => getStep1Blocker() === null,
@@ -1010,6 +1293,30 @@ const FitPalGymSetup: FC = () => {
     [getStep4Blocker],
   );
 
+  const applyStep1Validation = useCallback(() => {
+    const errors = collectStep1FieldErrors();
+    replaceFieldErrors(STEP1_FIELD_KEYS, errors);
+    return !hasFieldErrors(errors);
+  }, [collectStep1FieldErrors, replaceFieldErrors]);
+
+  const applyStep2Validation = useCallback(() => {
+    const errors = collectStep2FieldErrors();
+    replaceFieldErrors(STEP2_FIELD_KEYS, errors);
+    return !hasFieldErrors(errors);
+  }, [collectStep2FieldErrors, replaceFieldErrors]);
+
+  const applyStep3Validation = useCallback(() => {
+    const errors = collectStep3FieldErrors();
+    replaceFieldErrors(STEP3_FIELD_KEYS, errors);
+    return !hasFieldErrors(errors);
+  }, [collectStep3FieldErrors, replaceFieldErrors]);
+
+  const applyStep4Validation = useCallback(() => {
+    const errors = collectStep4FieldErrors();
+    replaceFieldErrors(STEP4_FIELD_KEYS, errors);
+    return !hasFieldErrors(errors);
+  }, [collectStep4FieldErrors, replaceFieldErrors]);
+
   // Guard: if the user somehow lands on a step they haven't unlocked, push them back
   useEffect(() => {
     if (step > 0 && !step1Complete) { setStep(0); return; }
@@ -1026,8 +1333,7 @@ const FitPalGymSetup: FC = () => {
 
   const goToLocationStep = async () => {
     if (isBusy) return;
-    const blocker = getStep1Blocker();
-    if (blocker) { setStepError(blocker); return; }
+    if (!applyStep1Validation()) return;
     setIsSavingStep(true);
     try {
       const profile = await patchGymBasicsStepApi({
@@ -1044,8 +1350,11 @@ const FitPalGymSetup: FC = () => {
 
   const goToPayoutStep = async () => {
     if (isBusy) return;
-    const blocker = getStep2Blocker();
-    if (blocker) { setStepError(blocker); return; }
+    if (!step1Complete) {
+      setStepError("Complete Step 1 first. Step 2 stays locked until basics are complete.");
+      return;
+    }
+    if (!applyStep2Validation()) return;
     setIsSavingStep(true);
     try {
       const profile = await patchGymLocationStepApi({
@@ -1054,7 +1363,6 @@ const FitPalGymSetup: FC = () => {
         latitude: gymLatitude ?? undefined, longitude: gymLongitude ?? undefined,
         phoneNo: gymPhone.trim(), contactEmail: gymContactEmail.trim(),
         description: gymDesc.trim() || undefined,
-        logoUrl: gymLogoUrl || undefined, logoPublicId: gymLogoPublicId || undefined, logoResourceType: gymLogoResourceType || undefined,
         websiteUrl: gymWebsite.trim() || undefined,
         opensAt: gymOpens, closesAt: gymCloses,
       });
@@ -1067,8 +1375,11 @@ const FitPalGymSetup: FC = () => {
 
   const goToDocumentsStep = async () => {
     if (isBusy) return;
-    const blocker = getStep3Blocker();
-    if (blocker) { setStepError(blocker); return; }
+    if (!step2Complete) {
+      setStepError("Complete Step 2 first. Payout setup stays locked until location and contact details are complete.");
+      return;
+    }
+    if (!applyStep3Validation()) return;
     setIsSavingStep(true);
     try {
       const profile = await patchGymPayoutStepApi({
@@ -1088,8 +1399,11 @@ const FitPalGymSetup: FC = () => {
 
   const goToReviewStep = async () => {
     if (isBusy) return;
-    const blocker = getStep4Blocker();
-    if (blocker) { setStepError(blocker); return; }
+    if (!step3Complete) {
+      setStepError("Complete Step 3 first. Documents stay locked until payout setup is complete.");
+      return;
+    }
+    if (!applyStep4Validation()) return;
     setIsSavingStep(true);
     const wasRejectedBeforeSubmit = isGymRejected;
     try {
@@ -1099,6 +1413,16 @@ const FitPalGymSetup: FC = () => {
       toast.success(wasRejectedBeforeSubmit ? "Gym resubmitted for review" : "Gym submitted for review");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to submit gym for review")); }
     finally { setIsSavingStep(false); }
+  };
+
+  const goToReviewSubmitStep = () => {
+    if (isBusy) return;
+    if (!step3Complete) {
+      setStepError("Complete Step 3 first. Documents stay locked until payout setup is complete.");
+      return;
+    }
+    if (!applyStep4Validation()) return;
+    setStep(REVIEW_SUBMIT_STEP_INDEX);
   };
 
   const verifyEmail = async () => {
@@ -1156,16 +1480,11 @@ const FitPalGymSetup: FC = () => {
   const handleLogoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const prevId = gymLogoPublicId;
-    const prevRt = gymLogoResourceType;
-    const persistedId = persistedLogoAssetRef.current.publicId;
     setIsUploadingLogo(true);
+    setStepError(null);
     try {
-      const asset: DocumentUploadResponse = await uploadImageFileApi(file, "fitpal/gym-logos");
-      setGymLogoUrl(asset.secureUrl || asset.url);
-      setGymLogoPublicId(asset.publicId);
-      setGymLogoResourceType(asset.resourceType);
-      if (prevId && prevId !== persistedId) await deleteAsset(prevId, prevRt, true);
+      const profile = await uploadGymLogoApi(file);
+      syncLogoProfileState(profile);
       toast.success("Logo uploaded");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to upload logo")); }
     finally { setIsUploadingLogo(false); e.target.value = ""; }
@@ -1173,14 +1492,12 @@ const FitPalGymSetup: FC = () => {
 
   const handleLogoRemoved = async () => {
     if (!gymLogoUrl || isUploadingLogo || isRemovingLogo) return;
-    const id = gymLogoPublicId;
-    const rt = gymLogoResourceType;
-    const isTemp = Boolean(id && id !== persistedLogoAssetRef.current.publicId);
     setIsRemovingLogo(true);
+    setStepError(null);
     try {
-      if (isTemp) await deleteAsset(id, rt);
-      clearLogoState();
-      toast.success(isTemp ? "Logo removed" : "Logo cleared. Save location step to persist the change.");
+      const profile = await deleteGymLogoApi();
+      syncLogoProfileState(profile);
+      toast.success("Logo removed");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove logo")); }
     finally { setIsRemovingLogo(false); }
   };
@@ -1208,6 +1525,7 @@ const FitPalGymSetup: FC = () => {
         ? { ...d, documentId: saved.documentId, fileName: file.name, fileUrl: saved.fileUrl, publicId: saved.publicId, resourceType: saved.resourceType, uploaded: true }
         : d
       ));
+      clearFieldError("documents");
       toast.success("Document uploaded");
     } catch (error) {
       await deleteAsset(asset?.publicId, asset?.resourceType, true);
@@ -1250,7 +1568,7 @@ const FitPalGymSetup: FC = () => {
             const match = refreshed.find(p => p.publicId === created.publicId);
             if (match) created = match;
           }
-          if (!hasPhotoId(created.photoId)) throw new Error("Photo is still syncing. Refresh once and try again.");
+          if (!ensurePhotoSynced(created.photoId)) throw new Error("Photo is still syncing. Refresh once and try again.");
           nextPhotos = sortPhotos([...nextPhotos, toPhotoRow(created)]);
           uploadCount++;
         } catch (error) {
@@ -1259,12 +1577,22 @@ const FitPalGymSetup: FC = () => {
         }
       }
       setPhotos(nextPhotos);
+      if (uploadCount > 0) clearFieldError("photos");
       if (uploadCount > 0) toast.success(`${uploadCount} photo${uploadCount > 1 ? "s" : ""} uploaded`);
     } finally { setIsUploadingPhotos(false); }
   };
 
+  // Helper: Check if photo is synced (reduces duplicate photo sync checks)
+  const ensurePhotoSynced = useCallback((photoId: number | null): boolean => {
+    if (!hasPhotoId(photoId)) {
+      setStepError("Photo is still syncing. Refresh once and try again.");
+      return false;
+    }
+    return true;
+  }, []);
+
   const setCoverPhoto = async (photoId: number | null) => {
-    if (!hasPhotoId(photoId)) { setStepError("Photo is still syncing. Refresh once and try again."); return; }
+    if (!ensurePhotoSynced(photoId)) return;
     if (activePhotoId !== null || isUploadingPhotos) return;
     setActivePhotoId(photoId);
     try {
@@ -1276,7 +1604,7 @@ const FitPalGymSetup: FC = () => {
   };
 
   const removePhoto = async (photoId: number | null) => {
-    if (!hasPhotoId(photoId)) { setStepError("Photo is still syncing. Refresh once and try again."); return; }
+    if (!ensurePhotoSynced(photoId)) return;
     if (activePhotoId !== null || isUploadingPhotos) return;
     const deletingPhoto = photos.find(p => p.photoId === photoId);
     setActivePhotoId(photoId);
@@ -1294,31 +1622,50 @@ const FitPalGymSetup: FC = () => {
     finally { setActivePhotoId(null); }
   };
 
-  const onLocationPicked = useCallback((lat: number | null, lng: number | null, _data: NominatimResult, fields?: FillFields) => {
-    if (lat !== null) setGymLatitude(lat);
-    if (lng !== null) setGymLongitude(lng);
+  const onLocationPicked = useCallback((lat: number | null, lng: number | null, _data: LocationResult, fields?: FillFields) => {
+    if (lat !== null) {
+      setGymLatitude(lat);
+      clearFieldError("gymCoordinates");
+    }
+    if (lng !== null) {
+      setGymLongitude(lng);
+      clearFieldError("gymCoordinates");
+    }
     if (!fields) return;
-    if (fields.street) setGymAddressLine(fields.street);
-    if (fields.city)   setGymCity(fields.city);
+    if (fields.street) {
+      setGymAddressLine(fields.street);
+      clearFieldError("gymAddressLine");
+    }
+    if (fields.city) {
+      setGymCity(fields.city);
+      clearFieldError("gymCity");
+    }
     if (fields.postal) setGymPostal(fields.postal);
-  }, []);
+  }, [clearFieldError]);
 
   // ── Render helpers ─────────────────────────────────────────────────────────
 
+  const visibleStepIndex =
+    step === REVIEW_SUBMIT_STEP_INDEX
+      ? DOCUMENTS_STEP_INDEX
+      : step > REVIEW_SUBMIT_STEP_INDEX
+        ? step - 1
+        : step;
+
   const renderTrack = () => (
     <div className="progress-track">
-      {STEPS.map((s, idx) => {
-        const done   = idx < step;
-        const active = idx === step;
+      {TRACK_STEPS.map((s, displayIdx) => {
+        const done = displayIdx < visibleStepIndex;
+        const active = displayIdx === visibleStepIndex;
         return (
           <span key={s.id} style={{ display: "contents" }}>
             <div className="pt-step">
               <div className={`pt-dot${done ? " done" : active ? " active" : ""}`}>
-                {done ? <ChkWhite /> : idx + 1}
+                {done ? <ChkWhite /> : displayIdx + 1}
               </div>
               <div className={`pt-label${active ? " active" : ""}`}>{s.label}</div>
             </div>
-            {idx < STEPS.length - 1 && <div className={`pt-line${idx < step ? " done" : ""}`} />}
+            {displayIdx < TRACK_STEPS.length - 1 && <div className={`pt-line${done ? " done" : ""}`} />}
           </span>
         );
       })}
@@ -1360,6 +1707,7 @@ const FitPalGymSetup: FC = () => {
                 </button>
               )}
             </div>
+            <FieldError message={fieldErrors.gymEmailVerified} />
           </div>
 
           {/* Logo card */}
@@ -1404,18 +1752,32 @@ const FitPalGymSetup: FC = () => {
           <div className="sec-label" style={{ marginBottom: 14 }}>Core Gym Details</div>
           <div className="field">
             <label>Gym name <span style={{ color: "#ef4444" }}>*</span></label>
-            <input type="text" placeholder="e.g. FitZone Kathmandu" value={gymName} onChange={e => setGymName(e.target.value)} />
+            <input
+              type="text"
+              placeholder="e.g. FitZone Kathmandu"
+              value={gymName}
+              onChange={e => {
+                setGymName(e.target.value);
+                clearFieldError("gymName");
+              }}
+              style={inputErrorStyle("gymName")}
+            />
+            <FieldError message={fieldErrors.gymName} />
           </div>
           <div className="field">
             <label>Gym type <span style={{ color: "#ef4444" }}>*</span></label>
             <div className="pill-group">
               {GYM_TYPES.map(type => (
                 <div key={type} className={`pill${gymType === type ? " sel" : ""}`}
-                  onClick={() => setGymType(cur => cur === type ? null : type as ApiGymType)}>
+                  onClick={() => {
+                    setGymType(cur => cur === type ? null : type as ApiGymType);
+                    clearFieldError("gymType");
+                  }}>
                   {type}
                 </div>
               ))}
             </div>
+            <FieldError message={fieldErrors.gymType} />
           </div>
           <div className="frow">
             <div className="field">
@@ -1424,12 +1786,35 @@ const FitPalGymSetup: FC = () => {
             </div>
             <div className="field">
               <label>Established Year <span style={{ color: "var(--text-d)" }}>optional</span></label>
-              <NumberInput placeholder="e.g. 2018" min={1900} max={currentYear} step={1} value={gymEstablished} onChange={e => setGymEstablished(e.target.value)} />
+              <NumberInput
+                placeholder="e.g. 2018"
+                min={1900}
+                max={currentYear}
+                step={1}
+                value={gymEstablished}
+                onChange={e => {
+                  setGymEstablished(e.target.value);
+                  clearFieldError("gymEstablished");
+                }}
+                style={inputErrorStyle("gymEstablished")}
+              />
+              <FieldError message={fieldErrors.gymEstablished} />
             </div>
           </div>
           <div className="field" style={{ flex: 1 }}>
             <label>Maximum Member Capacity <span style={{ color: "#ef4444" }}>*</span></label>
-            <NumberInput placeholder="e.g. 150" min={10} step={1} value={gymCapacity} onChange={e => setGymCapacity(e.target.value)} />
+            <NumberInput
+              placeholder="e.g. 150"
+              min={10}
+              step={1}
+              value={gymCapacity}
+              onChange={e => {
+                setGymCapacity(e.target.value);
+                clearFieldError("gymCapacity");
+              }}
+              style={inputErrorStyle("gymCapacity")}
+            />
+            <FieldError message={fieldErrors.gymCapacity} />
             <div className="field-hint">Total concurrent members your facility can safely accommodate.</div>
           </div>
           <div style={{ alignSelf: "flex-end", width: "100%" }}>
@@ -1450,6 +1835,7 @@ const FitPalGymSetup: FC = () => {
         <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px", background: "var(--muted)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "1.45rem" }}>
             <MapSection initialLatitude={gymLatitude} initialLongitude={gymLongitude} onLocationPicked={onLocationPicked} />
+            <FieldError message={fieldErrors.gymCoordinates} />
           </div>
         </div>
 
@@ -1461,12 +1847,32 @@ const FitPalGymSetup: FC = () => {
             </div>
             <div className="field">
               <label>Street address <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="text" placeholder="123 Durbar Marg" value={gymAddressLine} onChange={e => setGymAddressLine(e.target.value)} />
+              <input
+                type="text"
+                placeholder="123 Durbar Marg"
+                value={gymAddressLine}
+                onChange={e => {
+                  setGymAddressLine(e.target.value);
+                  clearFieldError("gymAddressLine");
+                }}
+                style={inputErrorStyle("gymAddressLine")}
+              />
+              <FieldError message={fieldErrors.gymAddressLine} />
             </div>
             <div className="frow">
               <div className="field">
                 <label>City <span style={{ color: "#ef4444" }}>*</span></label>
-                <input type="text" placeholder="Kathmandu" value={gymCity} onChange={e => setGymCity(e.target.value)} />
+                <input
+                  type="text"
+                  placeholder="Kathmandu"
+                  value={gymCity}
+                  onChange={e => {
+                    setGymCity(e.target.value);
+                    clearFieldError("gymCity");
+                  }}
+                  style={inputErrorStyle("gymCity")}
+                />
+                <FieldError message={fieldErrors.gymCity} />
               </div>
               <div className="field">
                 <label>Postal code</label>
@@ -1475,7 +1881,17 @@ const FitPalGymSetup: FC = () => {
             </div>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Country <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="text" placeholder="Nepal" value={gymCountry} onChange={e => setGymCountry(e.target.value)} />
+              <input
+                type="text"
+                placeholder="Nepal"
+                value={gymCountry}
+                onChange={e => {
+                  setGymCountry(e.target.value);
+                  clearFieldError("gymCountry");
+                }}
+                style={inputErrorStyle("gymCountry")}
+              />
+              <FieldError message={fieldErrors.gymCountry} />
             </div>
           </div>
 
@@ -1485,11 +1901,38 @@ const FitPalGymSetup: FC = () => {
             </div>
             <div className="field">
               <label>Phone number <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="tel" placeholder="+977 01-xxxxxxx" value={gymPhone} onChange={e => setGymPhone(e.target.value)} />
+              <input
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="98XXXXXXXX"
+                value={gymPhone}
+                onChange={e => {
+                  setGymPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
+                  clearFieldError("gymPhone");
+                }}
+                style={fieldErrors.gymPhone ? inputErrorStyle("gymPhone") : { borderColor: gymPhone && !isValidNepalMobileNumber(gymPhone) ? "rgba(239,68,68,.5)" : undefined }}
+              />
+              <FieldError message={fieldErrors.gymPhone} />
+              {!fieldErrors.gymPhone && gymPhone && !isValidNepalMobileNumber(gymPhone) && (
+                <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>
+                  Must start with 98 or 97 followed by 8 digits.
+                </div>
+              )}
             </div>
             <div className="field">
               <label>Contact email <span style={{ color: "#ef4444" }}>*</span></label>
-              <input type="email" placeholder="public@yourgym.com" value={gymContactEmail} onChange={e => setGymContactEmail(e.target.value)} />
+              <input
+                type="email"
+                placeholder="public@yourgym.com"
+                value={gymContactEmail}
+                onChange={e => {
+                  setGymContactEmail(e.target.value);
+                  clearFieldError("gymContactEmail");
+                }}
+                style={inputErrorStyle("gymContactEmail")}
+              />
+              <FieldError message={fieldErrors.gymContactEmail} />
               <div className="field-hint">Shown to members — separate from your login email</div>
             </div>
             <div className="field">
@@ -1499,11 +1942,29 @@ const FitPalGymSetup: FC = () => {
             <div className="frow">
               <div className="field">
                 <label>Opens at <span style={{ color: "#ef4444" }}>*</span></label>
-                <TimeInput className="w-full" value={gymOpens} onChange={e => setGymOpens(e.target.value)} />
+                <TimeInput
+                  className="w-full"
+                  value={gymOpens}
+                  onChange={e => {
+                    setGymOpens(e.target.value);
+                    clearFieldError("gymOpens");
+                  }}
+                  style={{ colorScheme: "dark", ...(inputErrorStyle("gymOpens") ?? {}) }}
+                />
+                <FieldError message={fieldErrors.gymOpens} />
               </div>
               <div className="field">
                 <label>Closes at <span style={{ color: "#ef4444" }}>*</span></label>
-                <TimeInput className="w-full" value={gymCloses} onChange={e => setGymCloses(e.target.value)} />
+                <TimeInput
+                  className="w-full"
+                  value={gymCloses}
+                  onChange={e => {
+                    setGymCloses(e.target.value);
+                    clearFieldError("gymCloses");
+                  }}
+                  style={{ colorScheme: "dark", ...(inputErrorStyle("gymCloses") ?? {}) }}
+                />
+                <FieldError message={fieldErrors.gymCloses} />
               </div>
             </div>
             <div className="field" style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -1521,8 +1982,8 @@ const FitPalGymSetup: FC = () => {
   );
 
   const renderPayoutScreen = () => {
-    const esewaWalletValid = isValidNepalWalletId(esewaWalletId);
-    const khaltiWalletValid = isValidNepalWalletId(khaltiWalletId);
+    const esewaWalletValid = isValidNepalMobileNumber(esewaWalletId);
+    const khaltiWalletValid = isValidNepalMobileNumber(khaltiWalletId);
 
     // Shared styles for the provider containers to avoid repetition
     const providerBox = (enabled: boolean, accentRgb: string) => ({
@@ -1541,10 +2002,20 @@ const FitPalGymSetup: FC = () => {
         <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>
           Link the wallet where FitPal sends your revenue share. You can enable one or both.
         </p>
+        <FieldError message={fieldErrors.payoutSelection} />
 
         {/* eSewa */}
         <div style={providerBox(esewaEnabled, "96,187,70")}>
-          <button type="button" onClick={() => setEsewaEnabled(p => !p)}
+          <button
+            type="button"
+            onClick={() => {
+              setEsewaEnabled(prev => {
+                const next = !prev;
+                clearFieldError("payoutSelection");
+                if (!next) clearFieldError("esewaWalletId", "esewaAccountName");
+                return next;
+              });
+            }}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}>
             <div style={{ width: 112, height: 56, borderRadius: 14, background: "rgba(96,187,70,.14)", border: "1px solid rgba(96,187,70,.22)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", overflow: "hidden", flexShrink: 0 }}>
               <img src={ESEWA_LOGO_URL} alt="eSewa" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
@@ -1562,14 +2033,32 @@ const FitPalGymSetup: FC = () => {
               <div className="field" style={{ marginBottom: 12 }}>
                 <label>eSewa ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
                 <input type="text" maxLength={10} placeholder="98XXXXXXXX" value={esewaWalletId}
-                  onChange={e => setEsewaWalletId(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  style={{ background: "rgba(255,255,255,.04)", borderColor: esewaWalletId && !esewaWalletValid ? "rgba(239,68,68,.5)" : esewaWalletValid ? "rgba(96,187,70,.45)" : "rgba(255,255,255,.08)" }}
+                  onChange={e => {
+                    setEsewaWalletId(e.target.value.replace(/\D/g, "").slice(0, 10));
+                    clearFieldError("payoutSelection", "esewaWalletId");
+                  }}
+                  style={fieldErrors.esewaWalletId
+                    ? { background: "rgba(255,255,255,.04)", ...inputErrorStyle("esewaWalletId") }
+                    : { background: "rgba(255,255,255,.04)", borderColor: esewaWalletId && !esewaWalletValid ? "rgba(239,68,68,.5)" : esewaWalletValid ? "rgba(96,187,70,.45)" : "rgba(255,255,255,.08)" }}
                 />
-                {esewaWalletId && !esewaWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>}
+                <FieldError message={fieldErrors.esewaWalletId} />
+                {!fieldErrors.esewaWalletId && esewaWalletId && !esewaWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98 or 97 followed by 8 digits.</div>}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <input type="text" placeholder="Full name on eSewa account" value={esewaAccountName} onChange={e => setEsewaAccountName(e.target.value)} style={{ background: "rgba(255,255,255,.04)" }} />
+                <input
+                  type="text"
+                  placeholder="Full name on eSewa account"
+                  value={esewaAccountName}
+                  onChange={e => {
+                    setEsewaAccountName(e.target.value);
+                    clearFieldError("payoutSelection", "esewaAccountName");
+                  }}
+                  style={fieldErrors.esewaAccountName
+                    ? { background: "rgba(255,255,255,.04)", ...inputErrorStyle("esewaAccountName") }
+                    : { background: "rgba(255,255,255,.04)" }}
+                />
+                <FieldError message={fieldErrors.esewaAccountName} />
               </div>
             </div>
           )}
@@ -1577,7 +2066,16 @@ const FitPalGymSetup: FC = () => {
 
         {/* Khalti */}
         <div style={providerBox(khaltiEnabled, "139,92,246")}>
-          <button type="button" onClick={() => setKhaltiEnabled(p => !p)}
+          <button
+            type="button"
+            onClick={() => {
+              setKhaltiEnabled(prev => {
+                const next = !prev;
+                clearFieldError("payoutSelection");
+                if (!next) clearFieldError("khaltiWalletId", "khaltiAccountName");
+                return next;
+              });
+            }}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 18px", background: "transparent", border: "none", cursor: "pointer", color: "#fff", textAlign: "left" }}>
             <div style={{ width: 112, height: 56, borderRadius: 14, background: "rgba(92,45,145,.16)", border: "1px solid rgba(139,92,246,.32)", display: "flex", alignItems: "center", justifyContent: "center", padding: "6px 10px", overflow: "hidden", flexShrink: 0 }}>
               <img src={KHALTI_LOGO_URL} alt="Khalti" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
@@ -1595,14 +2093,32 @@ const FitPalGymSetup: FC = () => {
               <div className="field" style={{ marginBottom: 12 }}>
                 <label>Khalti ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
                 <input type="text" maxLength={10} placeholder="98XXXXXXXX" value={khaltiWalletId}
-                  onChange={e => setKhaltiWalletId(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  style={{ width: "100%", background: "rgba(255,255,255,.04)", borderColor: khaltiWalletId && !khaltiWalletValid ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.08)" }}
+                  onChange={e => {
+                    setKhaltiWalletId(e.target.value.replace(/\D/g, "").slice(0, 10));
+                    clearFieldError("payoutSelection", "khaltiWalletId");
+                  }}
+                  style={fieldErrors.khaltiWalletId
+                    ? { width: "100%", background: "rgba(255,255,255,.04)", ...inputErrorStyle("khaltiWalletId") }
+                    : { width: "100%", background: "rgba(255,255,255,.04)", borderColor: khaltiWalletId && !khaltiWalletValid ? "rgba(239,68,68,.5)" : "rgba(255,255,255,.08)" }}
                 />
-                {khaltiWalletId && !khaltiWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98, 97 or 96 followed by 8 digits.</div>}
+                <FieldError message={fieldErrors.khaltiWalletId} />
+                {!fieldErrors.khaltiWalletId && khaltiWalletId && !khaltiWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98 or 97 followed by 8 digits.</div>}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
                 <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
-                <input type="text" placeholder="Full name on Khalti account" value={khaltiAccountName} onChange={e => setKhaltiAccountName(e.target.value)} style={{ background: "rgba(255,255,255,.04)" }} />
+                <input
+                  type="text"
+                  placeholder="Full name on Khalti account"
+                  value={khaltiAccountName}
+                  onChange={e => {
+                    setKhaltiAccountName(e.target.value);
+                    clearFieldError("payoutSelection", "khaltiAccountName");
+                  }}
+                  style={fieldErrors.khaltiAccountName
+                    ? { background: "rgba(255,255,255,.04)", ...inputErrorStyle("khaltiAccountName") }
+                    : { background: "rgba(255,255,255,.04)" }}
+                />
+                <FieldError message={fieldErrors.khaltiAccountName} />
               </div>
             </div>
           )}
@@ -1632,6 +2148,7 @@ const FitPalGymSetup: FC = () => {
 
       <div className="sec-label">Verification Documents</div>
       <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>All documents are reviewed by our team and never shared publicly. Uploads are encrypted.</p>
+      <FieldError message={fieldErrors.documents} />
 
       {docs.map((doc, idx) => {
         const isRequired = isRequiredDocType(doc.type);
@@ -1715,6 +2232,7 @@ const FitPalGymSetup: FC = () => {
 
       {/* Photos section */}
       <div className="sec-label green" style={{ marginTop: 24 }}>Gym Photos</div>
+      <FieldError message={fieldErrors.photos} />
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "rgba(255,255,255,.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 10, fontSize: 12, color: "var(--text-m)" }}>
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style={{ color: "var(--orange)", flexShrink: 0 }}>
           <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
@@ -1789,7 +2307,7 @@ const FitPalGymSetup: FC = () => {
         </div>
       )}
 
-      <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(2)} onNext={() => setStep(REVIEW_SUBMIT_STEP_INDEX)} />
+      <Actions label="Save and Continue" step={step} totalSteps={STEPS.length} disabled={isBusy} onBack={() => setStep(2)} onNext={goToReviewSubmitStep} />
     </div>
   );
 

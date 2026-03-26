@@ -55,6 +55,9 @@ export interface AuthResponse {
   role: string;
   providers: string[];
   profileCompleted: boolean;
+  emailVerified: boolean;
+  submittedForReview: boolean;
+  approved: boolean;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
 }

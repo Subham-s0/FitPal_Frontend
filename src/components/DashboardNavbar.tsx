@@ -26,6 +26,8 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
   const roleLabel = getDashboardRoleLabel(roleValue);
   const primaryActionLabel = getDashboardPrimaryActionLabel(roleValue);
   const searchPlaceholder = getDashboardSearchPlaceholder(roleValue);
+  const isUserDashboard = dashboardRole === "USER";
+  const showRoleMeta = !isUserDashboard;
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
   const logoHref = dashboardRole === "ADMIN" ? "/admin/dashboard" : "/";
 
@@ -76,9 +78,11 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
             <span className="text-xl font-bold text-white">
               <span className="text-gradient-fire">Fit</span>Pal
             </span>
-            <span className="hidden rounded-md border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300/80 sm:inline-flex">
-              {roleBadgeLabel}
-            </span>
+            {showRoleMeta && (
+              <span className="hidden rounded-md border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300/80 sm:inline-flex">
+                {roleBadgeLabel}
+              </span>
+            )}
           </div>
         </a>
       </div>
@@ -103,7 +107,11 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
         <button
           type="button"
           onClick={handlePrimaryAction}
-          className="rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-orange-500"
+          className={`transition-all duration-300 ${
+            isUserDashboard
+              ? "rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+              : "rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-orange-500"
+          }`}
         >
           {primaryActionLabel}
         </button>
@@ -117,9 +125,11 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
         >
           <div className="hidden text-right leading-none text-white sm:block">
             <p className="text-sm font-black tracking-tight">{displayName}</p>
-            <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-orange-600">
-              {roleLabel}
-            </p>
+            {showRoleMeta && (
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-orange-600">
+                {roleLabel}
+              </p>
+            )}
           </div>
           <div className="h-12 w-12 rounded-full border-2 border-orange-600 p-0.5">
             <img src={avatarUrl} className="h-full w-full rounded-full object-cover" alt={displayName} />
