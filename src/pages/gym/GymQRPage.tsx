@@ -1,9 +1,11 @@
 import type { FC } from "react";
+import { useState } from "react";
 import StatCard from "@/components/gym/StatCard";
 import BarChart from "@/components/gym/BarChart";
 import QRPattern from "@/components/gym/QRPattern";
 import { PlanBadge, StatusBadge } from "@/components/gym/BadgeVariants";
 import { SCANS } from "@/components/gym/mock-data";
+import { ChevronLeft, ChevronRight, Filter, Search } from "lucide-react";
 
 const hourlyData = [
   { label: "6am", h: 28 }, { label: "7am", h: 60 }, { label: "8am", h: 88, today: true },
@@ -22,15 +24,44 @@ const steps = [
 
 const card = "rounded-2xl border border-white/[0.07] bg-[#0c0c0c] p-5";
 
-const GymQRPage: FC = () => (
+const ITEMS_PER_PAGE = 8;
+
+const GymQRPage: FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterPlan, setFilterPlan] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter scans
+  const filteredScans = SCANS.filter(scan => {
+    const matchesStatus = filterStatus === "all" || scan.result === filterStatus;
+    const matchesPlan = filterPlan === "all" || scan.plan === filterPlan;
+    const matchesSearch = searchQuery === "" || 
+      scan.member.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesPlan && matchesSearch;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredScans.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedScans = filteredScans.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Stats from filtered data
+  const successfulScans = filteredScans.filter(s => s.result === "Success").length;
+  const failedScans = filteredScans.filter(s => s.result === "Failed").length;
+  const deniedScans = filteredScans.filter(s => s.result === "Denied").length;
+
+  return (
   <div className="max-w-[1600px] animate-fade-in">
+    {/* Header */}
     <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div>
-        <p className="mb-1 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-500">
-          <span className="inline-block h-px w-4 bg-orange-500" />Entry Management
+        <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">
+          QR and <span className="text-gradient-fire">Check-Ins</span>
+        </h1>
+        <p className="mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
+          Member Access Management
         </p>
-        <h1 className="text-xl font-black uppercase tracking-tight">QR &amp; <span className="text-gradient-fire">Check-In</span></h1>
-        <p className="mt-1 text-[11px] text-zinc-600">Your QR is the only gate. Members scan → platform validates → logged to your dashboard.</p>
       </div>
       <div className="flex gap-2">
         <button className="rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 hover:text-white">Download QR</button>
@@ -57,10 +88,10 @@ const GymQRPage: FC = () => (
 
     {/* Stats */}
     <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatCard label="Today's Scans" value="84" accent />
-      <StatCard label="Successful" value="80" sub="95.2%" />
-      <StatCard label="Failed" value="2" sub="badge errors" />
-      <StatCard label="Denied" value="2" sub="expired pass" />
+      <StatCard label="Total Scans" value={filteredScans.length.toString()} accent />
+      <StatCard label="Successful" value={successfulScans.toString()} sub={`${((successfulScans/filteredScans.length)*100).toFixed(1)}%`} up />
+      <StatCard label="Failed" value={failedScans.toString()} sub="badge errors" down={failedScans > 0} />
+      <StatCard label="Denied" value={deniedScans.toString()} sub="access denied" down={deniedScans > 0} />
     </div>
 
     {/* QR + Hourly Chart */}
@@ -92,32 +123,165 @@ const GymQRPage: FC = () => (
 
     {/* Scan Log Table */}
     <div className={card}>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Recent Scan Log</p>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Recent Scan Log</p>
+          <p className="mt-0.5 text-[10px] text-zinc-600">
+            Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredScans.length)} of {filteredScans.length} entries
+          </p>
+        </div>
         <button className="rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 hover:text-white">Export CSV</button>
       </div>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            {["Time", "Member", "Plan", "Result", ""].map(h => (
-              <th key={h} className="pb-2 text-left text-[9px] font-black uppercase tracking-[0.09em] text-zinc-600">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {SCANS.map((s, i) => (
-            <tr key={i} className="transition-colors hover:bg-white/[0.015]">
-              <td className="border-t border-white/[0.03] py-2.5 font-mono text-[11px] text-zinc-600">{s.time}</td>
-              <td className="border-t border-white/[0.03] py-2.5 text-xs font-semibold">{s.member}</td>
-              <td className="border-t border-white/[0.03] py-2.5">{s.plan !== "—" ? <PlanBadge plan={s.plan} /> : <span className="text-zinc-600">—</span>}</td>
-              <td className="border-t border-white/[0.03] py-2.5"><StatusBadge status={s.result} /></td>
-              <td className="border-t border-white/[0.03] py-2.5"><button className="rounded-lg border border-white/[0.07] bg-white/[0.04] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 hover:text-white">Detail</button></td>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600" />
+          <input
+            type="text"
+            placeholder="Search member..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full rounded-lg border border-white/[0.07] bg-white/[0.04] py-2 pl-9 pr-3 text-xs text-white placeholder:text-zinc-600 focus:border-orange-500/30 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600" />
+          <select
+            value={filterStatus}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="rounded-lg border border-white/[0.07] bg-white/[0.04] py-2 pl-9 pr-8 text-xs font-bold text-white focus:border-orange-500/30 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
+          >
+            <option value="all">All Status</option>
+            <option value="Success">Success</option>
+            <option value="Failed">Failed</option>
+            <option value="Denied">Denied</option>
+          </select>
+        </div>
+
+        {/* Plan Filter */}
+        <select
+          value={filterPlan}
+          onChange={(e) => {
+            setFilterPlan(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="rounded-lg border border-white/[0.07] bg-white/[0.04] py-2 px-3 text-xs font-bold text-white focus:border-orange-500/30 focus:outline-none focus:ring-1 focus:ring-orange-500/20"
+        >
+          <option value="all">All Plans</option>
+          <option value="Basic">Basic</option>
+          <option value="Pro">Pro</option>
+          <option value="Elite">Elite</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {["Time", "Member", "Plan", "Result", ""].map(h => (
+                <th key={h} className="border-b border-white/[0.05] pb-3 text-left text-[9px] font-black uppercase tracking-[0.09em] text-zinc-600">{h}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {paginatedScans.length > 0 ? (
+              paginatedScans.map((s, i) => (
+                <tr key={i} className="group transition-colors hover:bg-white/[0.02]">
+                  <td className="border-t border-white/[0.03] py-3 font-mono text-[11px] text-zinc-500">{s.time}</td>
+                  <td className="border-t border-white/[0.03] py-3 text-xs font-semibold">{s.member}</td>
+                  <td className="border-t border-white/[0.03] py-3">{s.plan !== "—" ? <PlanBadge plan={s.plan} /> : <span className="text-zinc-600">—</span>}</td>
+                  <td className="border-t border-white/[0.03] py-3"><StatusBadge status={s.result} /></td>
+                  <td className="border-t border-white/[0.03] py-3">
+                    <button className="rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 opacity-0 transition-opacity hover:text-white group-hover:opacity-100">
+                      Detail
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="border-t border-white/[0.03] py-8 text-center">
+                  <div className="text-sm text-zinc-600">No entries match your filters</div>
+                  <button 
+                    onClick={() => {
+                      setFilterStatus("all");
+                      setFilterPlan("all");
+                      setSearchQuery("");
+                      setCurrentPage(1);
+                    }}
+                    className="mt-2 text-xs font-bold text-orange-500 hover:text-orange-400"
+                  >
+                    Clear filters
+                  </button>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between border-t border-white/[0.05] pt-4">
+          <div className="text-[10px] text-zinc-600">
+            Page {currentPage} of {totalPages}
+          </div>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-zinc-500 transition-colors hover:text-white disabled:opacity-30 disabled:hover:text-zinc-500"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                return page === 1 || 
+                       page === totalPages || 
+                       Math.abs(page - currentPage) <= 1;
+              })
+              .map((page, idx, arr) => (
+                <>
+                  {idx > 0 && arr[idx - 1] !== page - 1 && (
+                    <span key={`ellipsis-${page}`} className="px-2 py-1.5 text-xs text-zinc-600">...</span>
+                  )}
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                      currentPage === page
+                        ? "bg-orange-500 text-white"
+                        : "border border-white/[0.07] bg-white/[0.04] text-zinc-500 hover:text-white"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                </>
+              ))}
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-zinc-500 transition-colors hover:text-white disabled:opacity-30 disabled:hover:text-zinc-500"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   </div>
-);
+  );
+};
 
 export default GymQRPage;

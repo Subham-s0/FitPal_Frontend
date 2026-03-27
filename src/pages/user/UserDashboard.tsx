@@ -5,6 +5,7 @@ import ExercisesSection from "@/components/user/ExercisesSection";
 import NewRoutine from "@/components/user/NewRoutine";
 import RoutinesSection from "@/components/user/RoutinesSection";
 import WorkoutsSection from "@/components/user/WorkoutsSection";
+import CheckInSection from "@/components/user/CheckInSection";
 import {
   ArrowUpCircle,
   Check,
@@ -12,12 +13,13 @@ import {
   Pause,
   Play,
   QrCode,
+  ScanLine,
 } from "lucide-react";
 import L from "leaflet";
 
-type UserDashboardSection = "home" | "gyms" | "routines" | "new-routine" | "exercises" | "workouts";
+type UserDashboardSection = "home" | "gyms" | "routines" | "new-routine" | "exercises" | "workouts" | "checkin";
 
-const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "new-routine", "exercises", "workouts"];
+const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "new-routine", "exercises", "workouts", "checkin"];
 
 const mapMarkers = [
   { pos: [27.7149, 85.311], color: "#ef4444", name: "Iron Paradise" },
@@ -90,9 +92,12 @@ const UserDashboard = () => {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-stops))] from-orange-600 via-transparent to-transparent opacity-10" />
               <QrCode className="z-10 h-[100px] w-[100px] text-orange-600/90" />
             </div>
-            <button className="mt-auto flex w-full items-center justify-center gap-3 rounded-2xl bg-button-gradient py-5 font-bold text-white shadow-lg shadow-orange-950/40 transition-all hover:brightness-110 active:scale-[0.98]">
-              <Maximize2 className="h-6 w-6" />
-              <span className="text-xl">Fullscreen QR</span>
+            <button 
+              onClick={() => setActiveSection("checkin")}
+              className="mt-auto flex w-full items-center justify-center gap-3 rounded-2xl bg-button-gradient py-5 font-bold text-white shadow-lg shadow-orange-950/40 transition-all hover:brightness-110 active:scale-[0.98]"
+            >
+              <ScanLine className="h-6 w-6" />
+              <span className="text-xl">Scan Now</span>
             </button>
           </div>
         </div>
@@ -401,6 +406,8 @@ const UserDashboard = () => {
         return <ExercisesSection onBack={() => setActiveSection("home")} />;
       case "workouts":
         return <WorkoutsSection />;
+      case "checkin":
+        return <CheckInSection onBack={() => setActiveSection("home")} />;
       case "home":
       default:
         return renderHome();
@@ -419,7 +426,7 @@ const UserDashboard = () => {
 
         setActiveSection(resolveSection(section));
       }}
-      onPrimaryAction={() => setActiveSection("gyms")}
+      onPrimaryAction={() => setActiveSection("checkin")}
       onProfileClick={() => navigate("/profile")}
       contentClassName={activeSection === "exercises" ? "p-0" : "p-6"}
     >

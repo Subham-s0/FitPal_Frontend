@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "@yudiel/react-qr-scanner": "^2.0.8",
+    "@zxing/library": "^0.21.3"
+  },
+  "note": "Add these to your existing package.json dependencies section"
+}

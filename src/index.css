@@ -94,6 +94,20 @@
     --gradient-surface: linear-gradient(180deg, #161616 0%, #0f0f0f 100%);
     --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
 
+    /* ── Admin Table Colors ── */
+    --table-bg: hsl(0 0% 7%);
+    --table-bg-alt: hsl(0 0% 9%);
+    --table-bg-hover: hsl(0 0% 6%);
+    --table-bg-expanded: hsl(0 0% 6%);
+    --table-border: hsl(0 0% 18%);
+    --table-border-row: hsl(0 0% 10%);
+    --table-border-cell: hsl(0 0% 13%);
+    --table-text: hsl(0 0% 55%);
+    --table-text-muted: hsl(0 0% 35%);
+    --table-header-bg: hsl(0 0% 9%);
+    --table-input-bg: hsl(0 0% 9%);
+    --table-input-border: hsl(0 0% 18%);
+
     /* ── Glows & shadows ── */
     --glow-primary: 0 0 60px hsl(25 100% 50% / 0.4);
     --glow-accent: 0 0 40px hsl(40 100% 50% / 0.3);
@@ -330,6 +344,20 @@
     border: 1px solid hsl(var(--destructive) / 0.2);
   }
 
+  /* ── Admin Table utilities ── */
+  .table-bg          { background-color: var(--table-bg); }
+  .table-bg-alt      { background-color: var(--table-bg-alt); }
+  .table-bg-hover    { background-color: var(--table-bg-hover); }
+  .table-bg-expanded { background-color: var(--table-bg-expanded); }
+  .table-border      { border-color: var(--table-border); }
+  .table-border-row  { border-color: var(--table-border-row); }
+  .table-border-cell { border-color: var(--table-border-cell); }
+  .table-text        { color: var(--table-text); }
+  .table-text-muted  { color: var(--table-text-muted); }
+  .table-header-bg   { background-color: var(--table-header-bg); }
+  .table-input-bg    { background-color: var(--table-input-bg); }
+  .table-input-border{ border-color: var(--table-input-border); }
+
   /* ── Glow utilities ── */
   .glow-success { box-shadow: var(--glow-success); }
   .glow-soft    { box-shadow: var(--glow-soft); }
@@ -393,4 +421,72 @@
   );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
+}
+
+/* ══════════════════════════════════════════════════
+   GYM DASHBOARD ENHANCEMENTS
+   ══════════════════════════════════════════════════ */
+
+@layer utilities {
+  /* ── Enhanced Table Styles ── */
+  .table-card {
+    @apply rounded-2xl border border-white/[0.07] bg-[#0c0c0c];
+  }
+
+  .table-header {
+    @apply border-b border-white/[0.05] pb-3 text-left text-[9px] font-black uppercase tracking-[0.09em] text-zinc-600;
+  }
+
+  .table-row {
+    @apply transition-all duration-200 hover:bg-white/[0.02];
+  }
+
+  .table-cell {
+    @apply border-t border-white/[0.03] py-3;
+  }
+
+  /* ── Button Variants ── */
+  .btn-ghost {
+    @apply rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 transition-colors hover:text-white hover:bg-white/[0.08];
+  }
+
+  .btn-primary {
+    @apply rounded-lg bg-orange-500 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-[0_3px_14px_rgba(249,115,22,0.22)] transition-all hover:bg-orange-600 active:scale-95;
+  }
+
+  /* ── Input Styles ── */
+  .input-search {
+    @apply w-full rounded-lg border border-white/[0.07] bg-white/[0.04] py-2 px-3 text-xs text-white placeholder:text-zinc-600 focus:border-orange-500/30 focus:outline-none focus:ring-1 focus:ring-orange-500/20 transition-all;
+  }
+
+  /* ── Card Variants ── */
+  .card-dark {
+    @apply rounded-2xl border border-white/[0.07] bg-[#0c0c0c] p-5;
+  }
+
+  /* ── Status Badges ── */
+  .status-success {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-green-400/20 bg-green-400/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-green-400;
+  }
+
+  .status-warning {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-yellow-400;
+  }
+
+  .status-error {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-red-400/20 bg-red-400/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-red-400;
+  }
+
+  /* ── Section Labels ── */
+  .section-label {
+    @apply text-[9px] font-black uppercase tracking-[0.13em] text-orange-500;
+  }
+
+  .page-title {
+    @apply text-4xl font-black uppercase tracking-tighter leading-none;
+  }
+
+  .page-subtitle {
+    @apply mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500;
+  }
 }
