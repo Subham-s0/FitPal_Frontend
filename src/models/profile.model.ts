@@ -213,10 +213,33 @@ export interface UpdateUserOnboardingRequest {
   profileImageResourceType?: string;
 }
 
+export interface UpdateUserProfileDetailsRequest {
+  userName: string;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNo: string | null;
+  dob: string | null;
+  gender: Gender | null;
+  height: number | null;
+  weight: number | null;
+  fitnessLevel: FitnessLevel | null;
+  primaryFitnessFocus: PrimaryFitnessFocus | null;
+}
+
+export interface ConfirmEmailVerificationRequest {
+  otp: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface UserProfileResponse {
   accountId: number;
   userId: number;
   email: string;
+  emailVerified: boolean;
   userName: string | null;
   firstName: string | null;
   lastName: string | null;

@@ -1,5 +1,7 @@
 import apiClient from "./client";
 import type {
+  ChangePasswordRequest,
+  ConfirmEmailVerificationRequest,
   CreateGymPhotoRequest,
   DeleteAssetRequest,
   DeleteAssetResponse,
@@ -12,6 +14,7 @@ import type {
   UpdateGymLocationStepRequest,
   UpdateGymPayoutStepRequest,
   UpdateGymPhotoRequest,
+  UpdateUserProfileDetailsRequest,
   UpsertGymDocumentRequest,
   ProfileSetupStatusResponse,
   UpdateUserOnboardingRequest,
@@ -87,6 +90,32 @@ export async function patchOnboardingProfileApi(
 ): Promise<UserProfileResponse> {
   const response = await apiClient.patch<UserProfileResponse>("/users/me/profile", payload);
   return response.data;
+}
+
+/** PATCH /api/users/me/profile/details */
+export async function patchMyProfileDetailsApi(
+  payload: UpdateUserProfileDetailsRequest
+): Promise<UserProfileResponse> {
+  const response = await apiClient.patch<UserProfileResponse>("/users/me/profile/details", payload);
+  return response.data;
+}
+
+/** POST /api/users/me/email-verification/request */
+export async function requestMyEmailVerificationApi(): Promise<void> {
+  await apiClient.post("/users/me/email-verification/request");
+}
+
+/** POST /api/users/me/email-verification/confirm */
+export async function confirmMyEmailVerificationApi(
+  payload: ConfirmEmailVerificationRequest
+): Promise<UserProfileResponse> {
+  const response = await apiClient.post<UserProfileResponse>("/users/me/email-verification/confirm", payload);
+  return response.data;
+}
+
+/** POST /api/users/me/password/change */
+export async function changeMyPasswordApi(payload: ChangePasswordRequest): Promise<void> {
+  await apiClient.post("/users/me/password/change", payload);
 }
 
 /** PATCH /api/gyms/me/profile/steps/basic */

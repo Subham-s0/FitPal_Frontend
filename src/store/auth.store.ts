@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
-import { AUTH_STORAGE_KEY } from "@/api/client";
 import type { AuthResponse } from "@/models/auth.model";
+import { AUTH_STORAGE_KEY } from "@/store/auth.storage";
 
 export interface AuthState {
   accessToken: string | null;

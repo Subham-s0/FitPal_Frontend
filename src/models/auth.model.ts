@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// ── Request DTOs ──────────────────────────────────────────────────────────
-
 export const loginSchema = z.object({
   email: z.string().email("Email must be valid"),
   password: z.string().min(8, "Password must be at least 8 characters").max(72),
@@ -43,7 +41,15 @@ export const registerGymSchema = z
   });
 export type RegisterGymRequest = z.infer<typeof registerGymSchema>;
 
-// ── Response DTO ──────────────────────────────────────────────────────────
+export interface ForgotPasswordRequestOtpRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResetRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
 
 export interface AuthResponse {
   message: string;

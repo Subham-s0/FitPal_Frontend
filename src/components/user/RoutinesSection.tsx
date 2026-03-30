@@ -1,32 +1,40 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface RoutinesSectionProps {
   onNewRoutine?: () => void;
 }
 
 const RoutinesSection = ({ onNewRoutine }: RoutinesSectionProps) => {
+  const [selectedMuscle, setSelectedMuscle] = useState('');
+  const [selectedEquipment, setSelectedEquipment] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const muscleOptions = [
+    { value: 'chest', label: 'Chest' },
+    { value: 'back', label: 'Back' },
+    { value: 'shoulders', label: 'Shoulders' },
+    { value: 'legs', label: 'Legs' },
+    { value: 'arms', label: 'Arms' },
+    { value: 'core', label: 'Core' },
+  ];
+
+  const equipmentOptions = [
+    { value: 'barbell', label: 'Barbell' },
+    { value: 'dumbbell', label: 'Dumbbell' },
+    { value: 'machine', label: 'Machine' },
+    { value: 'cable', label: 'Cable' },
+    { value: 'bodyweight', label: 'Bodyweight' },
+  ];
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-4xl font-black tracking-tighter text-white uppercase leading-none">
-            MY <span className="text-gradient-fire">ROUTINES</span>
+            <span className="text-gradient-fire">ROUTINES</span>
           </h1>
-          <p className="text-gray-500 font-bold uppercase tracking-[0.4em] text-[10px] mt-2">Advanced Training Management</p>
-        </div>
-        <div className="flex gap-4">
-          <button className="bg-white/5 border border-white/10 text-white px-8 py-4 rounded-2xl font-bold uppercase text-xs hover:bg-white/10 transition-all">
-            Archive
-          </button>
-          <button className="ai-glow bg-[#15110e] hover:bg-[#1a1512] text-orange-600 px-6 py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-orange-600/20">
-            <div className="w-2 h-2 rounded-full bg-orange-600 animate-ping"></div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Personalize with AI</span>
-          </button>
-          <button 
-            onClick={onNewRoutine}
-            className="bg-button-gradient text-white px-10 py-4 rounded-2xl font-black uppercase text-xs shadow-xl shadow-orange-600/30 hover:scale-105 transition-all">
-            Create New Routine
-          </button>
+          <p className="text-gray-500 font-bold uppercase tracking-[0.4em] text-[10px] mt-2">Exercise Library</p>
         </div>
       </div>
 

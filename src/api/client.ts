@@ -1,8 +1,8 @@
 import axios from "axios";
 import { apiBaseUrl } from "@/config/api";
 import type { ApiErrorResponse } from "@/models/auth.model";
-
-const AUTH_STORAGE_KEY = "fitpal_auth";
+import { authStore } from "@/store/auth.store";
+import { AUTH_STORAGE_KEY } from "@/store/auth.storage";
 
 interface ApiSuccessResponse<T> {
   success: boolean;
@@ -31,17 +31,21 @@ const apiClient = axios.create({
 
 // ── Request: attach JWT if available ──────────────────────────────────────
 apiClient.interceptors.request.use((config) => {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (raw) {
-      const { accessToken } = JSON.parse(raw) as { accessToken?: string };
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`;
-      }
-    }
-  } catch {
-    // corrupt storage — ignore
+  const accessToken = authStore.getSnapshot().accessToken;
+
+  if (!accessToken) {
+    return config;
   }
+
+  if (typeof config.headers?.set === "function") {
+    config.headers.set("Authorization", `Bearer ${accessToken}`);
+  } else {
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${accessToken}`,
+    };
+  }
+
   return config;
 });
 
@@ -55,7 +59,7 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+      authStore.clearAuth();
       const pathname = window.location.pathname;
       const isPublicAuthPage =
         pathname === "/admin" ||

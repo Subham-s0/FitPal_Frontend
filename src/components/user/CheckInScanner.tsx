@@ -13,7 +13,6 @@ import {
   MapPin,
   QrCode,
   RefreshCw,
-  ScanLine,
   ShieldCheck,
   Upload,
   X,
@@ -35,12 +34,24 @@ interface CheckInScannerProps {
 type ScannerMode = "qr" | "image";
 type DisplayStatus = CheckInStatus | "READY";
 type FeedbackTone = "success" | "warning" | "error" | "info";
+type ScanStateTone = "neutral" | FeedbackTone;
+type ScanStatePhase = "idle" | "active" | "reading" | "verifying" | "result" | "error";
 
 interface ActionFeedback {
   tone: FeedbackTone;
   title: string;
   detail: string | null;
 }
+
+interface InlineScanState {
+  source: ScannerMode;
+  phase: ScanStatePhase;
+  tone: ScanStateTone;
+  title: string;
+  detail: string;
+}
+
+const EMPTY_CHECK_INS: GymCheckInResponse[] = [];
 
 const TIER = {
   BASIC: { color: "#4ade80", border: "rgba(74,222,128,0.3)", bg: "rgba(74,222,128,0.1)", label: "Basic" },
@@ -89,6 +100,42 @@ const FEEDBACK_ACCENT: Record<FeedbackTone, string> = {
   warning: "text-yellow-300 border-yellow-500/20 bg-yellow-500/6",
   error: "text-red-300 border-red-500/20 bg-red-500/6",
   info: "text-blue-300 border-blue-500/20 bg-blue-500/6",
+};
+
+const SCAN_STATE_ACCENT: Record<
+  ScanStateTone,
+  { card: string; icon: string; label: string; chip: string }
+> = {
+  neutral: {
+    card: "border-white/8 bg-white/[0.02]",
+    icon: "border-white/10 bg-white/[0.04] text-white/60",
+    label: "text-white/35",
+    chip: "border-white/10 bg-white/[0.04] text-white/55",
+  },
+  info: {
+    card: "border-orange-500/20 bg-orange-500/[0.05]",
+    icon: "border-orange-500/20 bg-orange-500/10 text-orange-400",
+    label: "text-orange-300/75",
+    chip: "border-orange-500/20 bg-orange-500/10 text-orange-300",
+  },
+  success: {
+    card: "border-green-500/20 bg-green-500/[0.05]",
+    icon: "border-green-500/20 bg-green-500/10 text-green-400",
+    label: "text-green-300/75",
+    chip: "border-green-500/20 bg-green-500/10 text-green-300",
+  },
+  warning: {
+    card: "border-yellow-500/20 bg-yellow-500/[0.05]",
+    icon: "border-yellow-500/20 bg-yellow-500/10 text-yellow-300",
+    label: "text-yellow-200/80",
+    chip: "border-yellow-500/20 bg-yellow-500/10 text-yellow-200",
+  },
+  error: {
+    card: "border-red-500/20 bg-red-500/[0.05]",
+    icon: "border-red-500/20 bg-red-500/10 text-red-300",
+    label: "text-red-200/80",
+    chip: "border-red-500/20 bg-red-500/10 text-red-200",
+  },
 };
 
 function formatTime(value: string) {
@@ -200,14 +247,85 @@ function toFeedback(response: GymCheckInResponse): ActionFeedback {
   };
 }
 
+function getIdleScanState(source: ScannerMode): InlineScanState {
+  if (source === "qr") {
+    return {
+      source,
+      phase: "idle",
+      tone: "neutral",
+      title: "Scanner idle",
+      detail: "Activate the camera to start scanning a gym QR code.",
+    };
+  }
+
+  return {
+    source,
+    phase: "idle",
+    tone: "neutral",
+    title: "Image upload idle",
+    detail: "Choose a QR image and FitPal will decode it before verifying access.",
+  };
+}
+
+function getActiveCameraState(): InlineScanState {
+  return {
+    source: "qr",
+    phase: "active",
+    tone: "info",
+    title: "Camera active",
+    detail: "Waiting for a gym QR code. Hold your phone steady inside the frame.",
+  };
+}
+
+function getReadingImageState(fileName: string): InlineScanState {
+  return {
+    source: "image",
+    phase: "reading",
+    tone: "info",
+    title: "Reading QR image",
+    detail: `Scanning ${fileName} for a gym QR code.`,
+  };
+}
+
+function getVerifyingScanState(source: ScannerMode): InlineScanState {
+  return {
+    source,
+    phase: "verifying",
+    tone: "info",
+    title: "Verifying access",
+    detail:
+      source === "qr"
+        ? "QR detected. Checking your access with FitPal now."
+        : "QR found in the image. Checking your access with FitPal now.",
+  };
+}
+
+function toInlineScanState(source: ScannerMode, feedback: ActionFeedback): InlineScanState {
+  return {
+    source,
+    phase: feedback.tone === "error" ? "error" : "result",
+    tone: feedback.tone,
+    title: feedback.title,
+    detail:
+      feedback.detail ??
+      (feedback.tone === "success"
+        ? "The scan completed successfully."
+        : feedback.tone === "warning"
+          ? "The scan completed, but it still needs a response."
+          : feedback.tone === "error"
+            ? "The scan could not be completed."
+            : "The latest scanner action finished."),
+  };
+}
+
 const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scannerMode, setScannerMode] = useState<ScannerMode>("qr");
   const [showScanner, setShowScanner] = useState(false);
-  const [mirrored, setMirrored] = useState(false);
-  const [scannerError, setScannerError] = useState<string | null>(null);
+  const [mirrored, setMirrored] = useState(true);
   const [actionFeedback, setActionFeedback] = useState<ActionFeedback | null>(null);
+  const [scanState, setScanState] = useState<InlineScanState>(() => getIdleScanState("qr"));
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(0);
 
@@ -216,7 +334,7 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
     queryFn: getMyCheckInsApi,
   });
 
-  const checkIns = checkInsQuery.data ?? [];
+  const checkIns = checkInsQuery.data ?? EMPTY_CHECK_INS;
   const openVisit = useMemo(() => getOpenVisit(checkIns), [checkIns]);
   const latestVisit = openVisit ?? checkIns[0] ?? null;
   const displayStatus: DisplayStatus = openVisit?.status ?? latestVisit?.status ?? "READY";
@@ -250,8 +368,29 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
     ]);
   }
 
+  const switchScannerMode = (mode: ScannerMode) => {
+    setScannerMode(mode);
+    setShowScanner(false);
+    setActionFeedback(null);
+    setUploadedFileName(null);
+    setScanState(getIdleScanState(mode));
+  };
+
+  const activateScanner = () => {
+    setScannerMode("qr");
+    setShowScanner(true);
+    setActionFeedback(null);
+    setUploadedFileName(null);
+    setScanState(getActiveCameraState());
+  };
+
+  const stopScanner = () => {
+    setShowScanner(false);
+    setScanState(getIdleScanState("qr"));
+  };
+
   const scanMutation = useMutation({
-    mutationFn: async (qrToken: string) => {
+    mutationFn: async ({ qrToken }: { qrToken: string; source: ScannerMode }) => {
       const coordinates = await getCurrentCoordinates();
       return scanMyCheckInApi({
         qrToken,
@@ -260,18 +399,27 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
         deviceInfo: buildDeviceInfo(),
       });
     },
-    onSuccess: async (response) => {
-      setActionFeedback(toFeedback(response));
-      setScannerError(null);
+    onSuccess: async (response, variables) => {
+      const feedback = toFeedback(response);
+      setActionFeedback(feedback);
+      setScanState(toInlineScanState(variables.source, feedback));
       setShowScanner(false);
       await refreshCheckInQueries();
     },
-    onError: (error) => {
-      setActionFeedback({
+    onError: (error, variables) => {
+      const feedback: ActionFeedback = {
         tone: "error",
-        title: "Scan Failed",
-        detail: getApiErrorMessage(error, "Unable to verify the QR code."),
-      });
+        title: variables.source === "image" ? "Upload Failed" : "Scan Failed",
+        detail: getApiErrorMessage(
+          error,
+          variables.source === "image"
+            ? "Unable to verify the QR code from that image."
+            : "Unable to verify the QR code."
+        ),
+      };
+      setActionFeedback(feedback);
+      setScanState(toInlineScanState(variables.source, feedback));
+      setShowScanner(false);
     },
   });
 
@@ -300,12 +448,13 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
     },
   });
 
-  const handleTokenDetected = async (qrToken: string) => {
+  const handleTokenDetected = async (qrToken: string, source: ScannerMode) => {
     if (!qrToken || scanMutation.isPending || checkOutMutation.isPending) {
       return;
     }
 
-    await scanMutation.mutateAsync(qrToken);
+    setScanState(getVerifyingScanState(source));
+    await scanMutation.mutateAsync({ qrToken, source });
   };
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -317,267 +466,337 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
     }
 
     setUploadedFileName(file.name);
+    setActionFeedback(null);
+    setShowScanner(false);
+    setScanState(getReadingImageState(file.name));
 
     try {
       const qrToken = await decodeQrTokenFromImage(file);
-      await handleTokenDetected(qrToken);
+      await handleTokenDetected(qrToken, "image");
     } catch (error) {
-      setActionFeedback({
+      const feedback: ActionFeedback = {
         tone: "error",
         title: "Upload Failed",
         detail: getApiErrorMessage(error, "Unable to read a QR code from that image."),
-      });
+      };
+      setActionFeedback(feedback);
+      setScanState(toInlineScanState("image", feedback));
     }
   };
 
-  const statusSubtext =
-    latestVisit?.status === "DENIED"
-      ? formatEnumLabel(latestVisit.denyReason ?? latestVisit.status)
-      : actionFeedback?.detail;
+  const scanStateAccent = SCAN_STATE_ACCENT[scanState.tone];
+  const scanSourceLabel = scanState.source === "qr" ? "QR Scanner" : "QR Image";
+  const scanStateIcon =
+    scanState.phase === "verifying" ? (
+      <Loader2 className="h-4 w-4 animate-spin" />
+    ) : scanState.phase === "active" ? (
+      <Camera className="h-4 w-4" />
+    ) : scanState.phase === "reading" ? (
+      <FileImage className="h-4 w-4" />
+    ) : scanState.phase === "error" ? (
+      <AlertCircle className="h-4 w-4" />
+    ) : scanState.tone === "warning" ? (
+      <Clock className="h-4 w-4" />
+    ) : scanState.tone === "success" ? (
+      <ShieldCheck className="h-4 w-4" />
+    ) : scanState.source === "qr" ? (
+      <QrCode className="h-4 w-4" />
+    ) : (
+      <Upload className="h-4 w-4" />
+    );
+
+  const isLiveBadgeVerifying = scanMutation.isPending || scanState.phase === "verifying";
+  const liveBadgeLabel = isLiveBadgeVerifying ? "Verifying" : "Camera Live";
+  const liveBadgeTone = isLiveBadgeVerifying
+    ? "border-orange-500/30 bg-black/70 text-orange-200 shadow-[0_0_20px_rgba(255,153,0,0.16)]"
+    : "border-emerald-500/25 bg-black/70 text-emerald-100 shadow-[0_0_18px_rgba(74,222,128,0.12)]";
+  const liveBadgeIcon = isLiveBadgeVerifying ? (
+    <Loader2 className="h-3 w-3 animate-spin" />
+  ) : (
+    <Camera className="h-3 w-3" />
+  );
+
+  const renderScanStatePanel = (className = "") => (
+    <div
+      className={`${className} rounded-[1.25rem] border px-4 py-3 ${scanStateAccent.card}`}
+    >
+      <div className="flex items-start gap-2.5">
+        <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[1rem] border ${scanStateAccent.icon}`}>
+          {scanStateIcon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${scanStateAccent.label}`}>
+              Scan State
+            </span>
+            <span className={`rounded-full border px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${scanStateAccent.chip}`}>
+              {scanSourceLabel}
+            </span>
+          </div>
+          <p className="mt-1 text-[13px] font-bold leading-tight text-white">{scanState.title}</p>
+          <p className="mt-0.5 text-[10px] leading-tight text-white/70">{scanState.detail}</p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="w-full h-full text-white font-sans">
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
+    <div className="w-full h-full text-white font-sans flex flex-col overflow-hidden">
+      <div className="flex flex-col gap-3 h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-shrink-0">
           <div>
-            <h1 className="text-4xl font-black uppercase tracking-tighter leading-none">
+            <h1 className="text-3xl font-black uppercase tracking-tighter leading-none">
               Member <span className="text-gradient-fire">Check-In</span>
             </h1>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-500 mt-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500 mt-1">
               Access the gym
             </p>
           </div>
           <button
             onClick={onBack}
-            className="px-6 py-3 rounded-xl border border-orange-600/25 bg-orange-600/5 text-orange-600 text-[11px] font-bold uppercase tracking-wider hover:bg-orange-600/10 transition-all"
+            className="rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-200 hover:border-[hsla(30,100%,50%,0.35)] hover:bg-[hsla(30,100%,50%,0.14)] hover:text-white active:scale-95"
           >
             View Recents
           </button>
         </div>
 
-        {(checkInsQuery.error || scannerError) && (
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-200">
-            {scannerError ?? getApiErrorMessage(checkInsQuery.error, "Unable to load your current check-in status.")}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-          <div className="space-y-4">
-            <div className="bg-[#111] border border-white/5 rounded-[20px] overflow-hidden">
-              <div className="p-6 pb-0">
-                <div className="flex gap-2 border-b border-white/5 mb-6 relative">
-                  {showScanner && scannerMode === "qr" && (
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-500">
-                        LIVE
-                      </span>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      setScannerMode("qr");
-                      setShowScanner(false);
-                    }}
-                    className={`flex-1 px-6 py-4 border-b-2 transition-all text-sm font-extrabold uppercase tracking-wider ${
-                      scannerMode === "qr"
-                        ? "border-orange-600 text-orange-600"
-                        : "border-transparent text-white/40 hover:text-white/60"
-                    }`}
-                  >
-                    <QrCode className="inline-block w-4 h-4 mr-2 align-middle" />
-                    QR Scanner
-                  </button>
-                  <button
-                    onClick={() => {
-                      setScannerMode("image");
-                      setShowScanner(false);
-                    }}
-                    className={`flex-1 px-6 py-4 border-b-2 transition-all text-sm font-extrabold uppercase tracking-wider ${
-                      scannerMode === "image"
-                        ? "border-orange-600 text-orange-600"
-                        : "border-transparent text-white/40 hover:text-white/60"
-                    }`}
-                  >
-                    <FileImage className="inline-block w-4 h-4 mr-2 align-middle" />
-                    QR Image
-                  </button>
+        {/* Main grid — fills remaining height */}
+        <div className="grid grid-cols-1 gap-3 flex-1 min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
+          {/* ── Left column: scanner ── */}
+          <div className="flex flex-col gap-2 min-h-0 overflow-y-auto">
+            <div className="bg-[#111] border border-white/5 rounded-[1.75rem] flex flex-col min-h-0 overflow-hidden">
+              <div className="flex w-full flex-1 flex-col">
+                {/* Tab bar */}
+                <div className="px-3 pt-3 flex-shrink-0">
+                  <div className="flex gap-2 border-b border-white/5 mb-2">
+                    <button
+                      onClick={() => switchScannerMode("qr")}
+                      className={`flex-1 rounded-t-[1rem] px-3 py-2 border-b-2 transition-all duration-200 text-[11px] font-extrabold uppercase tracking-wider ${
+                        scannerMode === "qr"
+                          ? "border-orange-600 bg-orange-500/[0.07] text-orange-500"
+                          : "border-transparent text-white/40 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/70"
+                      }`}
+                    >
+                      <QrCode className="inline-block w-3.5 h-3.5 mr-1.5 align-middle" />
+                      QR Scanner
+                    </button>
+                    <button
+                      onClick={() => switchScannerMode("image")}
+                      className={`flex-1 rounded-t-[1rem] px-3 py-2 border-b-2 transition-all duration-200 text-[11px] font-extrabold uppercase tracking-wider ${
+                        scannerMode === "image"
+                          ? "border-orange-600 bg-orange-500/[0.07] text-orange-500"
+                          : "border-transparent text-white/40 hover:border-white/10 hover:bg-white/[0.03] hover:text-white/70"
+                      }`}
+                    >
+                      <FileImage className="inline-block w-3.5 h-3.5 mr-1.5 align-middle" />
+                      QR Image
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="p-6 pt-0">
-                {scannerMode === "qr" ? (
-                  <>
-                    <div className="relative rounded-2xl overflow-hidden bg-[#080808] border border-white/5 aspect-video flex items-center justify-center">
-                      {!showScanner ? (
-                        <div className="flex flex-col items-center gap-5 p-12 text-center">
-                          <div className="w-24 h-24 rounded-3xl bg-orange-600/7 border-2 border-orange-600/18 flex items-center justify-center animate-pulse">
-                            <QrCode className="w-12 h-12 text-orange-600/55" />
-                          </div>
-                          <div>
-                            <p className="text-base font-bold mb-2">Ready to scan a gym QR</p>
-                            <p className="text-sm text-white/40">
-                              Open the camera and point it at the gym&apos;s QR code.
-                            </p>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <Scanner
-                            onScan={(detectedCodes) => {
-                              const qrToken = detectedCodes[0]?.rawValue?.trim();
-                              if (!qrToken) {
-                                return;
-                              }
-
-                              void handleTokenDetected(qrToken);
-                            }}
-                            onError={(error) => {
-                              setScannerError(getApiErrorMessage(error, "Camera access failed."));
-                              setShowScanner(false);
-                            }}
-                            paused={scanMutation.isPending || checkOutMutation.isPending}
-                            scanDelay={800}
-                            sound={false}
-                            constraints={{ facingMode: "environment" }}
-                            styles={{
-                              container: { width: "100%", height: "100%" },
-                              video: {
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                                transform: mirrored ? "scaleX(-1)" : undefined,
-                              },
-                            }}
-                            classNames={{ container: "w-full h-full", video: "w-full h-full object-cover" }}
-                          >
-                            <div className="absolute inset-0 pointer-events-none">
-                              <div className="absolute top-4 left-4 w-10 h-10 border-t-2 border-l-2 border-orange-600 rounded-tl-[10px]" />
-                              <div className="absolute top-4 right-4 w-10 h-10 border-t-2 border-r-2 border-orange-600 rounded-tr-[10px]" />
-                              <div className="absolute bottom-4 left-4 w-10 h-10 border-b-2 border-l-2 border-orange-600 rounded-bl-[10px]" />
-                              <div className="absolute bottom-4 right-4 w-10 h-10 border-b-2 border-r-2 border-orange-600 rounded-br-[10px]" />
-                              <div className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-orange-600/95 to-transparent shadow-[0_0_18px_rgba(255,153,0,0.8)] animate-[scan-beam_1.8s_ease-in-out_infinite]" />
+                {/* Scanner body */}
+                <div className="px-3 pb-3 flex flex-col gap-3 flex-1 min-h-0">
+                  {scannerMode === "qr" ? (
+                    <>
+                      {/* Camera viewport */}
+                          <div className="relative mx-auto h-[15rem] w-full sm:h-[18rem] lg:h-[20rem] lg:w-[92%] xl:h-[22rem] xl:w-[88%] rounded-[1.5rem] overflow-hidden bg-[#080808] border border-white/5 flex-shrink-0 flex items-center justify-center">
+                        {!showScanner ? (
+                          <div className="flex flex-col items-center gap-3 p-4 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] border border-orange-600/18 bg-orange-600/[0.05] shadow-[0_0_30px_rgba(255,153,0,0.08)]">
+                              <QrCode className="h-7 w-7 text-orange-500/70" />
                             </div>
-                          </Scanner>
-
-                          {scanMutation.isPending && (
-                            <div className="absolute inset-0 bg-black/80 backdrop-blur flex flex-col items-center justify-center gap-4">
-                              <div className="relative w-20 h-20">
-                                <div className="absolute inset-0 rounded-full border-2 border-orange-600/12" />
-                                <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-orange-600 animate-spin" />
-                                <ScanLine className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-orange-600" />
-                              </div>
-                              <p className="text-[11px] font-extrabold uppercase tracking-widest text-orange-600">
-                                Verifying Access...
+                            <div>
+                              <p className="text-[13px] font-bold text-white/90">Ready to scan a gym QR</p>
+                              <p className="mt-1 text-[10px] text-white/40">
+                                Open the camera and point it at the gym&apos;s QR code.
                               </p>
                             </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Scanner
+                              onScan={(detectedCodes) => {
+                                const qrToken = detectedCodes[0]?.rawValue?.trim();
+                                if (!qrToken) return;
+                                void handleTokenDetected(qrToken, "qr");
+                              }}
+                              onError={(error) => {
+                                const feedback: ActionFeedback = {
+                                  tone: "error",
+                                  title: "Camera Access Failed",
+                                  detail: getApiErrorMessage(error, "Camera access failed."),
+                                };
+                                setActionFeedback(feedback);
+                                setScanState(toInlineScanState("qr", feedback));
+                                setShowScanner(false);
+                              }}
+                              paused={checkOutMutation.isPending}
+                              scanDelay={800}
+                              sound={false}
+                              constraints={{ facingMode: "environment" }}
+                              styles={{
+                                container: {
+                                  width: "100%",
+                                  height: "100%",
+                                  backgroundColor: "#000",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                },
+                                video: {
+                                  width: "auto",
+                                  height: "100%",
+                                  maxWidth: "100%",
+                                  objectFit: "contain",
+                                  borderRadius: "1.25rem",
+                                  transform: mirrored ? "scaleX(-1)" : undefined,
+                                },
+                              }}
+                              classNames={{
+                                container:
+                                  "flex h-full w-full items-center justify-center overflow-hidden rounded-[1.5rem] bg-black ring-1 ring-inset ring-orange-600/15",
+                                video: "h-full w-auto max-w-full rounded-[1.25rem] object-contain bg-transparent",
+                              }}
+                            >
+                              <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute top-3 left-3 w-7 h-7 border-t-2 border-l-2 border-orange-600 rounded-tl-[10px]" />
+                                <div className="absolute top-3 right-3 w-7 h-7 border-t-2 border-r-2 border-orange-600 rounded-tr-[10px]" />
+                                <div className="absolute bottom-3 left-3 w-7 h-7 border-b-2 border-l-2 border-orange-600 rounded-bl-[10px]" />
+                                <div className="absolute bottom-3 right-3 w-7 h-7 border-b-2 border-r-2 border-orange-600 rounded-br-[10px]" />
+                                <div className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-orange-600/95 to-transparent shadow-[0_0_14px_rgba(255,153,0,0.8)] animate-[scan-beam_1.8s_ease-in-out_infinite]" />
+                              </div>
+                            </Scanner>
 
-                    <div className="mt-4 flex gap-3">
-                      {!showScanner ? (
-                        <button
-                          onClick={() => {
-                            setScannerError(null);
-                            setShowScanner(true);
-                          }}
-                          className="flex-1 px-6 py-5 rounded-xl bg-gradient-to-r from-[#FACC15] via-[#FF9900] to-[#FF6A00] text-white text-sm font-extrabold uppercase tracking-wider hover:shadow-[0_10px_32px_rgba(255,153,0,0.55)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3"
-                        >
-                          <Camera className="w-4 h-4" /> Activate Scanner
-                        </button>
-                      ) : (
-                        <>
+                            <div className="absolute top-3 left-3 pointer-events-none">
+                              <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] backdrop-blur-md ${liveBadgeTone}`}>
+                                {liveBadgeIcon}
+                                <span>{liveBadgeLabel}</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {renderScanStatePanel()}
+
+                      {/* Action buttons */}
+                      <div className="flex gap-2 flex-shrink-0">
+                        {!showScanner ? (
                           <button
-                            onClick={() => setShowScanner(false)}
-                            className="flex-1 px-6 py-5 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-all flex items-center justify-center gap-3 text-sm font-extrabold uppercase tracking-wider"
+                            onClick={activateScanner}
+                            className="flex-1 px-3 py-2.5 rounded-[1.2rem] bg-gradient-to-r from-[#FACC15] via-[#FF9900] to-[#FF6A00] text-white text-[11px] font-extrabold uppercase tracking-wider shadow-[0_3px_14px_rgba(249,115,22,0.22)] transition-all duration-200 hover:brightness-105 active:scale-[0.98] flex items-center justify-center gap-2"
                           >
-                            <X className="w-4 h-4" /> Close Scanner
+                            <Camera className="w-3.5 h-3.5" /> Activate Scanner
                           </button>
-                          <button
-                            onClick={() => setMirrored((current) => !current)}
-                            title="Flip camera horizontally"
-                            className="w-14 px-0 py-5 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 transition-all flex items-center justify-center"
-                          >
-                            <FlipHorizontal className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full rounded-2xl border-2 border-dashed border-orange-600/25 bg-orange-600/3 p-12 text-center transition-all hover:border-orange-600/45 hover:bg-orange-600/6"
-                    >
-                      <span className="inline-flex w-24 h-24 rounded-3xl bg-orange-600/7 border-2 border-orange-600/18 items-center justify-center mb-5 animate-pulse">
-                        <Upload className="w-12 h-12 text-orange-600/55" />
-                      </span>
-                      <p className="text-base font-bold mb-3">Upload a QR image</p>
-                      <p className="text-sm text-white/40 mb-2">
-                        Choose a QR screenshot or photo and FitPal will extract the token in the browser.
-                      </p>
-                      <p className="text-xs text-white/30">Supported: JPG, PNG, WebP</p>
-                    </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={stopScanner}
+                              className="flex-1 px-3 py-2.5 rounded-[1.2rem] bg-white/5 border border-white/10 text-white/70 transition-all duration-200 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] flex items-center justify-center gap-2 text-[11px] font-extrabold uppercase tracking-wider"
+                            >
+                              <X className="w-3.5 h-3.5" /> Close Scanner
+                            </button>
+                            <button
+                              onClick={() => setMirrored((c) => !c)}
+                              title="Flip camera horizontally"
+                              className="w-10 px-0 py-2.5 rounded-[1rem] bg-white/5 border border-white/10 text-white/70 transition-all duration-200 hover:bg-white/[0.08] hover:text-white active:scale-[0.98] flex items-center justify-center"
+                            >
+                              <FlipHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    /* Image upload mode */
+                    <div className="flex flex-col gap-3">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full rounded-[1.25rem] border-2 border-dashed border-orange-600/25 bg-orange-600/3 p-5 text-center transition-all hover:border-orange-600/45 hover:bg-orange-600/6"
+                      >
+                        <span className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-[1.25rem] border-2 border-orange-600/18 bg-orange-600/7">
+                          <Upload className="h-7 w-7 text-orange-600/60" />
+                        </span>
+                        <p className="text-xs font-bold mb-1">Upload a QR image</p>
+                        <p className="text-[10px] text-white/40 mb-1">
+                          FitPal will extract the token in the browser.
+                        </p>
+                        <p className="text-[9px] text-white/30">Supported: JPG, PNG, WebP</p>
+                      </button>
 
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                    />
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
 
-                    {uploadedFileName ? (
-                      <div className="mt-4 rounded-xl border border-white/8 bg-white/[0.02] p-4">
-                        <div className="flex items-center gap-3">
-                          <FileImage className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                          <div>
-                            <p className="text-[11px] font-semibold">{uploadedFileName}</p>
-                            <p className="text-[9px] text-white/30 mt-0.5">
-                              The token is decoded client-side and sent through the normal scan endpoint.
-                            </p>
+                      {uploadedFileName && (
+                        <div className="rounded-[1.25rem] border border-white/8 bg-white/[0.02] p-3">
+                          <div className="flex items-center gap-2">
+                            <FileImage className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+                            <div>
+                              <p className="text-[10px] font-semibold">{uploadedFileName}</p>
+                              <p className="text-[9px] text-white/30 mt-px">
+                                Decoded client-side, sent through the scan endpoint.
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : null}
-                  </div>
-                )}
+                      )}
+
+                      {renderScanStatePanel()}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          <div className="space-y-4">
+
+          {/* ── Right column: status + actions ── */}
+          <div className="flex flex-col gap-2 min-h-0 overflow-y-auto">
+            {/* Query error — lives here, near the status panel */}
+            {checkInsQuery.error && (
+              <div className="flex-shrink-0 rounded-[1.25rem] border border-red-500/20 bg-red-500/5 px-4 py-3 flex items-start gap-2">
+                <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-px" />
+                <p className="text-[11px] text-red-200 leading-snug">
+                  {getApiErrorMessage(checkInsQuery.error, "Unable to load your current check-in status.")}
+                </p>
+              </div>
+            )}
+
+            {/* Status card */}
             <div
-              className="relative p-5 rounded-[18px] border overflow-hidden"
+              className="relative p-4 rounded-[1.75rem] border overflow-hidden flex-shrink-0"
               style={{
                 borderColor: statusConfig.border,
                 backgroundColor: statusConfig.bg,
               }}
             >
               <div
-                className="absolute -top-12 -right-12 w-36 h-36 rounded-full pointer-events-none"
+                className="absolute -top-8 -right-8 w-24 h-24 rounded-full pointer-events-none"
                 style={{
                   background: `radial-gradient(circle, ${statusConfig.color}14, transparent 70%)`,
                 }}
               />
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-2">
                 <div
-                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
                     displayStatus === "ACCESS_PENDING" || displayStatus === "CHECKED_IN" ? "animate-pulse" : ""
                   }`}
                   style={{
                     backgroundColor: statusConfig.color,
-                    boxShadow: `0 0 7px ${statusConfig.color}`,
+                    boxShadow: `0 0 6px ${statusConfig.color}`,
                   }}
                 />
-                <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: statusConfig.color }}>
+                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: statusConfig.color }}>
                   {statusConfig.label}
                 </span>
-                {currentTier ? (
+                {currentTier && (
                   <span
-                    className="ml-auto px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border"
+                    className="ml-auto px-2 py-px rounded-full text-[8px] font-extrabold uppercase tracking-wider border"
                     style={{
                       color: currentTier.color,
                       borderColor: currentTier.border,
@@ -586,31 +805,33 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
                   >
                     {currentTier.label}
                   </span>
-                ) : null}
+                )}
               </div>
 
               {displayStatus === "READY" && (
-                <div className="text-center py-4">
-                  <div className="inline-flex w-14 h-14 rounded-2xl bg-orange-600/7 border-2 border-orange-600/14 items-center justify-center mx-auto mb-3 animate-pulse">
-                    <QrCode className="w-7 h-7 text-orange-600/55" />
+                <div className="flex min-h-[170px] flex-col items-center justify-center text-center py-5">
+                  <div className="relative inline-flex w-12 h-12 rounded-[1.25rem] bg-orange-600/7 border-2 border-orange-600/14 items-center justify-center mx-auto mb-2">
+                    <div className="absolute inset-0 rounded-[1.25rem] border-2 border-orange-600/30 animate-ping" />
+                    <div className="absolute inset-0 rounded-[1.25rem] bg-orange-600/5 animate-pulse" />
+                    <QrCode className="relative w-6 h-6 text-orange-600/55" />
                   </div>
-                  <p className="text-[13px] font-bold text-white/55 mb-1">No active session</p>
-                  <p className="text-[11px] text-white/30">Scan a gym QR to start</p>
+                  <p className="text-[13px] font-bold text-white/60 mb-1">No active session</p>
+                  <p className="text-[10px] text-white/30">Scan a gym QR to start</p>
                 </div>
               )}
 
               {latestVisit?.gymName && displayStatus === "ACCESS_PENDING" && (
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <MapPin className="w-3.5 h-3.5 text-yellow-500" />
-                    <p className="text-[17px] font-black">{latestVisit.gymName}</p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <MapPin className="w-3 h-3 text-yellow-500" />
+                    <p className="text-[13px] font-black">{latestVisit.gymName}</p>
                   </div>
-                  <div className="p-3 rounded-xl border border-yellow-500/20 bg-yellow-500/4 mb-2">
-                    <p className="text-[11px] text-white/55 leading-relaxed">
-                      Waiting for door confirmation. Stay near the entrance or rescan if the gym asks you to retry.
+                  <div className="p-3 rounded-[1.25rem] border border-yellow-500/20 bg-yellow-500/4 mb-1">
+                    <p className="text-[10px] text-white/55 leading-relaxed">
+                      Waiting for door confirmation. Stay near the entrance or rescan if needed.
                     </p>
                   </div>
-                  <p className="text-[11px] text-white/30 flex items-center gap-1.5">
+                  <p className="text-[9px] text-white/30 flex items-center gap-1">
                     <Clock className="w-3 h-3" /> Started {formatTime(latestVisit.checkInAt)}
                   </p>
                 </div>
@@ -618,18 +839,18 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
 
               {latestVisit?.gymName && displayStatus === "CHECKED_IN" && (
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <MapPin className="w-3.5 h-3.5 text-green-500" />
-                    <p className="text-[17px] font-black">{latestVisit.gymName}</p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <MapPin className="w-3 h-3 text-green-500" />
+                    <p className="text-[13px] font-black">{latestVisit.gymName}</p>
                   </div>
-                  <div className="p-4 rounded-xl border border-green-500/20 bg-green-500/4 mb-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-green-500/55 mb-1.5">
+                  <div className="p-3 rounded-[1.25rem] border border-green-500/20 bg-green-500/4 mb-1">
+                    <p className="text-[7px] font-black uppercase tracking-widest text-green-500/55 mb-1">
                       Session Time
                     </p>
-                    <p className="text-[40px] font-black text-green-500 leading-none tracking-tight font-mono">
+                    <p className="text-[26px] font-black text-green-500 leading-none tracking-tight font-mono">
                       {formatDuration(activeDurationSeconds)}
                     </p>
-                    <p className="text-[10px] text-white/30 mt-1.5">
+                    <p className="text-[9px] text-white/30 mt-0.5">
                       In since {formatTime(latestVisit.checkInAt)}
                     </p>
                   </div>
@@ -638,19 +859,19 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
 
               {latestVisit?.gymName && displayStatus === "CHECKED_OUT" && (
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                    <p className="text-[17px] font-black">{latestVisit.gymName}</p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <MapPin className="w-3 h-3 text-blue-500" />
+                    <p className="text-[13px] font-black">{latestVisit.gymName}</p>
                   </div>
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="flex gap-2.5 flex-wrap">
                     <div>
-                      <p className="text-[9px] font-extrabold uppercase text-white/30 mb-1">In</p>
-                      <p className="text-[13px] font-bold">{formatTime(latestVisit.checkInAt)}</p>
+                      <p className="text-[8px] font-extrabold uppercase text-white/30 mb-0.5">In</p>
+                      <p className="text-xs font-bold">{formatTime(latestVisit.checkInAt)}</p>
                     </div>
                     <div className="w-px bg-white/7" />
                     <div>
-                      <p className="text-[9px] font-extrabold uppercase text-white/30 mb-1">Out</p>
-                      <p className="text-[13px] font-bold">
+                      <p className="text-[8px] font-extrabold uppercase text-white/30 mb-0.5">Out</p>
+                      <p className="text-xs font-bold">
                         {latestVisit.checkOutAt ? formatTime(latestVisit.checkOutAt) : "--"}
                       </p>
                     </div>
@@ -660,38 +881,26 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
 
               {displayStatus === "DENIED" && (
                 <div>
-                  <div className="inline-flex w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 items-center justify-center mb-3">
-                    <XCircle className="w-7 h-7 text-red-400" />
+                  <div className="inline-flex w-10 h-10 rounded-[1rem] bg-red-500/10 border border-red-500/20 items-center justify-center mb-1.5">
+                    <XCircle className="w-5 h-5 text-red-400" />
                   </div>
-                  <p className="text-[13px] font-bold text-red-200 mb-1">Last scan was denied</p>
-                  <p className="text-[11px] text-white/40">
+                  <p className="text-xs font-bold text-red-200 mb-0.5">Last scan was denied</p>
+                  <p className="text-[10px] text-white/40">
                     {formatEnumLabel(latestVisit?.denyReason ?? latestVisit?.status) ?? "Retry the scan when you are ready."}
                   </p>
                 </div>
               )}
             </div>
 
-            {actionFeedback ? (
-              <div className={`rounded-2xl border px-4 py-3 ${FEEDBACK_ACCENT[actionFeedback.tone]}`}>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em]">{actionFeedback.title}</p>
-                {actionFeedback.detail ? (
-                  <p className="mt-1 text-sm text-white/80">{actionFeedback.detail}</p>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="p-5 rounded-2xl border border-white/6 bg-white/[0.015]">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-3">Actions</p>
-              <div className="space-y-2.5">
+            {/* Actions card */}
+            <div className="p-4 rounded-[1.75rem] border border-white/6 bg-white/[0.015] flex-shrink-0">
+              <p className="text-[7px] font-black uppercase tracking-widest text-white/25 mb-2">Actions</p>
+              <div className="space-y-1.5">
                 {(displayStatus === "READY" || displayStatus === "DENIED" || displayStatus === "CHECKED_OUT") && (
                   <button
-                    onClick={() => {
-                      setScannerMode("qr");
-                      setScannerError(null);
-                      setShowScanner(true);
-                    }}
+                    onClick={activateScanner}
                     disabled={isBusy}
-                    className="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-[#FACC15] via-[#FF9900] to-[#FF6A00] text-white text-xs font-extrabold uppercase tracking-wider hover:shadow-[0_10px_32px_rgba(255,153,0,0.55)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2.5 rounded-[1.2rem] bg-gradient-to-r from-[#FACC15] via-[#FF9900] to-[#FF6A00] text-white text-[11px] font-extrabold uppercase tracking-wider shadow-[0_3px_14px_rgba(249,115,22,0.22)] transition-all duration-200 hover:brightness-105 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <QrCode className="w-3.5 h-3.5" />}
                     Scan Gym QR
@@ -700,19 +909,15 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
 
                 {displayStatus === "ACCESS_PENDING" && (
                   <>
-                    <div className="flex items-center gap-2 p-3 rounded-xl border border-yellow-500/18 bg-yellow-500/4">
-                      <Loader2 className="w-3.5 h-3.5 text-yellow-500 animate-spin flex-shrink-0" />
-                      <span className="text-[11px] font-bold text-white/50">
-                        Waiting for the gym door confirmation...
+                    <div className="flex items-center gap-2 p-3 rounded-[1.25rem] border border-yellow-500/18 bg-yellow-500/4">
+                      <Loader2 className="w-3 h-3 text-yellow-500 animate-spin flex-shrink-0" />
+                      <span className="text-[10px] font-bold text-white/50">
+                        Waiting for door confirmation...
                       </span>
                     </div>
                     <button
-                      onClick={() => {
-                        setScannerMode("qr");
-                        setScannerError(null);
-                        setShowScanner(true);
-                      }}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-yellow-500/22 text-yellow-500 text-[11px] font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                      onClick={activateScanner}
+                      className="w-full px-3 py-2 rounded-[1.2rem] bg-white/5 border border-yellow-500/22 text-yellow-500 text-[10px] font-bold transition-all duration-200 hover:bg-yellow-500/[0.08] hover:text-yellow-400 active:scale-[0.98] flex items-center justify-center gap-2"
                     >
                       <RefreshCw className="w-3 h-3" /> Scan Again
                     </button>
@@ -723,7 +928,7 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
                   <button
                     onClick={() => checkOutMutation.mutate(latestVisit.checkInId)}
                     disabled={checkOutMutation.isPending}
-                    className="w-full px-6 py-4 rounded-xl border border-red-500/35 bg-red-500/8 text-red-500 text-xs font-extrabold uppercase tracking-wider hover:bg-red-500/15 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2.5 rounded-[1.2rem] border border-red-500/35 bg-red-500/8 text-red-500 text-[11px] font-extrabold uppercase tracking-wider transition-all duration-200 hover:bg-red-500/15 hover:text-red-400 active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {checkOutMutation.isPending ? (
                       <>
@@ -741,33 +946,38 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-red-500/16 bg-red-500/4">
-              <div className="flex gap-2 items-center text-red-500 mb-1.5">
+            {/* Access rules notice */}
+            <div className="p-3 rounded-[1.25rem] border border-red-500/16 bg-red-500/4 flex-shrink-0">
+              <div className="flex gap-1.5 items-center text-red-500 mb-1">
                 <AlertCircle className="w-3 h-3" />
-                <span className="text-[9px] font-black uppercase tracking-wider">Access Rules</span>
+                <span className="text-[7px] font-black uppercase tracking-wider">Access Rules</span>
               </div>
-              <p className="text-[11px] text-white/45 leading-relaxed">
-                Location is attached when available. If a gym uses radius checks, enable location permission before scanning.
+              <p className="text-[9px] text-white/45 leading-relaxed">
+                Location is attached when available. Enable location permission before scanning if the gym uses radius checks.
               </p>
             </div>
 
-            {statusSubtext ? (
-              <div className="p-3.5 rounded-xl border border-white/8 bg-white/[0.02]">
-                <div className="flex gap-2 items-center text-white/70 mb-1.5">
+            {/* Last result feedback */}
+            {actionFeedback && (
+              <div className={`rounded-[1.25rem] border p-3 flex-shrink-0 ${FEEDBACK_ACCENT[actionFeedback.tone]}`}>
+                <div className="mb-1 flex gap-1.5 items-center">
                   <ShieldCheck className="w-3 h-3" />
-                  <span className="text-[9px] font-black uppercase tracking-wider">Last Result</span>
+                  <span className="text-[7px] font-black uppercase tracking-wider">Last Result</span>
                 </div>
-                <p className="text-[11px] text-white/55 leading-relaxed">{statusSubtext}</p>
+                <p className="text-[12px] font-bold text-white">{actionFeedback.title}</p>
+                {actionFeedback.detail && (
+                  <p className="mt-0.5 text-[10px] leading-relaxed text-white/70">{actionFeedback.detail}</p>
+                )}
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
 
       <style>{`
         @keyframes scan-beam {
-          0%, 100% { top: 16px; }
-          50% { top: calc(100% - 16px); }
+          0%, 100% { top: 12px; }
+          50% { top: calc(100% - 12px); }
         }
       `}</style>
     </div>

@@ -27,7 +27,7 @@ import Pricing from "@/components/Pricing";
 import {
   Field, FieldError, Pill, ProfileSetupShell, SectionLabel, SetupActions,
   TextInput, type StepDefinition,
-} from "@/components/ProfileSetupShell";
+} from "@/components/user/ProfileSetupShell";
 
 type StepId = "profile" | "demographics" | "goals" | "subscription" | "payment";
 type PlanFrequency = "monthly" | "yearly";

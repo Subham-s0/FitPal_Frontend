@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, registerUserSchema, registerGymSchema } from "@/models/auth.model";
 import type { ApiErrorResponse, AuthResponse, LoginRequest, RegisterGymRequest, RegisterUserRequest } from "@/models/auth.model";
 import { getApiErrorMessage } from "@/api/client";
-import { googleOAuthStartUrl } from "@/config/api";
+import { buildGoogleOAuthStartUrl } from "@/config/api";
 import { useLogin, useRegisterUser, useRegisterGym, useAuthState } from "@/hooks/useAuth";
 import { authStore } from "@/store/auth.store";
 import { getPostAuthRoute } from "@/utils/auth-routing";
@@ -179,6 +179,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
       return;
     }
 
+    const googleOAuthStartUrl = buildGoogleOAuthStartUrl(window.location.origin);
     const width = 520;
     const height = 720;
     const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
@@ -623,4 +624,3 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
 };
 
 export default LoginRegister;
-

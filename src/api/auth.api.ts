@@ -4,6 +4,8 @@ import type {
   RegisterUserRequest,
   RegisterGymRequest,
   AuthResponse,
+  ForgotPasswordRequestOtpRequest,
+  ForgotPasswordResetRequest,
 } from "@/models/auth.model";
 
 /** POST /api/auth/login */
@@ -32,4 +34,18 @@ export async function registerGymApi(
   const { confirmPassword: _, ...payload } = data;
   const res = await apiClient.post<AuthResponse>("/auth/register/gym", payload);
   return res.data;
+}
+
+/** POST /api/auth/password/forgot/request-otp */
+export async function requestForgotPasswordOtpApi(
+  data: ForgotPasswordRequestOtpRequest
+): Promise<void> {
+  await apiClient.post("/auth/password/forgot/request-otp", data);
+}
+
+/** POST /api/auth/password/forgot/reset */
+export async function resetForgotPasswordApi(
+  data: ForgotPasswordResetRequest
+): Promise<void> {
+  await apiClient.post("/auth/password/forgot/reset", data);
 }
