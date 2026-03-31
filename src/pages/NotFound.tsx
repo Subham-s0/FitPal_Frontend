@@ -1,11 +1,11 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuthState } from "@/hooks/useAuth";
+import { useAuthState } from "@/features/auth/hooks";
 import {
   ADMIN_DASHBOARD_ROUTE,
   PROFILE_SETUP_ROUTE,
   getPostAuthRoute,
-} from "@/utils/auth-routing";
+} from "@/features/auth/auth-routing";
 
 const NotFound = () => {
   const location = useLocation();

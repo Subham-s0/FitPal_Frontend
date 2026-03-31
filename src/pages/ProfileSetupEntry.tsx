@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import GymProfileSetup from "./gym/GymProfileSetup";
-import { default as ProfileSetup } from "@/pages/user/UserProfileSetup";
-import { useAuthState } from "@/hooks/useAuth";
+import { useAuthState } from "@/features/auth/hooks";
+import GymProfileSetupScreen from "@/features/profile/screens/GymProfileSetup";
+import UserProfileSetupScreen from "@/features/profile/screens/UserProfileSetup";
 import { useNavigate } from "react-router-dom";
 
 const ProfileSetupEntry = () => {
@@ -17,7 +17,7 @@ const ProfileSetupEntry = () => {
     }
   }, [isGymRole, auth.hasActiveSubscription, navigate]);
 
-  return isGymRole ? <GymProfileSetup /> : <ProfileSetup />;
+  return isGymRole ? <GymProfileSetupScreen /> : <UserProfileSetupScreen />;
 };
 
 export default ProfileSetupEntry;

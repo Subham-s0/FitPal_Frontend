@@ -1,5 +1,5 @@
-import PaymentCallback from "./PaymentCallback";
+import PaymentCallbackScreen from "@/features/payment/screens/PaymentCallback";
 
-const KhaltiPaymentCallback = () => <PaymentCallback gateway="khalti" />;
+const KhaltiPaymentCallback = () => <PaymentCallbackScreen gateway="khalti" />;
 
 export default KhaltiPaymentCallback;

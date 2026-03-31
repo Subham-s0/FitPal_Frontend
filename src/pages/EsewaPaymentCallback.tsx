@@ -1,5 +1,5 @@
-import PaymentCallback from "./PaymentCallback";
+import PaymentCallbackScreen from "@/features/payment/screens/PaymentCallback";
 
-const EsewaPaymentCallback = () => <PaymentCallback gateway="esewa" />;
+const EsewaPaymentCallback = () => <PaymentCallbackScreen gateway="esewa" />;
 
 export default EsewaPaymentCallback;
