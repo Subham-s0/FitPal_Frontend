@@ -14,6 +14,7 @@ import {
   formatGymDistance,
   getGymCityLabel,
   getGymDisplayName,
+  getGymMonogram,
   getGymPreviewImageUrl,
 } from "@/features/gyms/utils";
 
@@ -243,6 +244,11 @@ function MobileGymCard({
             alt=""
             className="h-9 w-9 rounded-lg border border-white/10 object-cover"
           />
+        )}
+        {!previewImageUrl && (
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-tight text-slate-400">
+            {getGymMonogram(gym)}
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <h4 className="truncate text-xs font-extrabold uppercase tracking-tight">{getGymDisplayName(gym)}</h4>

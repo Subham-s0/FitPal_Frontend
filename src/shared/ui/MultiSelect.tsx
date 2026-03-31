@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useState, useRef, useEffect, type CSSProperties } from "react";
 import { X, ChevronDown } from "lucide-react";
 
 interface MultiSelectOption {
@@ -25,10 +26,16 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedTrigger = containerRef.current?.contains(target);
+      const clickedDropdown = dropdownRef.current?.contains(target);
+
+      if (!clickedTrigger && !clickedDropdown) {
         setIsOpen(false);
       }
     };
@@ -39,6 +46,35 @@ export function MultiSelect({
 
   const selectedOptions = options.filter((opt) => value.includes(opt.value));
   const availableOptions = options.filter((opt) => !value.includes(opt.value));
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const updateDropdownPosition = () => {
+      if (!containerRef.current) {
+        return;
+      }
+
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+      });
+    };
+
+    updateDropdownPosition();
+
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
+  }, [isOpen, selectedOptions.length, availableOptions.length]);
 
   const handleToggle = (optionValue: string) => {
     if (value.includes(optionValue)) {
@@ -93,28 +129,35 @@ export function MultiSelect({
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
-        <div className="absolute z-50 mt-2 w-full rounded-xl border border-white/10 bg-[#111] py-2 shadow-xl">
-          {availableOptions.length === 0 ? (
-            <div className="px-3 py-2 text-center text-xs text-gray-500">
-              No more options available
-            </div>
-          ) : (
-            <div className="max-h-48 overflow-y-auto">
-              {availableOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleToggle(option.value)}
-                  className="w-full px-3 py-2 text-left text-xs font-medium text-slate-100 transition-colors hover:bg-orange-600/20 hover:text-white"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {isOpen && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={dropdownRef}
+              className="fixed z-[320] rounded-xl border border-white/10 bg-[#111] py-2 shadow-xl"
+              style={dropdownStyle}
+            >
+              {availableOptions.length === 0 ? (
+                <div className="px-3 py-2 text-center text-xs text-gray-500">
+                  No more options available
+                </div>
+              ) : (
+                <div className="max-h-48 overflow-y-auto">
+                  {availableOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleToggle(option.value)}
+                      className="w-full px-3 py-2 text-left text-xs font-medium text-slate-100 transition-colors hover:bg-orange-600/20 hover:text-white"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

@@ -4,8 +4,8 @@ import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import { CheckInScreen } from "@/features/check-in";
 import { ExercisesScreen } from "@/features/exercises";
 import { GymsScreen } from "@/features/gyms";
-import NewRoutine from "@/features/user-dashboard/components/NewRoutine";
-import RoutinesSection from "@/features/user-dashboard/components/RoutinesSection";
+import RoutineFlow from "@/features/user-dashboard/components/RoutineFlow";
+import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import WorkoutsSection from "@/features/user-dashboard/components/WorkoutsSection";
 import {
   ArrowUpCircle,
@@ -23,9 +23,9 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-type UserDashboardSection = "home" | "gyms" | "routines" | "new-routine" | "exercises" | "workouts" | "checkin" | "progress" | "profile";
+type UserDashboardSection = "home" | "gyms" | "routines" | "exercises" | "workouts" | "checkin" | "progress" | "profile";
 
-const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "new-routine", "exercises", "workouts", "checkin", "progress", "profile"];
+const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "exercises", "workouts", "checkin", "progress", "profile"];
 
 // Body model images
 const BODY_FRONT_IMAGE = "https://res.cloudinary.com/dahnl97zc/image/upload/v1774873783/male_front_base_kj9xwd.png";
@@ -63,17 +63,17 @@ const UserDashboard = () => {
   ];
 
   const renderHome = () => (
-    <div className="fade-up max-w-[1400px]">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-black uppercase leading-none tracking-tighter text-white">
-          <span className="text-gradient-fire">Fit</span>Pal Dashboard
-        </h1>
-        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.4em] text-gray-500">
-          All your widgets combined in one place.
-        </p>
-      </div>
-
+    <UserSectionShell
+      title={
+        <>
+          Member <span className="text-gradient-fire">Dashboard</span>
+        </>
+      }
+      description="All your widgets combined in one place."
+      width="wide"
+      className="fade-up"
+      bodyClassName="space-y-5"
+    >
       {/* Top Row Grid - 3 columns on desktop, 1 on mobile */}
       <div className="top-sys mb-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
         {/* Gym Access Card */}
@@ -433,7 +433,7 @@ const UserDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </UserSectionShell>
   );
 
 
@@ -442,9 +442,7 @@ const UserDashboard = () => {
       case "gyms":
         return <GymsScreen onSwitchToCheckIn={() => setActiveSection("checkin")} />;
       case "routines":
-        return <RoutinesSection onNewRoutine={() => setActiveSection("new-routine")} />;
-      case "new-routine":
-        return <NewRoutine onBack={() => setActiveSection("routines")} />;
+        return <RoutineFlow />;
       case "exercises":
         return <ExercisesScreen />;
       case "workouts":
@@ -465,7 +463,7 @@ const UserDashboard = () => {
   return (
     <UserLayout
       activeSection={activeSection}
-      contentMode={activeSection === "gyms" ? "immersive" : "default"}
+      contentMode={activeSection === "gyms" || activeSection === "exercises" ? "immersive" : "default"}
       onSectionChange={(section) => {
         if (section === "profile") {
           navigate("/profile");

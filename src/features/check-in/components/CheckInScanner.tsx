@@ -25,6 +25,7 @@ import {
   getMyCheckInsApi,
   scanMyCheckInApi,
 } from "@/features/check-in/api";
+import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import type { CheckInStatus, GymCheckInResponse } from "@/features/check-in/model";
 
 interface CheckInScannerProps {
@@ -541,10 +542,28 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
   );
 
   return (
-    <div className="w-full h-full text-white font-sans flex flex-col overflow-hidden">
-      <div className="flex flex-col gap-3 h-full">
+    <UserSectionShell
+      title={
+        <>
+          Member <span className="text-gradient-fire">Check-In</span>
+        </>
+      }
+      description="Scan QR and manage access."
+      actions={
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-200 hover:border-[hsla(30,100%,50%,0.35)] hover:bg-[hsla(30,100%,50%,0.14)] hover:text-white active:scale-95"
+        >
+          View Recents
+        </button>
+      }
+      bodyClassName="space-y-0"
+      titleClassName="tracking-tighter"
+    >
+      <div className="flex h-full flex-col gap-3 overflow-hidden font-sans text-white">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0">
+        <div className="hidden items-center justify-between flex-shrink-0">
           <div>
             <h1 className="text-3xl font-black uppercase tracking-tighter leading-none">
               Member <span className="text-gradient-fire">Check-In</span>
@@ -980,7 +999,7 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
           50% { top: calc(100% - 12px); }
         }
       `}</style>
-    </div>
+    </UserSectionShell>
   );
 };
 

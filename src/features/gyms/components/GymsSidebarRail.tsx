@@ -11,6 +11,7 @@ import {
   formatGymDistance,
   getGymDisplayName,
   getGymLocationLabel,
+  getGymMonogram,
   getGymPreviewImageUrl,
 } from "@/features/gyms/utils";
 
@@ -74,12 +75,12 @@ const GymsSidebarRail = ({
       }}
     >
       <div className="mb-4 shrink-0 px-6 pt-8">
-        <div>
-          <h1 className="text-4xl font-black leading-none tracking-tighter text-white">
-            FIND <span className="pr-2 text-gradient-fire">GYMS</span>
+        <div className="space-y-2">
+          <h1 className="text-4xl font-black leading-none tracking-tight text-white">
+            Find <span className="pr-2 text-gradient-fire">Gyms</span>
           </h1>
-          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
-            Personalised Recommendations
+          <p className="max-w-sm text-[10px] font-black uppercase leading-[1.6] tracking-[0.18em] text-slate-500 md:text-[11px]">
+            Elite Network Directory
           </p>
         </div>
       </div>
@@ -205,7 +206,9 @@ function DesktopGymCard({
             />
           ) : (
             <div className="flex h-full min-h-[116px] w-full items-center justify-center bg-[#111]">
-              <MapPin className="text-slate-700" size={22} />
+              <span className="text-3xl font-black uppercase tracking-tight text-slate-500">
+                {getGymMonogram(gym)}
+              </span>
             </div>
           )}
           <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/80 px-2.5 py-1 backdrop-blur-md">

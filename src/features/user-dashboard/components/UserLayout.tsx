@@ -45,14 +45,30 @@ const MOBILE_DRAWER_ITEMS: UserLayoutSection[] = [
   { id: "profile", label: "Profile", icon: User },
 ];
 
-// Mobile bottom nav items (subset for compact display)
-const MOBILE_NAV_ITEMS: UserLayoutSection[] = [
-  { id: "home", label: "Home", icon: LayoutDashboard },
+// Mobile bottom nav side items (center check-in stays a FAB)
+const MOBILE_BOTTOM_NAV_ITEMS: UserLayoutSection[] = [
+  { id: "home", label: "Dashboard", icon: LayoutDashboard },
   { id: "gyms", label: "Gyms", icon: Building2 },
-  // Check-in is the center FAB
-  { id: "workouts", label: "Workouts", icon: Activity },
-  { id: "profile", label: "Profile", icon: User },
+  { id: "routines", label: "Routines", icon: ClipboardList },
+  { id: "exercises", label: "Exercises", icon: Dumbbell },
 ];
+
+const MOBILE_BOTTOM_NAV_IDS = new Set([
+  ...MOBILE_BOTTOM_NAV_ITEMS.map((item) => item.id),
+  "checkin",
+]);
+
+function resolveMobileBottomNavActiveSection(activeSection: string) {
+  if (activeSection === "new-routine" || activeSection === "workouts") {
+    return "routines";
+  }
+
+  if (activeSection === "progress") {
+    return "home";
+  }
+
+  return MOBILE_BOTTOM_NAV_IDS.has(activeSection) ? activeSection : null;
+}
 
 interface UserLayoutProps {
   activeSection: string;
@@ -76,6 +92,30 @@ const UserLayout = ({
 
   const displayName = getDisplayNameFromEmail(auth.email, "USER");
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
+  const activeMobileBottomSection = resolveMobileBottomNavActiveSection(activeSection);
+  const isCompactBottomDock = activeSection === "gyms" || activeSection === "exercises";
+  const bottomDockBottom = isCompactBottomDock
+    ? "max(0px, env(safe-area-inset-bottom))"
+    : "max(16px, env(safe-area-inset-bottom))";
+  const bottomDockWidth = isCompactBottomDock ? "100vw" : "calc(100vw - 24px)";
+  const bottomDockMaxWidth = isCompactBottomDock ? "100vw" : "460px";
+  const bottomDockShadow = isCompactBottomDock
+    ? "0 -10px 30px rgba(0,0,0,0.35)"
+    : "0 8px 32px rgba(0,0,0,0.55)";
+  const checkInFabTransform = isCompactBottomDock
+    ? "translate(-50%, -50%)"
+    : "translate(-50%, calc(-50% - 26px))";
+  const checkInFabOuterSize = isCompactBottomDock ? 52 : 60;
+  const checkInFabInnerSize = isCompactBottomDock ? 42 : 60;
+  const bottomDockMotionClass = "duration-500 ease-out";
+  const bottomDockButtonSizeClass = isCompactBottomDock
+    ? "h-[52px] w-[52px]"
+    : "h-12 w-12 min-h-[48px] min-w-[48px]";
+  const bottomDockActiveSurfaceClass = isCompactBottomDock
+    ? "h-[42px] w-[42px]"
+    : "h-full w-full";
+  const bottomDockIconSize = isCompactBottomDock ? 20 : 22;
+  const checkInIconSize = isCompactBottomDock ? 20 : 26;
 
   const handleNavigation = (id: string) => {
     if (id === "profile") {
@@ -99,7 +139,10 @@ const UserLayout = ({
           >
             <Menu size={20} />
           </button>
-          <a href="/dashboard" className="flex items-center gap-2 no-underline">
+          <a
+            href="/dashboard"
+            className="flex cursor-pointer items-center gap-2 no-underline transition-opacity hover:opacity-90"
+          >
             <img src="/logo.svg" alt="FitPal Logo" className="h-8 w-8 shrink-0 md:h-10 md:w-10" />
             <span className="text-xl font-bold text-white md:text-2xl">
               <span className="text-gradient-fire">Fit</span>Pal
@@ -342,7 +385,7 @@ const UserLayout = ({
             background:
               "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(234,88,12,0.05) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 15%, rgba(234,88,12,0.04) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 50% 85%, rgba(234,88,12,0.04) 0%, transparent 60%), #050505",
             ...({ // Provide root variables for mobile spacing
-              "--mobile-bottom-dock-height": activeSection === "gyms" || activeSection === "exercises" ? "52px" : "80px",
+              "--mobile-bottom-dock-height": isCompactBottomDock ? "68px" : "80px",
               "--mobile-safe-bottom": "env(safe-area-inset-bottom)",
             } as CSSProperties),
           }}
@@ -368,7 +411,7 @@ const UserLayout = ({
               paddingBottom:
                 contentMode === "immersive"
                   ? undefined
-                  : `calc(${activeSection === "gyms" || activeSection === "exercises" ? "72px" : "96px"} + env(safe-area-inset-bottom))`,
+                  : `calc(${isCompactBottomDock ? "84px" : "96px"} + env(safe-area-inset-bottom))`,
             }}
           >
             {children}
@@ -378,85 +421,146 @@ const UserLayout = ({
 
       {/* MOBILE BOTTOM NAV */}
       <div 
-        className={`bottom-nav pointer-events-none fixed left-1/2 z-[100] w-[calc(100vw-24px)] max-w-[460px] -translate-x-1/2 md:hidden transition-all duration-300 ${
-          activeSection === "gyms" || activeSection === "exercises" ? "bottom-[env(safe-area-inset-bottom)]" : "bottom-[max(16px,env(safe-area-inset-bottom))]"
-        }`}
+        className={`bottom-nav pointer-events-none fixed inset-x-0 z-[100] transition-[bottom] will-change-[bottom] md:hidden ${bottomDockMotionClass}`}
+        style={{ bottom: bottomDockBottom }}
       >
-        <div className="bottom-nav-inner pointer-events-auto relative w-full rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.55)]">
-          {/* Background with notch cutout */}
+        <div
+          className={`bottom-nav-inner pointer-events-auto relative mx-auto transition-[width,max-width,border-radius,box-shadow] will-change-[width,max-width,border-radius,box-shadow] ${bottomDockMotionClass} ${
+            isCompactBottomDock ? "rounded-none" : "rounded-full"
+          }`}
+          style={{
+            width: bottomDockWidth,
+            maxWidth: bottomDockMaxWidth,
+            boxShadow: bottomDockShadow,
+          }}
+        >
           <div
-            className="bottom-nav-bg absolute left-0 top-0 z-[-1] h-full w-full rounded-full bg-[rgb(18,18,20)]"
-            style={{
-              maskImage: activeSection === "gyms" || activeSection === "exercises" 
-                ? "radial-gradient(circle at 50% 6px, transparent 30px, black 31px)"
-                : "radial-gradient(circle at 50% 10px, transparent 36px, black 37px)",
-              WebkitMaskImage: activeSection === "gyms" || activeSection === "exercises"
-                ? "radial-gradient(circle at 50% 6px, transparent 30px, black 31px)"
-                : "radial-gradient(circle at 50% 10px, transparent 36px, black 37px)",
-              filter:
-                "drop-shadow(0 -1px 0 rgba(255,255,255,0.1)) drop-shadow(0 1px 0 rgba(255,255,255,0.1)) drop-shadow(-1px 0 0 rgba(255,255,255,0.1)) drop-shadow(1px 0 0 rgba(255,255,255,0.1))",
-            }}
-          />
+            className="pointer-events-none absolute inset-0 z-[-1]"
+          >
+            <div
+              className={`absolute inset-0 bg-[rgb(18,18,20)] transition-[border-radius,opacity] ${bottomDockMotionClass} ${
+                isCompactBottomDock ? "rounded-none opacity-100" : "rounded-full opacity-0"
+              }`}
+            />
+            <div
+              className={`absolute inset-0 bg-[rgb(18,18,20)] transition-[border-radius,opacity] ${bottomDockMotionClass} ${
+                isCompactBottomDock ? "rounded-none opacity-0" : "rounded-full opacity-100"
+              }`}
+              style={{
+                maskImage:
+                  "radial-gradient(circle at 50% 10px, transparent 36px, black 37px)",
+                WebkitMaskImage:
+                  "radial-gradient(circle at 50% 10px, transparent 36px, black 37px)",
+                filter:
+                  "drop-shadow(0 -1px 0 rgba(255,255,255,0.1)) drop-shadow(0 1px 0 rgba(255,255,255,0.1)) drop-shadow(-1px 0 0 rgba(255,255,255,0.1)) drop-shadow(1px 0 0 rgba(255,255,255,0.1))",
+              }}
+            />
+            <div
+              className={`absolute inset-x-0 top-0 h-px bg-white/[0.08] transition-opacity ${bottomDockMotionClass} ${
+                isCompactBottomDock ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          </div>
 
-          {/* Nav content */}
-          <div className={`bottom-nav-content flex w-full items-center justify-between px-3 ${
-            activeSection === "gyms" || activeSection === "exercises" ? "py-0.5" : "py-1.5"
-          }`}>
-            {/* Left items */}
-            {MOBILE_NAV_ITEMS.slice(0, 2).map(({ id, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => handleNavigation(id)}
-                className={`bnav-item flex shrink-0 items-center justify-center rounded-full border-none bg-transparent transition-all ${
-                  activeSection === "gyms" || activeSection === "exercises" ? "h-[48px] w-[48px]" : "h-12 w-12 min-h-[48px] min-w-[48px]"
-                } ${
-                  activeSection === id ? "bg-orange-500/[0.12] text-orange-500" : "text-white/40 hover:text-orange-500"
-                }`}
-              >
-                <Icon size={activeSection === "gyms" || activeSection === "exercises" ? 20 : 22} />
-              </button>
-            ))}
+          <div
+            className={`bottom-nav-content flex w-full items-center justify-between px-3 transition-[padding] ${bottomDockMotionClass} ${
+              isCompactBottomDock ? "px-3 py-2" : "py-1.5"
+            }`}
+          >
+            {MOBILE_BOTTOM_NAV_ITEMS.slice(0, 2).map(({ id, icon: Icon }) => {
+              const isActive = activeMobileBottomSection === id;
 
-            {/* Center FAB wrapper */}
-            <div className={`checkin-fab-wrap relative shrink-0 transition-all ${
-              activeSection === "gyms" || activeSection === "exercises" ? "h-[48px] w-[48px]" : "h-[52px] w-[52px]"
-            }`}>
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleNavigation(id)}
+                  className={`bnav-item flex shrink-0 items-center justify-center rounded-full border-none bg-transparent transition-[width,height,color] ${bottomDockMotionClass} ${
+                    bottomDockButtonSizeClass
+                  } ${isActive ? "text-orange-400" : "text-white/40 hover:text-orange-500"}`}
+                >
+                  <span
+                    className={`flex items-center justify-center rounded-full transition-[width,height,background-color,box-shadow] ${bottomDockMotionClass} ${
+                      bottomDockActiveSurfaceClass
+                    } ${
+                      isActive
+                        ? "bg-orange-500/[0.12] shadow-[inset_0_0_0_1px_rgba(234,88,12,0.18),0_0_14px_rgba(234,88,12,0.10)]"
+                        : ""
+                    }`}
+                  >
+                    <Icon
+                      className={`transition-[width,height] ${bottomDockMotionClass}`}
+                      style={{ width: `${bottomDockIconSize}px`, height: `${bottomDockIconSize}px` }}
+                    />
+                  </span>
+                </button>
+              );
+            })}
+
+            <div
+              className={`checkin-fab-wrap relative h-[52px] w-[52px] shrink-0 transition-[width,height] will-change-[width,height] ${bottomDockMotionClass}`}
+            >
               <button
                 type="button"
                 onClick={() => handleNavigation("checkin")}
-                className={`checkin-fab absolute left-1/2 flex -translate-x-1/2 items-center justify-center rounded-full border-none bg-transparent p-0 transition-all ${
-                  activeSection === "gyms" || activeSection === "exercises" ? "top-[-18px] h-[52px] w-[52px]" : "top-[-26px] h-[60px] w-[60px]"
-                } ${activeSection === "checkin" ? "active" : ""}`}
+                className={`checkin-fab absolute left-1/2 top-1/2 flex items-center justify-center rounded-full border-none bg-transparent p-0 transition-[transform,width,height] will-change-[transform,width,height] ${bottomDockMotionClass}`}
+                style={{
+                  width: `${checkInFabOuterSize}px`,
+                  height: `${checkInFabOuterSize}px`,
+                  transform: checkInFabTransform,
+                }}
               >
                 <div
-                  className={`checkin-fab-inner flex items-center justify-center rounded-full transition-transform duration-200 hover:scale-[1.08] active:scale-[0.92] ${
-                    activeSection === "gyms" || activeSection === "exercises" ? "h-[52px] w-[52px]" : "h-[60px] w-[60px]"
+                  className={`checkin-fab-inner flex items-center justify-center rounded-full transition-[width,height,box-shadow,transform] ${bottomDockMotionClass} hover:scale-[1.08] active:scale-[0.92] ${
+                    activeMobileBottomSection === "checkin"
+                      ? isCompactBottomDock
+                        ? "shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_0_14px_rgba(249,115,22,0.18)]"
+                        : "shadow-[0_0_0_3px_rgba(255,255,255,0.08),0_0_26px_rgba(249,115,22,0.3)]"
+                      : ""
                   }`}
                   style={{
+                    width: `${checkInFabInnerSize}px`,
+                    height: `${checkInFabInnerSize}px`,
                     background: "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)",
                   }}
                 >
-                  <QrCode size={activeSection === "gyms" || activeSection === "exercises" ? 22 : 26} className="text-black" />
+                  <QrCode
+                    className={`text-black transition-[width,height] ${bottomDockMotionClass}`}
+                    style={{ width: `${checkInIconSize}px`, height: `${checkInIconSize}px` }}
+                  />
                 </div>
               </button>
             </div>
 
-            {/* Right items */}
-            {MOBILE_NAV_ITEMS.slice(2).map(({ id, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => handleNavigation(id)}
-                className={`bnav-item flex shrink-0 items-center justify-center rounded-full border-none bg-transparent transition-all ${
-                  activeSection === "gyms" || activeSection === "exercises" ? "h-[48px] w-[48px]" : "h-12 w-12 min-h-[48px] min-w-[48px]"
-                } ${
-                  activeSection === id ? "bg-orange-500/[0.12] text-orange-500" : "text-white/40 hover:text-orange-500"
-                }`}
-              >
-                <Icon size={activeSection === "gyms" || activeSection === "exercises" ? 20 : 22} />
-              </button>
-            ))}
+            {MOBILE_BOTTOM_NAV_ITEMS.slice(2).map(({ id, icon: Icon }) => {
+              const isActive = activeMobileBottomSection === id;
+
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleNavigation(id)}
+                  className={`bnav-item flex shrink-0 items-center justify-center rounded-full border-none bg-transparent transition-[width,height,color] ${bottomDockMotionClass} ${
+                    bottomDockButtonSizeClass
+                  } ${isActive ? "text-orange-400" : "text-white/40 hover:text-orange-500"}`}
+                >
+                  <span
+                    className={`flex items-center justify-center rounded-full transition-[width,height,background-color,box-shadow] ${bottomDockMotionClass} ${
+                      bottomDockActiveSurfaceClass
+                    } ${
+                      isActive
+                        ? "bg-orange-500/[0.12] shadow-[inset_0_0_0_1px_rgba(234,88,12,0.18),0_0_14px_rgba(234,88,12,0.10)]"
+                        : ""
+                    }`}
+                  >
+                    <Icon
+                      className={`transition-[width,height] ${bottomDockMotionClass}`}
+                      style={{ width: `${bottomDockIconSize}px`, height: `${bottomDockIconSize}px` }}
+                    />
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

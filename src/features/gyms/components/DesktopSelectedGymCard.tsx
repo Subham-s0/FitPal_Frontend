@@ -5,6 +5,7 @@ import {
   formatGymDistance,
   getGymDisplayName,
   getGymLocationLabel,
+  getGymMonogram,
   getGymPreviewImageUrl,
 } from "@/features/gyms/utils";
 
@@ -38,6 +39,11 @@ const DesktopSelectedGymCard = ({
               alt=""
               className="h-12 w-12 shrink-0 rounded-xl border border-white/10 object-cover"
             />
+          )}
+          {!previewImageUrl && (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-sm font-black uppercase tracking-tight text-slate-400">
+              {getGymMonogram(gym)}
+            </div>
           )}
           <div className="min-w-0 flex-1">
             <h3 className="text-base font-black uppercase tracking-tight">{getGymDisplayName(gym)}</h3>

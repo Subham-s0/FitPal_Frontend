@@ -265,6 +265,7 @@ const ExercisesScreen = () => {
   const [pendingDeleteExercise, setPendingDeleteExercise] = useState<SidebarExerciseItem | null>(null);
   const [isCustomExerciseModalOpen, setIsCustomExerciseModalOpen] = useState(false);
   const [isMobileLibraryOpen, setIsMobileLibraryOpen] = useState(false);
+  const [restoreMobileLibraryOnCustomClose, setRestoreMobileLibraryOnCustomClose] = useState(false);
   const auth = useAuthState();
   const queryClient = useQueryClient();
 
@@ -529,19 +530,40 @@ const ExercisesScreen = () => {
     });
   };
 
+  const openCustomExerciseModal = () => {
+    setRestoreMobileLibraryOnCustomClose(isMobileLibraryOpen);
+    if (isMobileLibraryOpen) {
+      setIsMobileLibraryOpen(false);
+    }
+    setIsCustomExerciseModalOpen(true);
+  };
+
+  const handleCloseCustomExerciseModal = (reason: "dismiss" | "success" = "dismiss") => {
+    setIsCustomExerciseModalOpen(false);
+
+    if (reason === "dismiss" && restoreMobileLibraryOnCustomClose && !isMobileLibraryOpen) {
+      setIsMobileLibraryOpen(true);
+    }
+
+    setRestoreMobileLibraryOnCustomClose(false);
+  };
+
   const libraryPanel = (
     <div className="flex h-full flex-col overflow-hidden">
+      <div className="flex justify-center px-4 pt-3 md:hidden">
+        <div className="h-1.5 w-12 rounded-full bg-white/10" />
+      </div>
       <div className="space-y-3 border-b border-white/5 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-black uppercase tracking-widest text-white">Library</h3>
-            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500 md:hidden">
-              Select an exercise to load details
+            <h3 className="text-xs font-black uppercase tracking-widest text-white">Exercise Library</h3>
+            <p className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.15em] text-gray-500 md:hidden">
+              Select an exercise
             </p>
           </div>
           <button
             type="button"
-            onClick={() => setIsCustomExerciseModalOpen(true)}
+            onClick={openCustomExerciseModal}
             className="rounded-lg border border-orange-600/20 bg-orange-600/10 px-3 py-1 text-[8px] font-black uppercase tracking-widest text-orange-600 transition-all hover:bg-gradient-fire hover:text-white"
           >
             + Custom
@@ -652,206 +674,232 @@ const ExercisesScreen = () => {
   );
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] w-full overflow-hidden font-sans text-white">
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(234,88,12,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(234,88,12,0.06) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-
-      <main className="relative z-10 flex-grow overflow-y-auto custom-scrollbar p-6">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <div>
-            <h1 className="text-4xl font-black uppercase leading-none tracking-tighter text-white">
-              <span className="text-gradient-fire">EXERCISES</span>
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden font-sans text-white md:flex-row">
+      {/* Left side - Exercise content (scrollable) */}
+      <div className="relative flex-1 overflow-y-auto">
+        {/* Grid lines background */}
+        <div
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(234,88,12,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(234,88,12,0.06) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        <div className="relative z-10 px-4 py-5 md:px-8 md:py-9">
+          {/* Header */}
+          <header className="mb-6 md:mb-8">
+            <h1 className="text-3xl font-black uppercase leading-none tracking-tight text-white md:text-4xl">
+              <span className="text-gradient-fire">Exercises</span>
             </h1>
-            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.4em] text-gray-500">
-              Exercise Library
+            <p className="mt-2 max-w-3xl text-[10px] font-black uppercase leading-[1.6] tracking-[0.18em] text-slate-500 md:text-[11px]">
+              Advanced Exercise Library
             </p>
-          </div>
-
-          <div className="md:hidden">
+            {/* Mobile library button */}
             <button
               type="button"
               onClick={() => setIsMobileLibraryOpen(true)}
-              className="inline-flex items-center justify-center rounded-2xl border border-orange-600/20 bg-orange-600/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-orange-400 transition-all hover:border-orange-500/40 hover:bg-orange-600/20 hover:text-white md:hidden"
+              className="mt-4 flex w-full items-center justify-center rounded-2xl border border-orange-600/20 bg-orange-600/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.22em] text-orange-400 transition-all hover:border-orange-500/40 hover:bg-orange-600/20 hover:text-white md:hidden"
             >
               {selectedExerciseRef ? "Change Exercise" : "Select Exercise"}
             </button>
-          </div>
+          </header>
 
-          {libraryErrorMessage ? (
-            <div className="rounded-[1.75rem] border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-200">
-              {libraryErrorMessage}
-            </div>
-          ) : null}
+          {/* Main content */}
+          <div className="space-y-6">
+            {libraryErrorMessage ? (
+              <div className="rounded-[1.75rem] border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-200">
+                {libraryErrorMessage}
+              </div>
+            ) : null}
 
           {!selectedExerciseRef ? (
-            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] p-8">
-              <div className="flex flex-col items-center gap-8 lg:flex-row">
-                <div className="flex-grow">
-                  <h1 className="mb-4 text-4xl font-black uppercase leading-none tracking-tighter text-gray-500">
-                    Select an Exercise
-                  </h1>
-                  <div className="mb-4 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="mb-1 text-[9px] font-black uppercase text-gray-500">Primary Muscle</p>
-                      <p className="text-sm font-bold text-gray-700">--</p>
+            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] p-4 sm:p-8">
+              <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_350px] lg:items-start lg:gap-8">
+                <div className="min-w-0">
+                  <div className="mb-4">
+                    <h1 className="text-2xl font-black uppercase leading-none tracking-tighter text-gray-500 sm:text-4xl">
+                      Select an Exercise
+                    </h1>
+                  </div>
+
+                  <div className="mb-4 grid max-w-2xl grid-cols-3 gap-2 sm:gap-4">
+                    <div className="rounded-2xl bg-white/5 p-2 sm:p-3">
+                      <p className="mb-0.5 text-[8px] font-black uppercase text-gray-500 sm:mb-1 sm:text-[9px]">Primary Muscle</p>
+                      <p className="text-xs font-bold text-gray-700 sm:text-sm">--</p>
                     </div>
-                    <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="mb-1 text-[9px] font-black uppercase text-gray-500">Secondary Muscles</p>
-                      <p className="text-sm font-bold text-gray-700">--</p>
+                    <div className="rounded-2xl bg-white/5 p-2 sm:p-3">
+                      <p className="mb-0.5 text-[8px] font-black uppercase text-gray-500 sm:mb-1 sm:text-[9px]">Secondary</p>
+                      <p className="text-xs font-bold text-gray-700 sm:text-sm">--</p>
                     </div>
-                    <div className="rounded-2xl bg-white/5 p-3">
-                      <p className="mb-1 text-[9px] font-black uppercase text-gray-500">Equipment</p>
-                      <p className="text-sm font-bold text-gray-700">--</p>
+                    <div className="rounded-2xl bg-white/5 p-2 sm:p-3">
+                      <p className="mb-0.5 text-[8px] font-black uppercase text-gray-500 sm:mb-1 sm:text-[9px]">Equipment</p>
+                      <p className="text-xs font-bold text-gray-700 sm:text-sm">--</p>
                     </div>
                   </div>
+
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-600">
                     {exercisesQuery.isLoading || customExercisesQuery.isLoading
                       ? "Loading exercises..."
                       : "Pick an exercise from the library to load details."}
                   </p>
                 </div>
-                <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-[2.5rem] border border-white/5 bg-black shadow-2xl lg:w-[350px]">
-                  <div className="text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-                      <svg className="h-8 w-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
+
+                <div className="w-full lg:w-[350px]">
+                  <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-[2rem] border border-white/5 bg-black shadow-2xl sm:rounded-[2.5rem]">
+                    <div className="text-center">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+                        <svg className="h-8 w-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-700">No Cover</p>
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-700">No Cover</p>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-8 overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] p-8 lg:flex-row">
-              <div className="flex-grow">
-                <div className="mb-4">
-                  <h1 className="text-4xl font-black uppercase leading-none tracking-tighter text-white">
-                    {selectedExerciseName ?? "Loading Exercise"}
-                    <br />
-                    <span className="text-gradient-fire">({selectedExerciseEquipment ?? "No Equipment"})</span>
-                  </h1>
-                </div>
-                <div className="mb-4 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-white/5 p-3">
-                    <p className="mb-1 text-[9px] font-black uppercase text-gray-500">Primary Muscle</p>
-                    <p className="text-sm font-bold text-orange-600">
-                      {selectedExercisePrimaryMuscles.length > 0
-                        ? selectedExercisePrimaryMuscles.join(", ")
-                        : "--"}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-white/5 p-3">
-                    <p className="mb-1 text-[9px] font-black uppercase text-gray-500">Secondary Muscles</p>
-                    <p className="text-sm font-bold text-gray-200">
-                      {selectedExerciseSecondaryMuscles.length > 0
-                        ? selectedExerciseSecondaryMuscles.join(", ")
-                        : "--"}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-white/5 p-3">
-                    <p className="mb-1 text-[9px] font-black uppercase text-gray-500">Equipment</p>
-                    <p className="text-sm font-bold text-gray-100">{selectedExerciseEquipment ?? "--"}</p>
-                  </div>
-                </div>
-                {exerciseDetailQuery.isLoading || customExerciseDetailQuery.isLoading ? (
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
-                    Loading exercise details...
-                  </p>
-                ) : null}
-                {detailErrorMessage ? (
-                  <div className="max-w-2xl rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-200">
-                    {detailErrorMessage}
-                  </div>
-                ) : null}
-              </div>
-              <div className="w-full space-y-3 lg:w-[350px]">
-                {selectedExerciseRef?.source === "custom" && selectedExercisePreview ? (
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteCustomExercise(selectedExercisePreview)}
-                      disabled={deleteCustomExerciseMutation.isPending}
-                      className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : null}
-                <div className="relative overflow-hidden rounded-[2.5rem] bg-black shadow-2xl">
-                  {selectedExerciseVideoUrl ? (
-                    <div className="group relative h-full w-full">
-                      <video
-                        ref={videoRef}
-                        key={`${selectedExerciseRef?.source}-${selectedExerciseRef?.id}-${selectedExerciseVideoUrl}`}
-                        src={selectedExerciseVideoUrl}
-                        poster={selectedExerciseCoverUrl ?? undefined}
-                        className="aspect-video h-full w-full object-cover"
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                        onPlay={() => setIsVideoPlaying(true)}
-                        onPause={() => setIsVideoPlaying(false)}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button
-                          onClick={handlePlayPause}
-                          className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-fire text-white shadow-2xl transition-transform hover:scale-110"
-                        >
-                          {isVideoPlaying ? (
-                            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                            </svg>
-                          ) : (
-                            <svg className="ml-0.5 h-6 w-6 fill-current" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
+            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] p-4 sm:p-8">
+              <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_350px] lg:items-start lg:gap-8">
+                <div className="min-w-0">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h1 className="text-2xl font-black uppercase leading-none tracking-tighter text-white sm:text-4xl">
+                        {selectedExerciseName ?? "Loading Exercise"}
+                        <br />
+                        <span className="text-gradient-fire">({selectedExerciseEquipment ?? "No Equipment"})</span>
+                      </h1>
+                    </div>
+                    {selectedExerciseRef?.source === "custom" && selectedExercisePreview ? (
                       <button
-                        onClick={handleFullscreen}
-                        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm opacity-0 transition-all group-hover:opacity-100 hover:bg-black/60"
+                        type="button"
+                        onClick={() => handleDeleteCustomExercise(selectedExercisePreview)}
+                        disabled={deleteCustomExerciseMutation.isPending}
+                        className="shrink-0 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-50 lg:hidden"
                       >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                        </svg>
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <div className="mb-4 grid max-w-2xl grid-cols-3 gap-2 sm:gap-4">
+                    <div className="rounded-2xl bg-white/5 p-2 sm:p-3">
+                      <p className="mb-0.5 text-[8px] font-black uppercase text-gray-500 sm:mb-1 sm:text-[9px]">Primary Muscle</p>
+                      <p className="text-xs font-bold text-orange-600 sm:text-sm">
+                        {selectedExercisePrimaryMuscles.length > 0
+                          ? selectedExercisePrimaryMuscles.join(", ")
+                          : "--"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-white/5 p-2 sm:p-3">
+                      <p className="mb-0.5 text-[8px] font-black uppercase text-gray-500 sm:mb-1 sm:text-[9px]">Secondary</p>
+                      <p className="text-xs font-bold text-gray-200 sm:text-sm">
+                        {selectedExerciseSecondaryMuscles.length > 0
+                          ? selectedExerciseSecondaryMuscles.join(", ")
+                          : "--"}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-white/5 p-2 sm:p-3">
+                      <p className="mb-0.5 text-[8px] font-black uppercase text-gray-500 sm:mb-1 sm:text-[9px]">Equipment</p>
+                      <p className="text-xs font-bold text-gray-100 sm:text-sm">{selectedExerciseEquipment ?? "--"}</p>
+                    </div>
+                  </div>
+
+                  {exerciseDetailQuery.isLoading || customExerciseDetailQuery.isLoading ? (
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+                      Loading exercise details...
+                    </p>
+                  ) : null}
+                  {detailErrorMessage ? (
+                    <div className="max-w-2xl rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-200">
+                      {detailErrorMessage}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="w-full space-y-3 lg:w-[350px]">
+                  {selectedExerciseRef?.source === "custom" && selectedExercisePreview ? (
+                    <div className="hidden justify-end lg:flex">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCustomExercise(selectedExercisePreview)}
+                        disabled={deleteCustomExerciseMutation.isPending}
+                        className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm font-black uppercase tracking-widest text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        Remove
                       </button>
                     </div>
-                  ) : selectedExerciseCoverUrl ? (
-                    <>
-                      <img
-                        src={selectedExerciseCoverUrl}
-                        className="aspect-video h-full w-full object-cover"
-                        alt={selectedExerciseName ?? "Exercise cover"}
-                      />
-                      <div className="absolute bottom-4 left-6 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-white">Cover Image</p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex aspect-video items-center justify-center">
-                      <div className="text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 text-lg font-black text-orange-600">
-                          {getExerciseInitials(selectedExerciseName)}
+                  ) : null}
+                  <div className="relative overflow-hidden rounded-[2rem] bg-black shadow-2xl sm:rounded-[2.5rem]">
+                    {selectedExerciseVideoUrl ? (
+                      <div className="group relative h-full w-full">
+                        <video
+                          ref={videoRef}
+                          key={`${selectedExerciseRef?.source}-${selectedExerciseRef?.id}-${selectedExerciseVideoUrl}`}
+                          src={selectedExerciseVideoUrl}
+                          poster={selectedExerciseCoverUrl ?? undefined}
+                          className="aspect-video h-full w-full object-cover"
+                          autoPlay
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                          onPlay={() => setIsVideoPlaying(true)}
+                          onPause={() => setIsVideoPlaying(false)}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                          <button
+                            onClick={handlePlayPause}
+                            className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-fire text-white shadow-2xl transition-transform hover:scale-110"
+                          >
+                            {isVideoPlaying ? (
+                              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                              </svg>
+                            ) : (
+                              <svg className="ml-0.5 h-6 w-6 fill-current" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            )}
+                          </button>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">No Cover</p>
+                        <button
+                          onClick={handleFullscreen}
+                          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm opacity-0 transition-all group-hover:opacity-100 hover:bg-black/60"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                          </svg>
+                        </button>
                       </div>
-                    </div>
-                  )}
+                    ) : selectedExerciseCoverUrl ? (
+                      <>
+                        <img
+                          src={selectedExerciseCoverUrl}
+                          className="aspect-video h-full w-full object-cover"
+                          alt={selectedExerciseName ?? "Exercise cover"}
+                        />
+                        <div className="absolute bottom-4 left-6 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-white">Cover Image</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex aspect-video items-center justify-center">
+                        <div className="text-center">
+                          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 text-lg font-black text-orange-600">
+                            {getExerciseInitials(selectedExerciseName)}
+                          </div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">No Cover</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1033,17 +1081,19 @@ const ExercisesScreen = () => {
               )}
             </>
           )}
+          </div>
         </div>
-      </main>
+      </div>
 
-      <aside className="relative z-10 hidden w-80 shrink-0 flex-col border-l border-white/5 bg-[#0a0a0a]/95 backdrop-blur-sm md:flex">
+      {/* Right side - Exercise Library (fixed panel like Gyms map) */}
+      <aside className="relative hidden h-full w-[320px] flex-shrink-0 overflow-hidden border-l border-white/5 bg-[#0a0a0a] md:flex xl:w-[340px]">
         {libraryPanel}
       </aside>
 
       <Sheet open={isMobileLibraryOpen} onOpenChange={setIsMobileLibraryOpen}>
         <SheetContent
-          side="right"
-          className="w-[min(24rem,92vw)] gap-0 border-l border-white/5 bg-[#0a0a0a]/95 p-0 text-white"
+          side="bottom"
+          className="inset-x-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 right-auto h-[min(84dvh,44rem)] w-[min(30rem,calc(100vw-1rem))] -translate-x-1/2 gap-0 rounded-[2rem] border border-white/5 bg-[#0a0a0a] p-0 text-white shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
         >
           <SheetTitle className="sr-only">Exercise Library</SheetTitle>
           {libraryPanel}
@@ -1053,7 +1103,7 @@ const ExercisesScreen = () => {
       {/* Add Custom Exercise Modal */}
       <AddCustomExerciseModal 
         isOpen={isCustomExerciseModalOpen} 
-        onClose={() => setIsCustomExerciseModalOpen(false)} 
+        onClose={handleCloseCustomExerciseModal} 
         onCreated={handleCustomExerciseCreated}
       />
 

@@ -8,6 +8,8 @@ export interface ExerciseEquipmentResponse {
 export interface MuscleResponse {
   muscleId: number;
   name: string;
+  frontUrl?: string | null;
+  backUrl?: string | null;
 }
 
 export interface ExerciseLibrarySummaryResponse {

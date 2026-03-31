@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X, Upload } from "lucide-react";
 import { getApiErrorMessage } from "@/shared/api/client";
@@ -10,7 +11,7 @@ import type { CustomExerciseResponse, ExerciseType } from "@/features/exercises/
 
 interface AddCustomExerciseModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (reason?: "dismiss" | "success") => void;
   onCreated?: (exercise: CustomExerciseResponse) => void;
 }
 
@@ -42,6 +43,30 @@ export function AddCustomExerciseModal({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen || typeof document === "undefined") {
+      return;
+    }
+
+    const { body, documentElement } = document;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+    const previousDocumentOverflow = documentElement.style.overflow;
+    const previousDocumentOverscroll = documentElement.style.overscrollBehavior;
+
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    documentElement.style.overflow = "hidden";
+    documentElement.style.overscrollBehavior = "none";
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+      documentElement.style.overflow = previousDocumentOverflow;
+      documentElement.style.overscrollBehavior = previousDocumentOverscroll;
+    };
+  }, [isOpen]);
+
   const muscleOptionsQuery = useQuery({
     queryKey: ["exercise-library-muscles"],
     queryFn: getExerciseLibraryMusclesApi,
@@ -57,7 +82,7 @@ export function AddCustomExerciseModal({
     onSuccess: (createdExercise) => {
       queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
       onCreated?.(createdExercise);
-      handleClose();
+      closeModal("success");
     },
     onError: (error) => {
       setError(getApiErrorMessage(error, "Failed to create custom exercise"));
@@ -114,7 +139,7 @@ export function AddCustomExerciseModal({
     setImagePreview(null);
   };
 
-  const handleClose = () => {
+  const resetForm = () => {
     setName("");
     setExerciseType("Weight Reps");
     setPrimaryMuscleId("");
@@ -123,7 +148,11 @@ export function AddCustomExerciseModal({
     setCoverImage(null);
     setImagePreview(null);
     setError(null);
-    onClose();
+  };
+
+  const closeModal = (reason: "dismiss" | "success" = "dismiss") => {
+    resetForm();
+    onClose(reason);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -152,17 +181,25 @@ export function AddCustomExerciseModal({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-x-0 bottom-0 top-20 z-[60] flex items-start justify-center overflow-y-auto bg-black/80 p-4 sm:items-center sm:p-6">
-      <div className="relative w-full max-w-lg overflow-hidden rounded-[2rem] border border-white/10 bg-[#111] shadow-2xl">
-        <div className="custom-scrollbar max-h-[calc(100vh-7rem)] overflow-y-auto p-5 sm:max-h-[calc(100vh-8rem)] sm:p-6">
+  const modalContent = (
+    <div className="fixed inset-0 z-[260] flex items-start justify-center bg-black/85 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[max(1.25rem,env(safe-area-inset-top)+1rem)] sm:items-center sm:p-6">
+      <div
+        className="relative w-full max-w-[26rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#111] shadow-2xl sm:max-w-lg"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div
+          className="custom-scrollbar max-h-[min(76dvh,38rem)] overflow-y-auto overscroll-contain p-5 sm:max-h-[min(88dvh,48rem)] sm:p-6"
+          onWheelCapture={(event) => event.stopPropagation()}
+          onTouchMoveCapture={(event) => event.stopPropagation()}
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {/* Header */}
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-black uppercase tracking-tighter text-white">
               Add <span className="text-gradient-fire">Custom Exercise</span>
             </h2>
             <button
-              onClick={handleClose}
+              onClick={() => closeModal("dismiss")}
               className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-gray-400 transition-all hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
@@ -286,7 +323,7 @@ export function AddCustomExerciseModal({
             <div className="flex gap-3 pt-3">
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={() => closeModal("dismiss")}
                 className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-white/10"
               >
                 Cancel
@@ -304,4 +341,6 @@ export function AddCustomExerciseModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent;
 }

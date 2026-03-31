@@ -26,6 +26,7 @@ import {
 } from "@/features/profile/api";
 import { getMySubscriptionApi } from "@/features/subscription/api";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
+import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import ProfileSecurityModal from "@/features/profile/components/ProfileSecurityModal";
 import {
   Field,
@@ -446,57 +447,48 @@ const Profile = () => {
 
   return (
       <UserLayout activeSection="profile" onSectionChange={(s) => navigate("/dashboard", { state: { activeSection: s } })}>
-        <div className="mx-auto max-w-7xl">
-              <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <span className="h-px w-12 bg-orange-600" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.35em] text-orange-600">
-                    FitPal Account
-                  </span>
-                  </div>
-                  <h1 className="text-4xl font-black uppercase tracking-tight">
-                    User <span className="text-orange-500">Profile</span>
-                  </h1>
-                  <p className="max-w-2xl text-sm text-slate-400">
-                    Manage your account details, membership snapshot, training profile, and security settings.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  {isEditing ? (
-                      <>
-                        <button
-                            type="button"
-                            onClick={cancelEditing}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-300 transition-all hover:bg-white/10 hover:text-white disabled:opacity-60"
-                        >
-                          <X className="h-4 w-4" />
-                          Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSave}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-button-gradient px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:shadow-[0_0_30px_rgba(234,88,12,0.25)] disabled:opacity-60"
-                        >
-                          <Save className="h-4 w-4" />
-                          {isSaving ? "Saving..." : "Save Changes"}
-                        </button>
-                      </>
-                  ) : (
-                      <button
-                          type="button"
-                          onClick={beginEditing}
-                          className="inline-flex items-center gap-2 rounded-2xl bg-button-gradient px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:shadow-[0_0_30px_rgba(234,88,12,0.25)]"
-                      >
-                        <PencilLine className="h-4 w-4" />
-                        Edit Profile
-                      </button>
-                  )}
-                </div>
-              </header>
+        <UserSectionShell
+          eyebrow="FitPal Account"
+          title={
+            <>
+              User <span className="text-orange-500">Profile</span>
+            </>
+          }
+          description="Manage your account details, membership snapshot, training profile, and security settings."
+          actions={
+            isEditing ? (
+              <>
+                <button
+                  type="button"
+                  onClick={cancelEditing}
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-300 transition-all hover:bg-white/10 hover:text-white disabled:opacity-60"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-button-gradient px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:shadow-[0_0_30px_rgba(234,88,12,0.25)] disabled:opacity-60"
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={beginEditing}
+                className="inline-flex items-center gap-2 rounded-2xl bg-button-gradient px-5 py-3 text-xs font-black uppercase tracking-widest text-white transition-all hover:shadow-[0_0_30px_rgba(234,88,12,0.25)]"
+              >
+                <PencilLine className="h-4 w-4" />
+                Edit Profile
+              </button>
+            )
+          }
+        >
 
               {/* Desktop tab nav */}
               <nav className="mb-8 hidden flex-wrap gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur-2xl md:flex">
@@ -974,7 +966,7 @@ const Profile = () => {
                   )}
                 </section>
               </div>
-            </div>
+        </UserSectionShell>
         <ProfileSecurityModal
             open={securityModal !== null}
             mode={securityModal ?? "change"}

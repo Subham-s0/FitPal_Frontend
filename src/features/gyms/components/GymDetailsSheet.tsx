@@ -17,6 +17,7 @@ import {
   getGymCityLabel,
   getGymDisplayName,
   getGymLocationLabel,
+  getGymMonogram,
   getGymPreviewImageUrl,
 } from "@/features/gyms/utils";
 
@@ -124,6 +125,15 @@ function SheetContent({
               isExpanded ? "h-16 w-16" : "h-12 w-12"
             }`}
           />
+        )}
+        {!previewImageUrl && (
+          <div
+            className={`flex shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] font-black uppercase tracking-tight text-slate-400 ${
+              isExpanded ? "h-16 w-16 text-lg" : "h-12 w-12 text-sm"
+            }`}
+          >
+            {getGymMonogram(gym)}
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">

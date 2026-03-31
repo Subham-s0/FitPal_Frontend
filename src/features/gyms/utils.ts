@@ -23,7 +23,15 @@ export function getGymCityLabel(gym: Pick<GymRecommendationItem, "city">): strin
 export function getGymPreviewImageUrl(
   gym: Pick<GymRecommendationItem, "coverPhotoUrl" | "logoUrl">
 ): string | null {
-  return gym.coverPhotoUrl ?? null;
+  return gym.logoUrl ?? gym.coverPhotoUrl ?? null;
+}
+
+export function getGymMonogram(gym: Pick<GymRecommendationItem, "gymName">): string {
+  const normalizedName = getGymDisplayName(gym).replace(/\s+/g, "").trim().toUpperCase();
+  if (!normalizedName) {
+    return "GY";
+  }
+  return normalizedName.slice(0, 2);
 }
 
 export function canCheckInAtGym(
