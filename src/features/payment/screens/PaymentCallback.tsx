@@ -53,19 +53,21 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
   const [failureFeedback, setFailureFeedback] = useState<PaymentFailureFeedback | null>(null);
 
   const isEsewa = gateway === "esewa";
+  const flow = searchParams.get("flow");
+  const isMembershipFlow = flow === "membership" || flow === "upgrade";
   const stepLabels = isEsewa
     ? ["Payment sent to eSewa", "Verifying with FitPal", "Activating membership"]
     : ["Payment sent to Khalti", "Verifying with FitPal", "Activating membership"];
 
-  const navigateToProfileSetup = () => {
-    navigate("/profile-setup", {
+  const navigateToRecoveryFlow = () => {
+    navigate(isMembershipFlow ? "/membership" : "/profile-setup", {
       replace: true,
       state: failureFeedback ? { paymentFeedback: failureFeedback, openPaymentStep: true } : undefined,
     });
   };
 
   const navigateToPlanSelection = () => {
-    navigate("/profile-setup", { replace: true });
+    navigate(isMembershipFlow ? "/membership" : "/profile-setup", { replace: true });
   };
 
   useEffect(() => {
@@ -173,7 +175,7 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
         clearTimeout(redirectTimeout);
       }
     };
-  }, [isEsewa, location.pathname, navigate, paymentAttemptIdParam, searchParams]);
+  }, [gateway, isEsewa, location.pathname, navigate, paymentAttemptIdParam, searchParams]);
 
   const stepState = (i: number): "done" | "active" | "pending" => {
     if (status === "loading") {
@@ -323,10 +325,10 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
           {status === "failure" && (
             <div className="mt-4 flex flex-col gap-2">
               <button
-                onClick={navigateToProfileSetup}
+                onClick={navigateToRecoveryFlow}
                 className="w-full rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-6 py-3 text-[0.78rem] font-black uppercase tracking-[0.08em] text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.35)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_28px_-6px_rgba(249,115,22,0.4)]"
               >
-                Return to Payment {"->"}
+                Return to {isMembershipFlow ? "Membership" : "Payment"} {"->"}
               </button>
               <button
                 onClick={navigateToPlanSelection}

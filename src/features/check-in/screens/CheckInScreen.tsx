@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import CheckInScanner from '../components/CheckInScanner';
 import CheckInLogs from '../components/CheckInLogs';
 
@@ -6,10 +6,15 @@ type CheckInView = 'scanner' | 'logs';
 
 interface CheckInScreenProps {
   onBack?: () => void;
+  initialView?: CheckInView;
 }
 
-const CheckInScreen: React.FC<CheckInScreenProps> = ({ onBack }) => {
-  const [view, setView] = useState<CheckInView>('scanner');
+const CheckInScreen: React.FC<CheckInScreenProps> = ({ onBack, initialView = 'scanner' }) => {
+  const [view, setView] = useState<CheckInView>(initialView);
+
+  useEffect(() => {
+    setView(initialView);
+  }, [initialView]);
 
   return (
     <div className="w-full min-h-full">

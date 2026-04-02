@@ -6,8 +6,7 @@ export type PaymentStatus =
   | "PENDING"
   | "COMPLETED"
   | "FAILED"
-  | "CANCELLED"
-  | "REFUNDED";
+  | "CANCELLED";
 
 export interface EsewaInitiatePaymentRequest {
   subscriptionId?: number;
@@ -74,4 +73,54 @@ export interface PaymentAttemptStatusResponse {
   gatewayTransactionId: string | null;
   gatewayResponseCode: string | null;
   gatewayResponseMessage: string | null;
+}
+
+export interface PageResponse<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface UserPaymentHistoryItemResponse {
+  paymentAttemptId: number;
+  subscriptionId: number | null;
+  planId: number | null;
+  planType: string | null;
+  planName: string | null;
+  billingCycle: BillingCycle | null;
+  invoiceNumber: string | null;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  paymentTime: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  currency: string;
+  subtotalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  serviceChargeAmount: number;
+  vatAmount: number;
+  totalAmount: number;
+  billingName: string | null;
+  billingEmail: string | null;
+  billingPhoneNumber: string | null;
+  billingAddress: string | null;
+  billingCity: string | null;
+  gatewayReference: string | null;
+  gatewayTransactionId: string | null;
+  gatewayResponseCode: string | null;
+  gatewayResponseMessage: string | null;
+}
+
+export interface UserPaymentHistorySearchRequest {
+  statuses?: PaymentStatus[];
+  paymentMethods?: PaymentMethod[];
+  sortBy?: "paymentTime" | "createdAt" | "updatedAt" | "paymentStatus" | "paymentMethod" | "totalAmount";
+  sortDirection?: "ASC" | "DESC";
+  page?: number;
+  size?: number;
 }

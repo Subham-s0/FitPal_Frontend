@@ -44,7 +44,7 @@ const initialPayments = [
   { id: "PAY-1002", user: "John Doe", plan: "Pro Plan", amount: 1999, date: "2024-03-14", status: "Pending", method: "E-Sewa" },
   { id: "PAY-1003", user: "Sarah Smith", plan: "Basic Plan", amount: 999, date: "2024-03-14", status: "Failed", method: "Khalti" },
   { id: "PAY-1004", user: "Mike Tyson", plan: "Elite Plan", amount: 3999, date: "2024-03-12", status: "Completed", method: "Card" },
-  { id: "PAY-1005", user: "Emily Davis", plan: "Pro Plan", amount: 1999, date: "2024-03-10", status: "Refunded", method: "E-Sewa" },
+  { id: "PAY-1005", user: "Emily Davis", plan: "Pro Plan", amount: 1999, date: "2024-03-10", status: "Cancelled", method: "E-Sewa" },
 ];
 
 type ManagedPayment = (typeof initialPayments)[number];
@@ -65,7 +65,7 @@ const ManagePayments = () => {
       case 'Completed': return 'bg-green-500/10 text-green-500 hover:bg-green-500/20';
       case 'Pending': return 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20';
       case 'Failed': return 'bg-red-500/10 text-red-500 hover:bg-red-500/20';
-      case 'Refunded': return 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/20';
+      case 'Cancelled': return 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20';
       default: return 'bg-gray-500/10 text-gray-500';
     }
   };
@@ -182,7 +182,7 @@ const ManagePayments = () => {
                   selectedPayment.status === 'Completed' ? 'bg-green-500/20 text-green-500' :
                   selectedPayment.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-500' :
                   selectedPayment.status === 'Failed' ? 'bg-red-500/20 text-red-500' :
-                  'bg-purple-500/20 text-purple-500'
+                  'bg-orange-500/20 text-orange-400'
                 }`}>
                   {selectedPayment.status === 'Completed' ? <CheckCircle className="w-8 h-8" /> :
                    selectedPayment.status === 'Pending' ? <AlertTriangle className="w-8 h-8" /> :

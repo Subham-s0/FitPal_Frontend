@@ -91,12 +91,14 @@ export const authStore = {
     profileCompleted: boolean;
     hasSubscription: boolean;
     hasActiveSubscription: boolean;
+    providers?: string[];
     emailVerified?: boolean;
     submittedForReview?: boolean;
     approved?: boolean;
   }) => {
     currentState = {
       ...currentState,
+      providers: payload.providers ?? currentState.providers,
       profileCompleted: payload.profileCompleted,
       emailVerified: payload.emailVerified ?? currentState.emailVerified,
       submittedForReview: payload.submittedForReview ?? currentState.submittedForReview,

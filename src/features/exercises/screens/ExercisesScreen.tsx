@@ -549,7 +549,7 @@ const ExercisesScreen = () => {
   };
 
   const libraryPanel = (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       <div className="flex justify-center px-4 pt-3 md:hidden">
         <div className="h-1.5 w-12 rounded-full bg-white/10" />
       </div>
@@ -1061,11 +1061,11 @@ const ExercisesScreen = () => {
                     ) : selectedExerciseHowToSections.length ? (
                       <div className="space-y-6">
                         {selectedExerciseHowToSections.map((section, index) => (
-                          <div key={section.howToSectionId} className="flex gap-6">
+                          <div key={section.howToSectionId} className="flex items-center gap-6">
                             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-orange-600/20 bg-orange-600/10 font-black text-orange-600">
                               {String(section.displayOrder ?? index + 1).padStart(2, "0")}
                             </div>
-                            <p className="text-xs font-bold uppercase leading-relaxed text-gray-400">
+                            <p className="flex-1 text-xs font-bold uppercase leading-relaxed text-gray-400">
                               {section.content}
                             </p>
                           </div>

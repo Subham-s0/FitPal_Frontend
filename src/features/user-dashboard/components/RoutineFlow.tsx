@@ -1,130 +1,93 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import RoutinesSectionNew from "@/features/user-dashboard/components/RoutinesSectionNew";
 import WorkoutDetail from "@/features/user-dashboard/screens/WorkoutDetail";
-import RoutineEditorNew from "@/features/user-dashboard/components/RoutineEditorNew";
-import {
-  createDefaultRoutine,
-} from "@/features/user-dashboard/routineTypes";
-import {
-  addRoutine,
-} from "@/features/user-dashboard/routineStore";
 
-// ============================================
-// TYPES
-// ============================================
+type View = "list" | "detail";
 
-type View = "list" | "detail" | "editor";
-
-// ============================================
-// MAIN COMPONENT
-// ============================================
+interface RoutineFlowProps {
+  onViewModeChange?: (view: View) => void;
+}
 
 /**
- * RoutineFlow - Orchestrates the three-screen routine management flow
+ * RoutineFlow — orchestrates the routine management flow.
  *
- * Screens:
- * 1. List (RoutinesSectionNew) - Browse routines
- * 2. Detail (WorkoutDetail) - View/edit a single workout day
- * 3. Editor (RoutineEditorNew) - Full routine builder
+ * List (RoutinesSectionNew) ↔ Detail (WorkoutDetail)
+ *
+ * Back behaviour:
+ *  • goToList(expandId) → re-mount list, auto-expand the routine card that
+ *    was open so the user lands exactly where they left off.
+ *  • inlineEditRoutineId is NEVER set on back — it only opens when the user
+ *    explicitly clicks "Edit Routine" from the three-dot menu.
  */
-export function RoutineFlow() {
-  // Navigation state
+export function RoutineFlow({ onViewModeChange }: RoutineFlowProps) {
   const [view, setView] = useState<View>("list");
   const [routineId, setRoutineId] = useState<string | null>(null);
   const [dayId, setDayId] = useState<string | null>(null);
-  const [addNewDay, setAddNewDay] = useState(false);
-  // Used to force RoutinesSectionNew to reload from localStorage on return
+  const [startInEditMode, setStartInEditMode] = useState(false);
+
+  // Which routine to auto-expand when returning to the list
+  const [expandOnReturnId, setExpandOnReturnId] = useState<string | null>(null);
+
+  // Which routine to open in the inline editor (only set explicitly, not on back)
+  const [inlineEditRoutineId, setInlineEditRoutineId] = useState<string | null>(null);
+
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const goToList = useCallback(() => {
+  useEffect(() => {
+    onViewModeChange?.(view);
+  }, [onViewModeChange, view]);
+
+  /** Go back to the list. Expands the given routine card (not inline editor). */
+  const goToList = useCallback((expandId: string | null = null) => {
     setView("list");
     setRoutineId(null);
     setDayId(null);
-    setAddNewDay(false);
+    setStartInEditMode(false);
+    setInlineEditRoutineId(null);   // never reopen inline editor on back
+    setExpandOnReturnId(expandId);
     setRefreshKey((k) => k + 1);
   }, []);
 
-  // ============================================
-  // LIST VIEW
-  // ============================================
-
+  // ── LIST ───────────────────────────────────────────────
   if (view === "list") {
     return (
       <RoutinesSectionNew
         key={refreshKey}
-        // Create new routine from scratch
-        onNewRoutine={() => {
-          const newRoutine = createDefaultRoutine();
-          addRoutine(newRoutine);
-          setRoutineId(newRoutine.id);
-          setAddNewDay(false);
-          setView("editor");
-        }}
-        // Edit existing routine
-        onEditRoutine={(id) => {
-          setRoutineId(id);
-          setDayId(null);
-          setAddNewDay(false);
-          setView("editor");
-        }}
-        // Add new workout day to existing routine
-        onAddWorkoutDay={(id) => {
-          setRoutineId(id);
-          setDayId(null);
-          setAddNewDay(true);
-          setView("editor");
-        }}
-        // View a specific workout day
+        initialExpandedRoutineId={expandOnReturnId}
+        initialInlineEditRoutineId={inlineEditRoutineId}
+        // Tap day row → view mode
         onViewDay={(rId, dId) => {
           setRoutineId(rId);
           setDayId(dId);
+          setStartInEditMode(false);
+          setExpandOnReturnId(rId);   // remember to expand this routine on back
+          setView("detail");
+        }}
+        // Three-dot "Edit Workout" → edit mode
+        onEditDay={(rId, dId) => {
+          setRoutineId(rId);
+          setDayId(dId);
+          setStartInEditMode(true);
+          setExpandOnReturnId(rId);
           setView("detail");
         }}
       />
     );
   }
 
-  // ============================================
-  // DETAIL VIEW
-  // ============================================
-
+  // ── DETAIL ─────────────────────────────────────────────
   if (view === "detail" && routineId && dayId) {
     return (
       <WorkoutDetail
         routineId={routineId}
         dayId={dayId}
-        // Back to list
-        onBack={goToList}
-        // Edit this workout day in the full editor
-        onEditRoutineDays={(rId, dId) => {
-          setRoutineId(rId);
-          setDayId(dId);
-          setAddNewDay(false);
-          setView("editor");
-        }}
+        startInEditMode={startInEditMode}
+        onBack={() => goToList(routineId)}   // expand the parent routine card on back
+        onEditRoutineDays={() => goToList(routineId)}
       />
     );
   }
 
-  // ============================================
-  // EDITOR VIEW
-  // ============================================
-
-  if (view === "editor" && routineId) {
-    return (
-      <RoutineEditorNew
-        routineId={routineId}
-        selectedDayId={dayId}
-        addNewDayOnLoad={addNewDay}
-        // Back to list (with unsaved changes warning)
-        onBack={goToList}
-        // Save and return to list
-        onSave={goToList}
-      />
-    );
-  }
-
-  // Fallback (should never reach here)
   return (
     <div className="flex h-64 items-center justify-center">
       <p className="text-gray-500">Invalid view state</p>

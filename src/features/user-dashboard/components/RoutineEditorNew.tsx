@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   ChevronLeft,
   Plus,
@@ -44,12 +44,14 @@ import {
   createDefaultRoutine,
   createDefaultDay,
   createDefaultSet,
-  createExerciseFromLibrary,
+  createExerciseFromPickerItem,
   cloneExercise,
   normalizeDayOrder,
+  generateDefaultWorkoutDayName,
   getVisibleSetFields,
   clearInvalidSetFields,
   getExerciseInitials,
+  removeExerciseAndLinkedSupersetExercises,
 } from "@/features/user-dashboard/routineTypes";
 
 import {
@@ -57,6 +59,23 @@ import {
   updateRoutine,
   addRoutine,
 } from "@/features/user-dashboard/routineStore";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
+
+const alertDialogContentClassName =
+  "rounded-[20px] border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]";
+const alertDialogCancelClassName =
+  "mt-0 flex flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)] py-2.5 text-[11px] font-black uppercase tracking-wider text-[hsl(0,0%,55%)] hover:border-white/20 hover:text-white";
+const alertDialogActionClassName =
+  "mt-0 flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[hsl(20,100%,50%)] py-2.5 text-[11px] font-black uppercase tracking-wider text-white hover:bg-[hsl(20,100%,46%)]";
 
 // ============================================
 // SORTABLE DAY ITEM
@@ -109,11 +128,10 @@ function SortableDayItem({
       )}
       <button
         onClick={onSelect}
-        className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all ${
-          isSelected
+        className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition-all ${isSelected
             ? "border-orange-600/50 bg-orange-600/10 text-white"
             : "border-white/10 bg-black/30 text-gray-400 hover:border-white/20 hover:text-white"
-        }`}
+          }`}
       >
         {/* Drag Handle */}
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
@@ -365,33 +383,6 @@ function SortableExerciseCard({
         />
       </div>
 
-      {/* Rest Timer */}
-      <div className="mb-3">
-        <label className="mb-1 block text-[10px] font-bold uppercase text-gray-500">
-          Rest Between Sets
-        </label>
-        <select
-          value={exercise.defaultRestSeconds}
-          onChange={(e) => {
-            const newRest = parseInt(e.target.value, 10);
-            onUpdate(exercise.id, { defaultRestSeconds: newRest });
-            // Update all sets
-            exercise.sets.forEach((set) => {
-              onUpdateSet(exercise.id, set.id, { targetRestSeconds: newRest });
-            });
-          }}
-          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-orange-600 focus:outline-none"
-        >
-          <option value={30}>30 seconds</option>
-          <option value={60}>1 minute</option>
-          <option value={90}>1.5 minutes</option>
-          <option value={120}>2 minutes</option>
-          <option value={180}>3 minutes</option>
-          <option value={240}>4 minutes</option>
-          <option value={300}>5 minutes</option>
-        </select>
-      </div>
-
       {/* Sets Table */}
       <div className="space-y-2">
         <div className="overflow-x-auto">
@@ -496,9 +487,10 @@ function SortableExerciseCard({
 
         <button
           onClick={() => onAddSet(exercise.id)}
-          className="text-xs font-bold text-orange-600 hover:text-orange-500 transition-colors"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/10 px-4 py-3 text-xs font-black uppercase tracking-[0.18em] text-orange-300 transition-colors hover:border-orange-500/35 hover:bg-orange-500/14 hover:text-white sm:w-auto"
         >
-          + Add Set
+          <Plus className="h-4 w-4" />
+          Add Set
         </button>
       </div>
     </div>
@@ -538,22 +530,29 @@ const RoutineEditorNew = ({
 
   const [isDirty, setIsDirty] = useState(false);
   const [showLibrarySheet, setShowLibrarySheet] = useState(false);
+  const [pendingDeleteDayId, setPendingDeleteDayId] = useState<string | null>(null);
+  const [pendingDeleteExerciseId, setPendingDeleteExerciseId] = useState<string | null>(null);
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  const hasAddedInitialDayRef = useRef(false);
 
   // Add new day on load if requested
   useEffect(() => {
-    if (addNewDayOnLoad && routine) {
-      const newDay = createDefaultDay(
-        `Day ${routine.days.length + 1}`,
-        routine.days.length + 1
-      );
-      setRoutine((prev) => ({
-        ...prev,
-        days: [...prev.days, newDay],
-      }));
-      setCurrentDayId(newDay.id);
-      setIsDirty(true);
+    if (!addNewDayOnLoad || hasAddedInitialDayRef.current) {
+      return;
     }
-  }, [addNewDayOnLoad]);
+
+    hasAddedInitialDayRef.current = true;
+    const newDay = createDefaultDay(
+      generateDefaultWorkoutDayName(routine.days),
+      routine.days.length + 1
+    );
+    setRoutine((prev) => ({
+      ...prev,
+      days: [...prev.days, newDay],
+    }));
+    setCurrentDayId(newDay.id);
+    setIsDirty(true);
+  }, [addNewDayOnLoad, routine.days]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -576,14 +575,17 @@ const RoutineEditorNew = ({
   }, []);
 
   const handleAddDay = useCallback(() => {
-    const newDay = createDefaultDay(`Day ${routine.days.length + 1}`, routine.days.length + 1);
+    const newDay = createDefaultDay(
+      generateDefaultWorkoutDayName(routine.days),
+      routine.days.length + 1
+    );
     setRoutine((prev) => ({
       ...prev,
       days: [...prev.days, newDay],
     }));
     setCurrentDayId(newDay.id);
     setIsDirty(true);
-  }, [routine.days.length]);
+  }, [routine.days]);
 
   // Inline rename state
   const [editingDayId, setEditingDayId] = useState<string | null>(null);
@@ -611,17 +613,25 @@ const RoutineEditorNew = ({
   }, [editingDayId, editingDayName]);
 
   const handleDeleteDay = useCallback((dayId: string) => {
-    if (!confirm("Delete this workout day?")) return;
-    setRoutine((prev) => {
-      const filtered = prev.days.filter((d) => d.id !== dayId);
-      const normalized = normalizeDayOrder(filtered);
-      return { ...prev, days: normalized };
-    });
-    if (currentDayId === dayId) {
-      setCurrentDayId(routine.days[0]?.id ?? null);
+    setPendingDeleteDayId(dayId);
+  }, []);
+
+  const handleConfirmDeleteDay = useCallback(() => {
+    if (!pendingDeleteDayId) return;
+
+    const normalized = normalizeDayOrder(
+      routine.days.filter((day) => day.id !== pendingDeleteDayId)
+    );
+
+    setRoutine((prev) => ({ ...prev, days: normalized }));
+
+    if (currentDayId === pendingDeleteDayId) {
+      setCurrentDayId(normalized[0]?.id ?? null);
     }
+
+    setPendingDeleteDayId(null);
     setIsDirty(true);
-  }, [currentDayId, routine.days]);
+  }, [currentDayId, pendingDeleteDayId, routine.days]);
 
   const handleDayDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -662,7 +672,7 @@ const RoutineEditorNew = ({
   const handleAddExercise = useCallback(
     (exerciseItem: ExerciseItem) => {
       if (!currentDay) return;
-      const newExercise = createExerciseFromLibrary(exerciseItem as any, currentDay.exercises.length);
+      const newExercise = createExerciseFromPickerItem(exerciseItem, currentDay.exercises.length);
       setRoutine((prev) => ({
         ...prev,
         days: prev.days.map((d) =>
@@ -683,11 +693,11 @@ const RoutineEditorNew = ({
         days: prev.days.map((d) =>
           d.id === currentDayId
             ? {
-                ...d,
-                exercises: d.exercises.map((ex) =>
-                  ex.id === exerciseId ? { ...ex, ...updates } : ex
-                ),
-              }
+              ...d,
+              exercises: d.exercises.map((ex) =>
+                ex.id === exerciseId ? { ...ex, ...updates } : ex
+              ),
+            }
             : d
         ),
       }));
@@ -704,18 +714,18 @@ const RoutineEditorNew = ({
         days: prev.days.map((d) =>
           d.id === currentDayId
             ? {
-                ...d,
-                exercises: d.exercises.map((ex) =>
-                  ex.id === exerciseId
-                    ? {
-                        ...ex,
-                        sets: ex.sets.map((set) =>
-                          set.id === setId ? { ...set, ...updates } : set
-                        ),
-                      }
-                    : ex
-                ),
-              }
+              ...d,
+              exercises: d.exercises.map((ex) =>
+                ex.id === exerciseId
+                  ? {
+                    ...ex,
+                    sets: ex.sets.map((set) =>
+                      set.id === setId ? { ...set, ...updates } : set
+                    ),
+                  }
+                  : ex
+              ),
+            }
             : d
         ),
       }));
@@ -732,13 +742,13 @@ const RoutineEditorNew = ({
         days: prev.days.map((d) =>
           d.id === currentDayId
             ? {
-                ...d,
-                exercises: d.exercises.map((ex) =>
-                  ex.id === exerciseId
-                    ? { ...ex, sets: ex.sets.filter((set) => set.id !== setId) }
-                    : ex
-                ),
-              }
+              ...d,
+              exercises: d.exercises.map((ex) =>
+                ex.id === exerciseId
+                  ? { ...ex, sets: ex.sets.filter((set) => set.id !== setId) }
+                  : ex
+              ),
+            }
             : d
         ),
       }));
@@ -755,13 +765,14 @@ const RoutineEditorNew = ({
         days: prev.days.map((d) =>
           d.id === currentDayId
             ? {
-                ...d,
-                exercises: d.exercises.map((ex) => {
-                  if (ex.id !== exerciseId) return ex;
-                  const newSet = createDefaultSet(ex.sets.length + 1, ex.defaultRestSeconds);
-                  return { ...ex, sets: [...ex.sets, newSet] };
-                }),
-              }
+              ...d,
+              exercises: d.exercises.map((ex) => {
+                if (ex.id !== exerciseId) return ex;
+                const nextRestSeconds = ex.sets[ex.sets.length - 1]?.targetRestSeconds ?? 90;
+                const newSet = createDefaultSet(ex.sets.length + 1, nextRestSeconds);
+                return { ...ex, sets: [...ex.sets, newSet] };
+              }),
+            }
             : d
         ),
       }));
@@ -772,19 +783,26 @@ const RoutineEditorNew = ({
 
   const handleRemoveExercise = useCallback(
     (exerciseId: string) => {
-      if (!confirm("Remove this exercise?")) return;
-      setRoutine((prev) => ({
-        ...prev,
-        days: prev.days.map((d) =>
-          d.id === currentDayId
-            ? { ...d, exercises: d.exercises.filter((ex) => ex.id !== exerciseId) }
-            : d
-        ),
-      }));
-      setIsDirty(true);
+      setPendingDeleteExerciseId(exerciseId);
     },
-    [currentDayId]
+    []
   );
+
+  const handleConfirmRemoveExercise = useCallback(() => {
+    if (!pendingDeleteExerciseId) return;
+
+    setRoutine((prev) => ({
+      ...prev,
+      days: prev.days.map((day) =>
+          day.id === currentDayId
+            ? removeExerciseAndLinkedSupersetExercises(day, pendingDeleteExerciseId)
+            : day
+        ),
+    }));
+
+    setPendingDeleteExerciseId(null);
+    setIsDirty(true);
+  }, [currentDayId, pendingDeleteExerciseId]);
 
   const handleCopyExercise = useCallback(
     (exerciseId: string) => {
@@ -873,9 +891,27 @@ const RoutineEditorNew = ({
   }, [routine, routineId, onSave]);
 
   const handleBackWithConfirm = useCallback(() => {
-    if (isDirty && !confirm("You have unsaved changes. Discard them?")) return;
+    if (isDirty) {
+      setIsDiscardDialogOpen(true);
+      return;
+    }
     onBack();
   }, [isDirty, onBack]);
+
+  const handleConfirmDiscardChanges = useCallback(() => {
+    setIsDiscardDialogOpen(false);
+    onBack();
+  }, [onBack]);
+
+  const pendingDeleteDay = useMemo(
+    () => routine.days.find((day) => day.id === pendingDeleteDayId) ?? null,
+    [pendingDeleteDayId, routine.days]
+  );
+
+  const pendingDeleteExercise = useMemo(
+    () => currentDay?.exercises.find((exercise) => exercise.id === pendingDeleteExerciseId) ?? null,
+    [currentDay, pendingDeleteExerciseId]
+  );
 
   // ============================================
   // RENDER
@@ -911,15 +947,6 @@ const RoutineEditorNew = ({
             {routineId ? "Save Changes" : "Create Routine"}
           </button>
         </div>
-
-        {/* Description */}
-        <textarea
-          value={routine.description}
-          onChange={(e) => handleUpdateRoutine({ description: e.target.value })}
-          placeholder="Add description..."
-          rows={2}
-          className="mt-3 w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-gray-300 placeholder-gray-600 outline-none focus:border-orange-600"
-        />
       </div>
 
       {/* Main Content */}
@@ -986,15 +1013,8 @@ const RoutineEditorNew = ({
             </div>
           ) : (
             <div>
-              <div className="mb-6 flex items-center justify-between">
+              <div className="mb-6">
                 <h2 className="text-xl font-black text-white">{currentDay.name}</h2>
-                <button
-                  onClick={() => setShowLibrarySheet(true)}
-                  className="flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-bold text-white transition-all hover:bg-white/5 md:hidden"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Exercise
-                </button>
               </div>
 
               {currentDay.exercises.length === 0 ? (
@@ -1041,12 +1061,21 @@ const RoutineEditorNew = ({
                   </SortableContext>
                 </DndContext>
               )}
+
+              {/* Mobile: Add Exercise button at bottom for better UX */}
+              <button
+                onClick={() => setShowLibrarySheet(true)}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-sm font-bold text-gray-400 transition-all hover:border-orange-600/30 hover:bg-orange-600/5 hover:text-orange-400 md:hidden"
+              >
+                <Plus className="h-4 w-4" />
+                Add Exercise
+              </button>
             </div>
           )}
         </div>
 
         {/* Right: Exercise Library (Desktop Only) */}
-        <div className="hidden w-80 shrink-0 overflow-hidden border-l border-white/5 bg-black/30 md:block">
+        <div className="hidden w-80 flex-shrink-0 overflow-hidden border-l border-white/5 bg-black/30 md:block">
           <div className="sticky top-0 h-screen overflow-y-auto p-4">
             <ExerciseLibraryPanel
               onAddExercise={handleAddExercise}
@@ -1064,6 +1093,90 @@ const RoutineEditorNew = ({
         onAddExercise={handleAddExercise}
         showAddButton
       />
+
+      <AlertDialog
+        open={pendingDeleteDayId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteDayId(null);
+          }
+        }}
+      >
+        <AlertDialogContent className={alertDialogContentClassName}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-black tracking-tight">
+              Delete workout day?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[12px] leading-relaxed text-[hsl(0,0%,55%)]">
+              {pendingDeleteDay
+                ? `${pendingDeleteDay.name} will be removed from this routine.`
+                : "This workout day will be removed from this routine."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className={alertDialogCancelClassName}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDeleteDay}
+              className={alertDialogActionClassName}
+            >
+              Delete Day
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={pendingDeleteExerciseId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteExerciseId(null);
+          }
+        }}
+      >
+        <AlertDialogContent className={alertDialogContentClassName}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-black tracking-tight">
+              Remove exercise?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[12px] leading-relaxed text-[hsl(0,0%,55%)]">
+              {pendingDeleteExercise
+                ? `${pendingDeleteExercise.name} will be removed from the current workout day.`
+                : "This exercise will be removed from the current workout day."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className={alertDialogCancelClassName}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmRemoveExercise}
+              className={alertDialogActionClassName}
+            >
+              Remove Exercise
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
+        <AlertDialogContent className={alertDialogContentClassName}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[17px] font-black tracking-tight">
+              Discard unsaved changes?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[12px] leading-relaxed text-[hsl(0,0%,55%)]">
+              Your routine edits have not been saved yet. Leaving now will discard them.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className={alertDialogCancelClassName}>Keep Editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDiscardChanges}
+              className={alertDialogActionClassName}
+            >
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -344,7 +344,7 @@ export function ExerciseLibraryPanel({
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       {/* Mobile drag handle */}
       <div className="flex justify-center px-4 pt-3 md:hidden">
         <div className="h-1.5 w-12 rounded-full bg-white/10" />

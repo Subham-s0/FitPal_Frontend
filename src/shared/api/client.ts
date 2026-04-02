@@ -132,7 +132,7 @@ export function getApiErrorMessage(
 
     if (typeof error.response?.status === "number") {
       if (error.response.status >= 500) {
-        return "Server error while processing payment verification.";
+        return fallback;
       }
       return `Request failed with status ${error.response.status}.`;
     }

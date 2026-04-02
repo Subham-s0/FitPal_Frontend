@@ -226,6 +226,50 @@ export interface UpdateUserProfileDetailsRequest {
   primaryFitnessFocus: PrimaryFitnessFocus | null;
 }
 
+export interface ProfileImageUpdateRequest {
+  profileImageUrl: string;
+  profileImagePublicId: string;
+  profileImageResourceType: string;
+}
+
+export interface ProfileImageUpdateResponse {
+  profileImageUrl: string | null;
+  profileImagePublicId: string | null;
+  profileImageResourceType: string | null;
+}
+
+export interface ProfileInfoUpdateRequest {
+  userName: string;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNo: string | null;
+  dob: string | null;
+  gender: Gender | null;
+  height: number | null;
+  weight: number | null;
+}
+
+export interface ProfileInfoUpdateResponse {
+  userName: string;
+  firstName: string | null;
+  lastName: string | null;
+  phoneNo: string | null;
+  dob: string | null;
+  gender: Gender | null;
+  height: number | null;
+  weight: number | null;
+}
+
+export interface ProfileGoalsUpdateRequest {
+  fitnessLevel: FitnessLevel | null;
+  primaryFitnessFocus: PrimaryFitnessFocus | null;
+}
+
+export interface ProfileGoalsUpdateResponse {
+  fitnessLevel: FitnessLevel | null;
+  primaryFitnessFocus: PrimaryFitnessFocus | null;
+}
+
 export interface ConfirmEmailVerificationRequest {
   otp: string;
 }
@@ -255,6 +299,7 @@ export interface UserProfileResponse {
   profileImageUrl: string | null;
   profileImagePublicId: string | null;
   profileImageResourceType: string | null;
+  linkedAuthProviders: string[];
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
 }

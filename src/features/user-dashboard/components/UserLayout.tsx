@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Dumbbell,
+  Gem,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -32,6 +33,7 @@ const DESKTOP_NAV_ITEMS: UserLayoutSection[] = [
   { id: "routines", label: "Routines", icon: ClipboardList },
   { id: "exercises", label: "Exercises", icon: Dumbbell },
   { id: "workouts", label: "Workouts", icon: Activity },
+  { id: "membership", label: "Membership", icon: Gem },
 ];
 
 // Mobile drawer nav items (extended for mobile UX)
@@ -42,6 +44,7 @@ const MOBILE_DRAWER_ITEMS: UserLayoutSection[] = [
   { id: "routines", label: "Routines", icon: ClipboardList },
   { id: "exercises", label: "Exercises", icon: Dumbbell },
   { id: "workouts", label: "Workouts", icon: Activity },
+  { id: "membership", label: "Membership", icon: Gem },
   { id: "profile", label: "Profile", icon: User },
 ];
 
@@ -56,6 +59,16 @@ const MOBILE_BOTTOM_NAV_ITEMS: UserLayoutSection[] = [
 const MOBILE_BOTTOM_NAV_IDS = new Set([
   ...MOBILE_BOTTOM_NAV_ITEMS.map((item) => item.id),
   "checkin",
+]);
+
+const COMPACT_MOBILE_BOTTOM_DOCK_SECTIONS = new Set([
+  "gyms",
+  "routines",
+  "exercises",
+  "checkin",
+  "profile",
+  "settings",
+  "membership",
 ]);
 
 function resolveMobileBottomNavActiveSection(activeSection: string) {
@@ -93,7 +106,7 @@ const UserLayout = ({
   const displayName = getDisplayNameFromEmail(auth.email, "USER");
   const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
   const activeMobileBottomSection = resolveMobileBottomNavActiveSection(activeSection);
-  const isCompactBottomDock = activeSection === "gyms" || activeSection === "exercises";
+  const isCompactBottomDock = COMPACT_MOBILE_BOTTOM_DOCK_SECTIONS.has(activeSection);
   const bottomDockBottom = isCompactBottomDock
     ? "max(0px, env(safe-area-inset-bottom))"
     : "max(16px, env(safe-area-inset-bottom))";
@@ -118,6 +131,11 @@ const UserLayout = ({
   const checkInIconSize = isCompactBottomDock ? 20 : 26;
 
   const handleNavigation = (id: string) => {
+    if (id === "membership") {
+      navigate("/membership");
+      setIsMobileMenuOpen(false);
+      return;
+    }
     if (id === "profile") {
       navigate("/profile");
       return;
@@ -180,7 +198,6 @@ const UserLayout = ({
           >
             Check In
           </button>
-
           {/* Desktop divider */}
           <div className="desktop-only hidden h-10 w-px bg-[#252525] md:block" />
 
@@ -280,7 +297,13 @@ const UserLayout = ({
           <div className="mx-3 my-2 h-px bg-white/[0.06]" />
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-xl border-none bg-transparent px-3.5 py-3.5 text-left font-sans text-[13px] font-bold text-white/65 transition-all hover:bg-white/[0.06]"
+            onClick={() => {
+              navigate("/settings");
+              setIsMobileMenuOpen(false);
+            }}
+            className={`flex w-full items-center gap-3 rounded-xl border-none bg-transparent px-3.5 py-3.5 text-left font-sans text-[13px] font-bold transition-all hover:bg-white/[0.06] ${
+              activeSection === "settings" ? "bg-orange-500/[0.08] text-orange-500" : "text-white/65"
+            }`}
           >
             <Settings size={17} className="shrink-0" />
             Settings
@@ -343,16 +366,19 @@ const UserLayout = ({
           <div className="mt-auto flex flex-col gap-4 border-t border-white/10 pt-4">
             <button
               type="button"
-              onClick={() => navigate("/profile")}
-              className={`group/link flex w-full items-center p-3 transition-all hover:bg-orange-600 ${
+              onClick={() => navigate("/settings")}
+              className={`group/link flex w-full items-center p-3 transition-all ${
                 isSidebarExpanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
-              }`}
+              } ${activeSection === "settings" ? "bg-orange-600" : "hover:bg-orange-600"}`}
             >
-              <Settings size={24} className="min-w-[24px] text-[var(--text-sidebar)]" />
+              <Settings
+                size={24}
+                className={`min-w-[24px] ${activeSection === "settings" ? "text-black" : "text-[var(--text-sidebar)]"}`}
+              />
               <span
-                className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none text-[var(--text-sidebar)] transition-opacity ${
+                className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
                   isSidebarExpanded ? "block opacity-100" : "hidden opacity-0"
-                }`}
+                } ${activeSection === "settings" ? "text-black" : "text-[var(--text-sidebar)]"}`}
               >
                 Settings
               </span>

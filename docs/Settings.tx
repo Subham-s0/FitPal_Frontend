@@ -1,0 +1,19 @@
+If you want the cleanest settings IA for the current backend, I would use:
+1.
+Profile
+2.
+Security
+3.
+Membership
+4.
+Routines
+5.
+Saved Gyms
+6.
+Access History
+7.
+Payments
+Payments / Billing history is not ready as a real settings section. You have payment processing and a payment-attempt model in PaymentAttempt.java, plus gateway status DTOs in PaymentAttemptStatusResponse.java, but there is no /users/me/payments list/detail endpoint.
+True user routine settings are only partial. The model has currentDay, cyclesCompleted, activatedAt, deactivatedAt, and lastSessionAt in UserRoutineSetting.java, but there is no dedicated /users/me/routine-settings endpoint.
+•
+ava

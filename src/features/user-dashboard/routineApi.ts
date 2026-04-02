@@ -3,6 +3,7 @@ import type {
   RoutineSummaryResponse,
   RoutineDetailResponse,
   RoutineUpsertRequest,
+  UserRoutineSettingsResponse,
 } from "@/features/user-dashboard/routineTypes";
 
 // ============================================
@@ -65,6 +66,14 @@ export async function deleteRoutineApi(routineId: string): Promise<void> {
   await apiClient.delete(`/users/me/routines/${routineId}`);
 }
 
+/**
+ * Get user routine settings and active routine progress
+ */
+export async function getMyRoutineSettingsApi(): Promise<UserRoutineSettingsResponse> {
+  const response = await apiClient.get<UserRoutineSettingsResponse>("/users/me/routine-settings");
+  return response.data;
+}
+
 // ============================================
 // REACT QUERY KEYS
 // ============================================
@@ -75,4 +84,5 @@ export const routineQueryKeys = {
   list: () => [...routineQueryKeys.lists()] as const,
   details: () => [...routineQueryKeys.all, "detail"] as const,
   detail: (routineId: string) => [...routineQueryKeys.details(), routineId] as const,
+  settings: () => [...routineQueryKeys.all, "settings"] as const,
 };

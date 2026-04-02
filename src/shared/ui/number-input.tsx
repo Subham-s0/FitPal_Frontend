@@ -76,10 +76,11 @@ const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
             onChange?.(e)
           }}
           className={cn(
-            "w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3",
-            "text-sm font-medium text-white outline-none transition-all placeholder:text-slate-600",
-            "focus:border-orange-600/60 focus:ring-2 focus:ring-orange-600/10",
-            "disabled:cursor-not-allowed disabled:opacity-50",
+            "w-full rounded-2xl border px-4 py-2.5",
+            "text-sm font-bold outline-none transition-all placeholder:text-slate-600",
+            "focus:border-orange-600/60 focus:bg-[#111] focus:shadow-[0_0_0_3px_rgba(234,88,12,0.06)]",
+            "disabled:cursor-not-allowed disabled:border-white/5 disabled:bg-black/20 disabled:text-slate-500",
+            disabled ? "" : "border-white/10 bg-[#0c0c0c] text-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]",
             "[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-moz-number-spin-box]:display-none",
             showSpinners && "pr-10",
             className

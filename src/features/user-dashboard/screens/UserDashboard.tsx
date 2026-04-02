@@ -7,6 +7,7 @@ import { GymsScreen } from "@/features/gyms";
 import RoutineFlow from "@/features/user-dashboard/components/RoutineFlow";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import WorkoutsSection from "@/features/user-dashboard/components/WorkoutsSection";
+import { useIsMobile } from "@/shared/hooks/use-mobile";
 import {
   ArrowUpCircle,
   Check,
@@ -38,14 +39,23 @@ const resolveSection = (value: string | undefined): UserDashboardSection =>
 const UserDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const requestedSection = (location.state as { activeSection?: string } | null)?.activeSection;
+  const requestedCheckInView = (location.state as { checkInView?: "scanner" | "logs" } | null)?.checkInView;
   const [activeSection, setActiveSection] = useState<UserDashboardSection>(() => resolveSection(requestedSection));
   const [activityMonth, setActivityMonth] = useState<Date>(new Date());
+  const [isRoutineDetailView, setIsRoutineDetailView] = useState(false);
 
   useEffect(() => {
     if (!requestedSection) return;
     setActiveSection(resolveSection(requestedSection));
   }, [requestedSection]);
+
+  useEffect(() => {
+    if (activeSection !== "routines") {
+      setIsRoutineDetailView(false);
+    }
+  }, [activeSection]);
 
   const homeActivity = ["done", "done", "done", "miss", "done", "done", "done", "done", "miss", "done", "done", "done", "done", "done", "done", "done", "done", "done", "done", "done", "today", "future", "future", "future", "future", "future", "future", "future", "future", "future"];
 
@@ -442,13 +452,13 @@ const UserDashboard = () => {
       case "gyms":
         return <GymsScreen onSwitchToCheckIn={() => setActiveSection("checkin")} />;
       case "routines":
-        return <RoutineFlow />;
+        return <RoutineFlow onViewModeChange={(view) => setIsRoutineDetailView(view === "detail")} />;
       case "exercises":
         return <ExercisesScreen />;
       case "workouts":
-        return <WorkoutsSection />;
+        return <WorkoutsSection onOpenRoutines={() => setActiveSection("routines")} />;
       case "checkin":
-        return <CheckInScreen onBack={() => setActiveSection("home")} />;
+        return <CheckInScreen initialView={requestedCheckInView ?? "scanner"} onBack={() => setActiveSection("home")} />;
       case "progress":
         return renderHome(); // Placeholder - can add progress section later
       case "profile":
@@ -463,7 +473,13 @@ const UserDashboard = () => {
   return (
     <UserLayout
       activeSection={activeSection}
-      contentMode={activeSection === "gyms" || activeSection === "exercises" ? "immersive" : "default"}
+      contentMode={
+        activeSection === "gyms" ||
+        activeSection === "exercises" ||
+        (activeSection === "routines" && isRoutineDetailView && !isMobile)
+          ? "immersive"
+          : "default"
+      }
       onSectionChange={(section) => {
         if (section === "profile") {
           navigate("/profile");

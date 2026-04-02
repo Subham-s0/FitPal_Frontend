@@ -15,6 +15,7 @@ import { cn } from "@/shared/lib/utils";
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface CustomDatePickerProps {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -23,6 +24,8 @@ interface CustomDatePickerProps {
   className?: string;
   maxDate?: Date;
   minDate?: Date;
+  ariaLabel?: string;
+  ariaDescribedBy?: string;
 }
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -58,6 +61,7 @@ function formatDisplay(date: Date): string {
 // â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function CustomDatePicker({
+  id,
   value,
   onChange,
   placeholder = "DD / MM / YYYY",
@@ -66,6 +70,8 @@ export function CustomDatePicker({
   className,
   maxDate,
   minDate,
+  ariaLabel,
+  ariaDescribedBy,
 }: CustomDatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -119,16 +125,21 @@ export function CustomDatePicker({
       {/* â”€â”€ Trigger â”€â”€ */}
       <PopoverTrigger asChild>
         <Button
+          id={id}
           type="button"
           variant="outline"
           disabled={disabled}
+          aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
           aria-invalid={invalid ? "true" : undefined}
           className={cn(
-            "group h-9 w-full justify-between rounded-xl px-3",
-            "border-white/8 bg-[#0a0a0a] text-slate-200",
-            "hover:bg-[#0a0a0a] hover:border-orange-600/50 hover:text-slate-200",
+            "group h-9 w-full justify-between rounded-xl px-3 transition-all",
+            disabled 
+              ? "border-transparent bg-black/20 text-slate-500 opacity-100 disabled:opacity-100" 
+              : "border-white/10 bg-[#0c0c0c] font-bold text-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]",
+            !disabled && "hover:border-orange-600/50 hover:bg-[#111]",
             "focus-visible:ring-0 focus-visible:ring-offset-0",
-            open && "border-orange-600/50 shadow-[0_0_0_3px_rgba(234,88,12,0.08)]",
+            open && "border-orange-600/50 bg-[#111] shadow-[0_0_0_3px_rgba(234,88,12,0.08)]",
             !selectedDate && "text-slate-500",
             invalid && "border-red-500/70",
             className,

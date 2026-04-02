@@ -14,7 +14,10 @@ import Dashboard from "@/pages/Dashboard";
 import NotFound from "@/pages/NotFound";
 import LoginRegister from "@/pages/LoginRegister";
 import GymProfile from "@/pages/gym/GymProfile";
+import Payments from "@/pages/user/Payments";
 import Profile from "@/pages/user/Profile";
+import Settings from "@/pages/user/Settings";
+import Membership from "@/pages/user/Membership";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import OAuthCallback from "@/pages/OAuthCallback";
 import Logout from "@/pages/Logout";
@@ -125,6 +128,14 @@ const AppRouter = () => (
       <Route path="/gym/:id" element={<GymProfile />} />
 
       <Route
+        path="/payments"
+        element={
+          <ProtectedRoute>
+            <Payments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
@@ -140,6 +151,23 @@ const AppRouter = () => (
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/membership"
+        element={
+          <ProtectedRoute>
+            <Membership />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/membership/upgrade" element={<Navigate to="/membership" replace />} />
       <Route
         path="/profile-setup"
         element={

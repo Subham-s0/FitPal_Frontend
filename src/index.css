@@ -492,6 +492,66 @@
     @apply rounded-2xl border border-white/[0.07] bg-[#0c0c0c] p-5;
   }
 
+  .flow-shell {
+    position: relative;
+    background: #050505;
+  }
+
+  .flow-grid {
+    background-image:
+      linear-gradient(rgba(234, 88, 12, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(234, 88, 12, 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .flow-panel {
+    background: rgba(17, 17, 17, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 24px 50px -26px rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .flow-panel-subtle {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .flow-panel-interactive {
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .flow-panel-interactive:hover {
+    background: rgba(23, 23, 23, 0.98);
+    border-color: rgba(249, 115, 22, 0.26);
+    box-shadow: 0 28px 55px -30px rgba(249, 115, 22, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .flow-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white transition-all hover:border-orange-400/40 hover:bg-orange-700 disabled:opacity-50;
+    box-shadow: 0 10px 24px -14px rgba(249, 115, 22, 0.7);
+  }
+
+  .flow-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white transition-all hover:bg-white/[0.08];
+  }
+
+  .flow-button-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-red-300 transition-all hover:bg-red-500/[0.14];
+  }
+
+  .flow-input {
+    @apply rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white placeholder:text-slate-500 outline-none transition-all hover:border-orange-600/30 focus:border-orange-600/40 focus:ring-0;
+  }
+
+  .flow-label {
+    @apply text-[10px] font-black uppercase tracking-[0.18em] text-slate-500;
+  }
+
   /* ── Status Badges ── */
   .status-success {
     @apply inline-flex items-center gap-1.5 rounded-full border border-green-400/20 bg-green-400/10 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-green-400;

@@ -10,6 +10,12 @@ import type {
   GymPhotoResponse,
   GymProfileResponse,
   GymProfileSetupStatusResponse,
+  ProfileGoalsUpdateRequest,
+  ProfileGoalsUpdateResponse,
+  ProfileImageUpdateRequest,
+  ProfileImageUpdateResponse,
+  ProfileInfoUpdateRequest,
+  ProfileInfoUpdateResponse,
   UpdateGymBasicsStepRequest,
   UpdateGymLocationStepRequest,
   UpdateGymPayoutStepRequest,
@@ -255,5 +261,38 @@ export async function uploadProfileImageApi(file: File): Promise<UserProfileResp
 /** DELETE /api/users/me/profile/image */
 export async function deleteProfileImageApi(): Promise<UserProfileResponse> {
   const response = await apiClient.delete<UserProfileResponse>("/users/me/profile/image");
+  return response.data;
+}
+
+/** PATCH /api/users/me/profile/image/metadata */
+export async function updateProfileImageMetadataApi(
+  payload: ProfileImageUpdateRequest
+): Promise<ProfileImageUpdateResponse> {
+  const response = await apiClient.patch<ProfileImageUpdateResponse>(
+    "/users/me/profile/image/metadata",
+    payload
+  );
+  return response.data;
+}
+
+/** PATCH /api/users/me/profile/info */
+export async function updateProfileInfoApi(
+  payload: ProfileInfoUpdateRequest
+): Promise<ProfileInfoUpdateResponse> {
+  const response = await apiClient.patch<ProfileInfoUpdateResponse>(
+    "/users/me/profile/info",
+    payload
+  );
+  return response.data;
+}
+
+/** PATCH /api/users/me/profile/goals */
+export async function updateProfileGoalsApi(
+  payload: ProfileGoalsUpdateRequest
+): Promise<ProfileGoalsUpdateResponse> {
+  const response = await apiClient.patch<ProfileGoalsUpdateResponse>(
+    "/users/me/profile/goals",
+    payload
+  );
   return response.data;
 }

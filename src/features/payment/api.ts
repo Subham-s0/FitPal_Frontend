@@ -7,8 +7,23 @@ import type {
   KhaltiInitiatePaymentRequest,
   KhaltiInitiatePaymentResponse,
   KhaltiLookupPaymentRequest,
+  PageResponse,
   PaymentAttemptStatusResponse,
+  UserPaymentHistoryItemResponse,
+  UserPaymentHistorySearchRequest,
 } from "@/features/payment/model";
+
+function buildPaymentHistoryParams(request?: UserPaymentHistorySearchRequest) {
+  if (!request) {
+    return undefined;
+  }
+
+  return {
+    ...request,
+    statuses: request.statuses?.length ? request.statuses.join(",") : undefined,
+    paymentMethods: request.paymentMethods?.length ? request.paymentMethods.join(",") : undefined,
+  };
+}
 
 /** POST /api/payments/esewa/initiate */
 export async function initiateEsewaPaymentApi(
@@ -47,5 +62,16 @@ export async function lookupKhaltiPaymentApi(
   payload: KhaltiLookupPaymentRequest
 ): Promise<PaymentAttemptStatusResponse> {
   const response = await apiClient.post<PaymentAttemptStatusResponse>("/payments/khalti/lookup", payload);
+  return response.data;
+}
+
+/** GET /api/users/me/payments/history */
+export async function getMyPaymentHistoryApi(
+  request?: UserPaymentHistorySearchRequest
+): Promise<PageResponse<UserPaymentHistoryItemResponse>> {
+  const response = await apiClient.get<PageResponse<UserPaymentHistoryItemResponse>>(
+    "/users/me/payments/history",
+    { params: buildPaymentHistoryParams(request) }
+  );
   return response.data;
 }
