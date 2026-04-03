@@ -5,7 +5,7 @@ import {
   getMyRoutinesApi,
   getRoutineDetailApi,
   updateRoutineApi,
-} from "@/features/user-dashboard/routineApi";
+} from "@/features/routines/routineApi";
 import { getApiErrorMessage } from "@/shared/api/client";
 import {
   type Routine,
@@ -16,8 +16,9 @@ import {
   type WorkoutDay,
   deriveGoalFromRoutineType,
   getRoutinePersistenceValidationError,
+  reconcileWorkoutDaySupersets,
   resolveRoutineTypeForSave,
-} from "@/features/user-dashboard/routineTypes";
+} from "@/features/routines/routineTypes";
 
 type MutationOptions = {
   sync?: "auto" | "force" | "none";
@@ -238,14 +239,15 @@ function buildRoutineRequest(routine: Routine) {
     routineType: resolveRoutineTypeForSave(routine.goal, routine.routineType),
     isPublic: routine.isPublic ?? false,
     days: routine.days.map((day) => {
-      const { groups, groupIdsByTag } = buildSupersetPayload(day);
+      const normalizedDay = reconcileWorkoutDaySupersets(day);
+      const { groups, groupIdsByTag } = buildSupersetPayload(normalizedDay);
 
       return {
-        routineDayId: day.backendId ?? null,
-        name: day.name.trim(),
-        weekDay: day.weekDay ?? null,
+        routineDayId: normalizedDay.backendId ?? null,
+        name: normalizedDay.name.trim(),
+        weekDay: normalizedDay.weekDay ?? null,
         supersetGroups: groups,
-        exercises: day.exercises.map((exercise) => ({
+        exercises: normalizedDay.exercises.map((exercise) => ({
           routineDayExerciseId: exercise.backendId ?? null,
           exerciseSource: exercise.source,
           sourceExerciseId: exercise.sourceExerciseId,
@@ -655,3 +657,4 @@ export function importRoutines(jsonData: string): void {
   const data = JSON.parse(jsonData) as Routine[];
   routineCache = data.map(normalizeRoutine);
 }
+

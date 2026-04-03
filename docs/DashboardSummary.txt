@@ -1,0 +1,231 @@
+Dashboard Summary Plan
+
+Current State
+- The user home dashboard is still hardcoded in [UserDashboard.tsx](D:/FitPal-MultiSubscriptionFitnessApp/Frontend/src/features/user-dashboard/screens/UserDashboard.tsx).
+- The current home view contains these cards/sections:
+  - Gym Access
+  - Monthly Activity
+  - Plan Duration
+  - Member Stats
+  - Upcoming Session
+  - Routine Summary
+- The monthly activity, plan duration, member stats, and routine summary data are mock values in the screen.
+
+Goal
+- Replace the hardcoded home dashboard data with backend-backed summary APIs.
+- Keep the same visual layout unless UI redesign is requested later.
+- Move the home dashboard to a summary-driven model instead of assembling many unrelated feature calls in the screen.
+
+Recommended Frontend Component Split
+- Keep [UserDashboard.tsx](D:/FitPal-MultiSubscriptionFitnessApp/Frontend/src/features/user-dashboard/screens/UserDashboard.tsx) as the page container and section switcher.
+- Extract the home tab into separate presentational cards:
+  - DashboardPlanDurationCard
+  - DashboardMonthlyActivityCard
+  - DashboardUpcomingSessionCard
+  - DashboardMemberStatsCard
+  - DashboardRoutineSummaryCard
+- Optional:
+  - DashboardEmptyStateCard for empty upcoming-session / no-routine states
+
+Recommended Backend Endpoints
+
+1. GET /users/me/dashboard/summary
+- Main home dashboard payload for first render.
+- Returns all 5 cards in one response.
+
+Suggested response shape:
+{
+  "generatedAt": "2026-04-03T10:15:00Z",
+  "planCard": {
+    "hasSubscription": true,
+    "planName": "Pro Access",
+    "planType": "PRO",
+    "billingCycle": "MONTHLY",
+    "subscriptionStatus": "ACTIVE",
+    "currentAccessEndsAt": "2026-04-18T00:00:00Z",
+    "nextMembershipStartsAt": "2026-04-18T00:00:00Z",
+    "totalPaidCoverageEndsAt": "2026-05-18T00:00:00Z",
+    "remainingDays": 15,
+    "durationDays": 30,
+    "progressPercent": 50
+  },
+  "monthlyActivityCard": {
+    "year": 2026,
+    "month": 4,
+    "days": [
+      {
+        "date": "2026-04-01",
+        "dayOfMonth": 1,
+        "hasValidCheckIn": true,
+        "displayState": "SUCCESS"
+      }
+    ]
+  },
+  "upcomingSessionCard": {
+    "state": "PLANNED",
+    "title": "Push Day A",
+    "routineName": "Upper Lower Split",
+    "routineDayName": "Day 1",
+    "exerciseCount": 6,
+    "estimatedDurationMinutes": 65,
+    "emptyStateTitle": null,
+    "emptyStateMessage": null
+  },
+  "memberStatsCard": {
+    "rangeType": "MONTH",
+    "rangeLabel": "April 2026",
+    "totalVisits": 14,
+    "successfulVisits": 12,
+    "deniedVisits": 2,
+    "uniqueGyms": 3,
+    "topFacilities": [
+      {
+        "gymId": 12,
+        "gymName": "PowerHouse Gym",
+        "city": "Kathmandu",
+        "logoUrl": "https://...",
+        "visitCount": 7
+      }
+    ]
+  },
+  "routineHeatmapCard": {
+    "state": "READY",
+    "title": "Today's Muscle Focus",
+    "emptyStateTitle": null,
+    "emptyStateMessage": null,
+    "exercises": [
+      {
+        "exerciseName": "Bench Press",
+        "setCount": 4,
+        "primaryMuscles": ["Chest"],
+        "secondaryMuscles": ["Triceps", "Front Delts"]
+      }
+    ]
+  }
+}
+
+2. GET /users/me/dashboard/activity/monthly?year=2026&month=4
+- Used when the user changes the month in the Monthly Activity card.
+- Keeps month switching separate from the main summary call.
+
+Suggested response shape:
+{
+  "year": 2026,
+  "month": 4,
+  "days": [
+    {
+      "date": "2026-04-01",
+      "dayOfMonth": 1,
+      "hasValidCheckIn": true,
+      "displayState": "SUCCESS"
+    }
+  ]
+}
+
+3. GET /users/me/dashboard/visits?rangeType=WEEK|MONTH|YEAR&year=2026&month=4&weekStart=2026-03-30
+- Used for the filter above Total Visits / Top Facilities in the Member Stats card.
+- Returns filtered visit totals and the ranked list used in the Top Facilities section.
+
+Suggested response shape:
+{
+  "rangeType": "MONTH",
+  "rangeLabel": "April 2026",
+  "totalVisits": 14,
+  "successfulVisits": 12,
+  "deniedVisits": 2,
+  "uniqueGyms": 3,
+  "topFacilities": [
+    {
+      "gymId": 12,
+      "gymName": "PowerHouse Gym",
+      "city": "Kathmandu",
+      "logoUrl": "https://...",
+      "visitCount": 7
+    }
+  ]
+}
+
+Card Logic
+
+Plan Duration
+- Use subscription summary only from backend.
+- The dashboard should display:
+  - plan name
+  - plan type
+  - billing cycle
+  - currentAccessEndsAt
+  - nextMembershipStartsAt
+  - totalPaidCoverageEndsAt
+  - remainingDays
+  - durationDays
+  - progressPercent
+
+Monthly Activity
+- Tick/success logic:
+  - if the user has at least one valid check-in on a date, mark it successful
+- Suggested displayState values:
+  - SUCCESS
+  - MISSED
+  - TODAY
+  - FUTURE
+- The card should support month switching.
+
+Upcoming Session
+- If a valid upcoming session exists, show the routine/session summary.
+- If it is empty:
+  - show a base picture or empty state visual
+  - message example: "No active routine. Start a session to plan your next training."
+
+Member Stats
+- This card should keep the filter above the stats section:
+  - WEEK
+  - MONTH
+  - YEAR
+- The filter should drive:
+  - totalVisits
+  - successfulVisits
+  - deniedVisits
+  - uniqueGyms
+  - the ranked Top Facilities list
+- Current backend supports top visited gyms, not true facility usage.
+- So the UI can keep the heading `Top Facilities`, but the first backend version should be powered by top visited gyms.
+- If real facility-level counts are needed later, backend needs facility usage data, not only gym check-ins.
+
+Routine Summary / Muscle Heatmap
+- Reuse [MuscleHeatmap.tsx](D:/FitPal-MultiSubscriptionFitnessApp/Frontend/src/features/routines/components/MuscleHeatmap.tsx).
+- Do not move color/intensity logic to the backend yet.
+- Backend should send exercise-level heatmap input:
+  - setCount
+  - primaryMuscles
+  - secondaryMuscles
+- Frontend computes the muscle intensity the same way as the current heatmap.
+
+Images
+- Base body front/back silhouette images:
+  - keep in frontend static/config
+- Muscle overlay images:
+  - should come from backend
+  - either:
+    - reuse existing muscle catalog API, or
+    - include overlay catalog in dashboard summary if one-call rendering is preferred
+
+Recommended Empty States
+- No subscription:
+  - show plan card with CTA to membership
+- No upcoming session:
+  - show inactive state and CTA to routines/workouts
+- No current routine for heatmap:
+  - show base body image and a short message instead of colored overlays
+- No visits in selected period:
+  - show zero-state instead of fake percentages
+
+Implementation Order
+1. Add backend DTOs for dashboard summary, monthly activity, and visit stats
+2. Implement GET /users/me/dashboard/summary
+3. Implement GET /users/me/dashboard/activity/monthly
+4. Implement GET /users/me/dashboard/visits
+5. Replace hardcoded home values in [UserDashboard.tsx](D:/FitPal-MultiSubscriptionFitnessApp/Frontend/src/features/user-dashboard/screens/UserDashboard.tsx)
+6. Split the home tab into card components if the screen starts getting too large
+
+Important Note
+- "Top Facilities" can stay as the UI heading, but the initial backend implementation should return top visited gyms until facility usage tracking exists.

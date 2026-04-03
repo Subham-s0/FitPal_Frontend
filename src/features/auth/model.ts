@@ -66,6 +66,7 @@ export interface AuthResponse {
   approved: boolean;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
 }
 
 export interface ApiErrorResponse {

@@ -11,7 +11,7 @@ import type {
   WorkoutSessionResponse,
   WorkoutSessionSetResponse,
   WorkoutSessionSummaryResponse,
-} from "@/features/user-dashboard/workoutSessionTypes";
+} from "@/features/workout-sessions/workoutSessionTypes";
 
 export async function getTodayWorkoutSessionApi(): Promise<TodayWorkoutSessionResponse> {
   const response = await apiClient.get<TodayWorkoutSessionResponse>("/users/me/workout-sessions/today");
@@ -93,6 +93,34 @@ export async function addWorkoutSetApi(
   return response.data;
 }
 
+export async function addExerciseToRoutineApi(
+  routineLogId: string,
+  routineLogExerciseId: string
+): Promise<void> {
+  await apiClient.post(
+    `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}/add-to-routine`
+  );
+}
+
+export async function deleteWorkoutSetApi(
+  routineLogId: string,
+  routineLogExerciseId: string,
+  routineLogSetId: string
+): Promise<void> {
+  await apiClient.delete(
+    `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}/sets/${routineLogSetId}`
+  );
+}
+
+export async function deleteWorkoutExerciseApi(
+  routineLogId: string,
+  routineLogExerciseId: string
+): Promise<void> {
+  await apiClient.delete(
+    `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}`
+  );
+}
+
 export const workoutSessionQueryKeys = {
   all: ["workout-sessions"] as const,
   today: () => [...workoutSessionQueryKeys.all, "today"] as const,
@@ -100,3 +128,4 @@ export const workoutSessionQueryKeys = {
   details: () => [...workoutSessionQueryKeys.all, "detail"] as const,
   detail: (routineLogId: string) => [...workoutSessionQueryKeys.details(), routineLogId] as const,
 };
+

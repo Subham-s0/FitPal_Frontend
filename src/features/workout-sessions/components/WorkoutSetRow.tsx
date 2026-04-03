@@ -1,12 +1,14 @@
 import { useCallback, useState, useEffect } from "react";
-import { Check, Timer } from "lucide-react";
+import { Check, Timer, Trash2 } from "lucide-react";
 import { Checkbox } from "@/shared/ui/checkbox";
-import type { WorkoutSessionSetResponse, UpdateWorkoutSetRequest } from "@/features/user-dashboard/workoutSessionTypes";
+import type { WorkoutSessionSetResponse, UpdateWorkoutSetRequest } from "@/features/workout-sessions/workoutSessionTypes";
 
 interface WorkoutSetRowProps {
   set: WorkoutSessionSetResponse;
   exerciseType: string;
   onUpdateSet: (setId: string, updates: UpdateWorkoutSetRequest) => void;
+  onRemoveSet?: (setId: string) => void;
+  canRemove?: boolean;
   disabled?: boolean;
 }
 
@@ -61,6 +63,8 @@ export default function WorkoutSetRow({
   set,
   exerciseType,
   onUpdateSet,
+  onRemoveSet,
+  canRemove = false,
   disabled = false,
 }: WorkoutSetRowProps) {
   const fields = getVisibleFieldsForExerciseType(exerciseType);
@@ -253,6 +257,21 @@ export default function WorkoutSetRow({
           Target: {formatTarget()}
         </span>
       </td>
+
+      {/* Remove button */}
+      {canRemove && onRemoveSet && (
+        <td className="w-10 px-2 py-2.5">
+          <button
+            type="button"
+            onClick={() => onRemoveSet(set.routineLogSetId)}
+            disabled={disabled}
+            className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Remove set"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </td>
+      )}
     </tr>
   );
 }

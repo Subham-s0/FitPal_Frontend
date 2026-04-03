@@ -66,14 +66,14 @@ const DashboardSidebar = ({ role, active, onChange, expanded, onExpandedChange }
           >
             <Icon
               className={`h-6 w-6 min-w-[24px] ${
-                active === id ? "text-black" : "text-[var(--text-sidebar)]"
+                active === id ? "text-white" : "text-[var(--text-sidebar)]"
               }`}
             />
             <span
               className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
                 isExpanded ? "block opacity-100" : "hidden opacity-0"
               } ${
-                active === id ? "text-black" : "text-[var(--text-sidebar)]"
+                active === id ? "text-white" : "text-[var(--text-sidebar)]"
               }`}
             >
               {label}
@@ -94,14 +94,14 @@ const DashboardSidebar = ({ role, active, onChange, expanded, onExpandedChange }
         >
           <Settings
             className={`h-6 w-6 min-w-[24px] ${
-              settingsActive ? "text-black" : "text-[var(--text-sidebar)]"
+              settingsActive ? "text-white" : "text-[var(--text-sidebar)]"
             }`}
           />
           <span
             className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
               isExpanded ? "block opacity-100" : "hidden opacity-0"
             } ${
-              settingsActive ? "text-black" : "text-[var(--text-sidebar)]"
+              settingsActive ? "text-white" : "text-[var(--text-sidebar)]"
             }`}
           >
             Settings

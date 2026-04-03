@@ -2,25 +2,22 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   confirmEsewaPaymentApi,
+  lookupEsewaPaymentApi,
   lookupKhaltiPaymentApi,
   markEsewaPaymentFailureApi,
 } from "@/features/payment/api";
+import type {
+  PaymentFailureFeedback,
+  PaymentGateway,
+} from "@/features/payment/checkout";
+import { authStore } from "@/features/auth/store";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { getMyProfileApi } from "@/features/profile/api";
 
 type Status = "loading" | "success" | "failure";
-type Gateway = "esewa" | "khalti";
-type FailureStatus = "failed" | "cancelled";
-
-type PaymentFailureFeedback = {
-  gateway: Gateway;
-  status: FailureStatus;
-  message: string;
-  paymentAttemptId: number;
-};
 
 type PaymentCallbackProps = {
-  gateway: Gateway;
+  gateway: PaymentGateway;
 };
 
 const CheckIcon = () => (
@@ -95,17 +92,17 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
 
           if (isSuccessPath) {
             const data = searchParams.get("data");
-            if (!data) {
-              setErrorMessage("Missing payment data from eSewa.");
-              setStatus("failure");
-              return;
-            }
-            const paymentStatus = await confirmEsewaPaymentApi({ paymentAttemptId: parsed, data });
+            const paymentStatus = data
+              ? await confirmEsewaPaymentApi({ paymentAttemptId: parsed, data })
+              : await lookupEsewaPaymentApi({ paymentAttemptId: parsed });
             if (paymentStatus.paymentStatus !== "COMPLETED") {
-              const message = paymentStatus.gatewayResponseMessage ?? "Payment was not completed in eSewa.";
+              const message = paymentStatus.gatewayResponseMessage
+                ?? (data
+                  ? "Payment was not completed in eSewa."
+                  : "eSewa did not return callback data, so payment status was checked directly.");
               setFailureFeedback({
                 gateway: "esewa",
-                status: "failed",
+                status: paymentStatus.paymentStatus === "CANCELLED" ? "cancelled" : "failed",
                 message,
                 paymentAttemptId: parsed,
               });
@@ -150,10 +147,21 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
         }
 
         const profile = await getMyProfileApi();
+        authStore.updateOnboardingStatus({
+          profileCompleted: profile.profileCompleted,
+          hasSubscription: profile.hasSubscription,
+          hasActiveSubscription: profile.hasActiveSubscription,
+          hasDashboardAccess: profile.hasDashboardAccess,
+        });
         setStatus("success");
 
         redirectTimeout = setTimeout(() => {
-          navigate(profile.hasActiveSubscription ? "/dashboard" : "/profile-setup", { replace: true });
+          navigate(
+            profile.profileCompleted
+              ? (profile.hasDashboardAccess ? "/dashboard" : "/membership")
+              : "/profile-setup",
+            { replace: true }
+          );
         }, 2000);
       } catch (err: unknown) {
         const message = getApiErrorMessage(err, "Payment verification failed.");

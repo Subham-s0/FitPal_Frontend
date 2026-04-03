@@ -9,9 +9,7 @@ export type PaymentStatus =
   | "CANCELLED";
 
 export interface EsewaInitiatePaymentRequest {
-  subscriptionId?: number;
-  planId?: number;
-  billingCycle?: BillingCycle;
+  subscriptionId: number;
   successUrl: string;
   failureUrl: string;
   billingName?: string;
@@ -29,9 +27,7 @@ export interface EsewaInitiatePaymentResponse {
 }
 
 export interface KhaltiInitiatePaymentRequest {
-  subscriptionId?: number;
-  planId?: number;
-  billingCycle?: BillingCycle;
+  subscriptionId: number;
   returnUrl: string;
   websiteUrl: string;
   billingName: string;

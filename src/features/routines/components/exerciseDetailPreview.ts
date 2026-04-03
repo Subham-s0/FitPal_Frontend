@@ -1,5 +1,5 @@
 import type { ExerciseItem } from "@/features/exercises";
-import type { RoutineExercise } from "@/features/user-dashboard/routineTypes";
+import type { RoutineExercise } from "@/features/routines/routineTypes";
 
 export type ExerciseDetailSource = "library" | "custom";
 
@@ -43,3 +43,4 @@ export function createExerciseDetailPreviewFromExerciseItem(
     secondaryMuscles: exercise.secondaryMuscles,
   };
 }
+

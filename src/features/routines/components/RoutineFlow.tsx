@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import RoutinesSectionNew from "@/features/user-dashboard/components/RoutinesSectionNew";
-import WorkoutDetail from "@/features/user-dashboard/screens/WorkoutDetail";
+import RoutinesSectionNew from "@/features/routines/components/RoutinesSectionNew";
+import WorkoutDetail from "@/features/routines/screens/WorkoutDetail";
 
 type View = "list" | "detail";
 
@@ -96,3 +96,4 @@ export function RoutineFlow({ onViewModeChange }: RoutineFlowProps) {
 }
 
 export default RoutineFlow;
+

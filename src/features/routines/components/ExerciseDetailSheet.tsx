@@ -7,7 +7,7 @@ import type {
   ExerciseLibraryResponse,
 } from "@/features/exercises/model";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
-import type { ExerciseDetailPreview } from "@/features/user-dashboard/components/exerciseDetailPreview";
+import type { ExerciseDetailPreview } from "@/features/routines/components/exerciseDetailPreview";
 
 interface ExerciseDetailSheetProps {
   exercise: ExerciseDetailPreview | null;

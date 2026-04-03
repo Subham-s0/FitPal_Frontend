@@ -3,6 +3,7 @@ export interface AuthRoutingState {
   profileCompleted: boolean;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
 }
 
 export const ADMIN_DASHBOARD_ROUTE = "/admin/dashboard";
@@ -39,8 +40,12 @@ export function getPostAuthRoute(state: AuthRoutingState) {
       return PROFILE_SETUP_ROUTE;
     }
 
-    if (!state.hasActiveSubscription) {
+    if (!state.hasSubscription) {
       return PROFILE_SETUP_ROUTE;
+    }
+
+    if (!state.hasDashboardAccess) {
+      return "/membership";
     }
   }
 

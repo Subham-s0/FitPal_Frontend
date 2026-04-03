@@ -4,6 +4,7 @@ import type {
   EsewaFailurePaymentRequest,
   EsewaInitiatePaymentRequest,
   EsewaInitiatePaymentResponse,
+  EsewaLookupPaymentRequest,
   KhaltiInitiatePaymentRequest,
   KhaltiInitiatePaymentResponse,
   KhaltiLookupPaymentRequest,
@@ -54,6 +55,14 @@ export async function markEsewaPaymentFailureApi(
   payload: EsewaFailurePaymentRequest
 ): Promise<PaymentAttemptStatusResponse> {
   const response = await apiClient.post<PaymentAttemptStatusResponse>("/payments/esewa/failure", payload);
+  return response.data;
+}
+
+/** POST /api/payments/esewa/lookup */
+export async function lookupEsewaPaymentApi(
+  payload: EsewaLookupPaymentRequest
+): Promise<PaymentAttemptStatusResponse> {
+  const response = await apiClient.post<PaymentAttemptStatusResponse>("/payments/esewa/lookup", payload);
   return response.data;
 }
 

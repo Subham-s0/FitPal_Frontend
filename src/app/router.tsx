@@ -27,6 +27,7 @@ import UserProfileSetup from "@/pages/user/UserProfileSetup";
 import GymProfileSetup from "@/pages/gym/GymProfileSetup";
 import ProfileSetupEntry from "@/pages/ProfileSetupEntry";
 import AdminLoginPortal from "@/pages/admin/AdminLoginPortal";
+import WorkoutSession from "@/pages/user/WorkoutSession";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const auth = useAuthState();
@@ -39,6 +40,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   const role = auth.role?.toUpperCase();
   const isSetupRoute = isProfileSetupRoute(location.pathname);
+  const isMembershipRoute = location.pathname === "/membership";
 
   if (role === "SUPERADMIN") {
     return <Navigate to={ADMIN_DASHBOARD_ROUTE} replace />;
@@ -53,11 +55,15 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       return <Navigate to={PROFILE_SETUP_ROUTE} replace />;
     }
 
-    if (auth.profileCompleted && !auth.hasActiveSubscription && !isSetupRoute) {
+    if (auth.profileCompleted && !auth.hasSubscription && !isSetupRoute) {
       return <Navigate to={PROFILE_SETUP_ROUTE} replace />;
     }
 
-    if (auth.profileCompleted && auth.hasActiveSubscription && isSetupRoute) {
+    if (auth.profileCompleted && !auth.hasDashboardAccess && !isSetupRoute && !isMembershipRoute) {
+      return <Navigate to="/membership" replace />;
+    }
+
+    if (auth.profileCompleted && auth.hasDashboardAccess && isSetupRoute) {
       return <Navigate to="/dashboard" replace />;
     }
 
@@ -90,6 +96,7 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
           profileCompleted: auth.profileCompleted,
           hasSubscription: auth.hasSubscription,
           hasActiveSubscription: auth.hasActiveSubscription,
+          hasDashboardAccess: auth.hasDashboardAccess,
         })}
         replace
       />
@@ -189,6 +196,14 @@ const AppRouter = () => (
         element={
           <ProtectedRoute>
             <GymProfileSetup />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/workout-session/:routineLogId"
+        element={
+          <ProtectedRoute>
+            <WorkoutSession />
           </ProtectedRoute>
         }
       />

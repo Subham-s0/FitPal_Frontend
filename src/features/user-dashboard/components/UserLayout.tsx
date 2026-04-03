@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useAuthState } from "@/features/auth/hooks";
 import { getDisplayNameFromEmail } from "@/shared/layout/dashboard-shell";
+import { ActiveSessionBar } from "@/features/workout-sessions/components/ActiveSessionBar";
 
 export interface UserLayoutSection {
   id: string;
@@ -175,7 +176,7 @@ const UserLayout = ({
             <input
               type="text"
               placeholder="Search routines..."
-              className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-2.5 pl-11 pr-4 font-sans text-sm text-white outline-none transition-colors focus:border-orange-600"
+              className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] px-4 py-2.5 pl-11 text-sm font-sans text-white outline-none transition-colors focus:border-orange-600"
             />
           </div>
         </div>
@@ -235,6 +236,9 @@ const UserLayout = ({
           </div>
         </div>
       </header>
+
+      {/* ACTIVE SESSION BAR - Shows when workout is in progress */}
+      <ActiveSessionBar />
 
       {/* MOBILE DRAWER OVERLAY */}
       <div
@@ -324,9 +328,7 @@ const UserLayout = ({
       </div>
 
       {/* SHELL */}
-      <div
-        className="user-shell flex flex-1 overflow-hidden"
-      >
+      <div className="user-shell flex flex-1 overflow-hidden">
         {/* DESKTOP SIDEBAR */}
         <aside
           className={`desktop-sidebar z-40 hidden h-full shrink-0 flex-col overflow-hidden border-r border-[var(--border-default)] bg-[var(--surface-sidebar)] transition-[width,padding] duration-300 md:flex ${
@@ -349,12 +351,12 @@ const UserLayout = ({
                 >
                   <Icon
                     size={24}
-                    className={`min-w-[24px] ${isActive ? "text-black" : "text-[var(--text-sidebar)]"}`}
+                    className={`min-w-[24px] ${isActive ? "text-white" : "text-[var(--text-sidebar)]"}`}
                   />
                   <span
                     className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
                       isSidebarExpanded ? "block opacity-100" : "hidden opacity-0"
-                    } ${isActive ? "text-black" : "text-[var(--text-sidebar)]"}`}
+                    } ${isActive ? "text-white" : "text-[var(--text-sidebar)]"}`}
                   >
                     {label}
                   </span>
@@ -373,12 +375,12 @@ const UserLayout = ({
             >
               <Settings
                 size={24}
-                className={`min-w-[24px] ${activeSection === "settings" ? "text-black" : "text-[var(--text-sidebar)]"}`}
+                className={`min-w-[24px] ${activeSection === "settings" ? "text-white" : "text-[var(--text-sidebar)]"}`}
               />
               <span
                 className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
                   isSidebarExpanded ? "block opacity-100" : "hidden opacity-0"
-                } ${activeSection === "settings" ? "text-black" : "text-[var(--text-sidebar)]"}`}
+                } ${activeSection === "settings" ? "text-white" : "text-[var(--text-sidebar)]"}`}
               >
                 Settings
               </span>
@@ -410,7 +412,7 @@ const UserLayout = ({
           style={{
             background:
               "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(234,88,12,0.05) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 15%, rgba(234,88,12,0.04) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 50% 85%, rgba(234,88,12,0.04) 0%, transparent 60%), #050505",
-            ...({ // Provide root variables for mobile spacing
+            ...({
               "--mobile-bottom-dock-height": isCompactBottomDock ? "68px" : "80px",
               "--mobile-safe-bottom": "env(safe-area-inset-bottom)",
             } as CSSProperties),
@@ -446,7 +448,7 @@ const UserLayout = ({
       </div>
 
       {/* MOBILE BOTTOM NAV */}
-      <div 
+      <div
         className={`bottom-nav pointer-events-none fixed inset-x-0 z-[100] transition-[bottom] will-change-[bottom] md:hidden ${bottomDockMotionClass}`}
         style={{ bottom: bottomDockBottom }}
       >
@@ -460,9 +462,7 @@ const UserLayout = ({
             boxShadow: bottomDockShadow,
           }}
         >
-          <div
-            className="pointer-events-none absolute inset-0 z-[-1]"
-          >
+          <div className="pointer-events-none absolute inset-0 z-[-1]">
             <div
               className={`absolute inset-0 bg-[rgb(18,18,20)] transition-[border-radius,opacity] ${bottomDockMotionClass} ${
                 isCompactBottomDock ? "rounded-none opacity-100" : "rounded-full opacity-0"
@@ -550,8 +550,9 @@ const UserLayout = ({
                     background: "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)",
                   }}
                 >
+                  {/* QR icon: white for contrast on the orange-yellow gradient */}
                   <QrCode
-                    className={`text-black transition-[width,height] ${bottomDockMotionClass}`}
+                    className={`text-white transition-[width,height] ${bottomDockMotionClass}`}
                     style={{ width: `${checkInIconSize}px`, height: `${checkInIconSize}px` }}
                   />
                 </div>

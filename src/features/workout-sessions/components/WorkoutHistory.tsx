@@ -13,11 +13,11 @@ import {
   getWorkoutSessionHistoryApi,
   getWorkoutSessionApi,
   workoutSessionQueryKeys,
-} from "@/features/user-dashboard/workoutSessionApi";
+} from "@/features/workout-sessions/workoutSessionApi";
 import type {
   WorkoutSessionSummaryResponse,
   WorkoutSessionResponse,
-} from "@/features/user-dashboard/workoutSessionTypes";
+} from "@/features/workout-sessions/workoutSessionTypes";
 
 interface WorkoutHistoryProps {
   onViewSession?: (sessionId: string) => void;
@@ -372,3 +372,4 @@ export default function WorkoutHistory({ onViewSession }: WorkoutHistoryProps) {
     </div>
   );
 }
+

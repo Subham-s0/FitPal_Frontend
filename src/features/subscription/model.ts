@@ -52,6 +52,7 @@ export interface UserSubscriptionResponse {
   profileCompleted: boolean;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
   subscriptionId: number;
   planId: number;
   planType: string;
@@ -86,6 +87,9 @@ export interface UserSubscriptionStateResponse {
   subscription: UserSubscriptionResponse | null;
   currentSubscription: UserSubscriptionResponse | null;
   upcomingSubscription: UserSubscriptionResponse | null;
+  currentAccessEndsAt: string | null;
+  nextMembershipStartsAt: string | null;
+  totalPaidCoverageEndsAt: string | null;
 }
 
 export interface UserSubscriptionHistoryItemResponse {

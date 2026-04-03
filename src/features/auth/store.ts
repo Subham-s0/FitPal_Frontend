@@ -13,6 +13,7 @@ export interface AuthState {
   approved: boolean;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
 }
 
 const defaultState: AuthState = {
@@ -27,6 +28,7 @@ const defaultState: AuthState = {
   approved: false,
   hasSubscription: false,
   hasActiveSubscription: false,
+  hasDashboardAccess: false,
 };
 
 const getInitialState = (): AuthState => {
@@ -44,6 +46,7 @@ const getInitialState = (): AuthState => {
         approved: Boolean(parsed.approved),
         hasSubscription: Boolean(parsed.hasSubscription),
         hasActiveSubscription: Boolean(parsed.hasActiveSubscription),
+        hasDashboardAccess: Boolean(parsed.hasDashboardAccess ?? parsed.hasActiveSubscription),
       };
     }
   } catch {
@@ -78,6 +81,7 @@ export const authStore = {
       approved: payload.approved,
       hasSubscription: payload.hasSubscription,
       hasActiveSubscription: payload.hasActiveSubscription,
+      hasDashboardAccess: payload.hasDashboardAccess,
     };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentState));
     notify();
@@ -91,6 +95,7 @@ export const authStore = {
     profileCompleted: boolean;
     hasSubscription: boolean;
     hasActiveSubscription: boolean;
+    hasDashboardAccess: boolean;
     providers?: string[];
     emailVerified?: boolean;
     submittedForReview?: boolean;
@@ -105,6 +110,7 @@ export const authStore = {
       approved: payload.approved ?? currentState.approved,
       hasSubscription: payload.hasSubscription,
       hasActiveSubscription: payload.hasActiveSubscription,
+      hasDashboardAccess: payload.hasDashboardAccess,
     };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(currentState));
     notify();

@@ -141,9 +141,9 @@ function PaymentRowCards({ items }: { items: UserPaymentHistoryItemResponse[] })
           </div>
 
           <div className="mt-4 rounded-xl border table-border table-bg-alt p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Address</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Billing Number</p>
             <p className="mt-1 text-xs text-slate-300">
-              {[payment.billingAddress, payment.billingCity].filter(Boolean).join(", ") || "Not provided"}
+              {payment.billingPhoneNumber || "Not provided"}
             </p>
           </div>
         </div>
@@ -251,9 +251,11 @@ export default function ProfilePaymentHistory() {
               Review membership payments, billing details, and wallet transaction status.
             </p>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
-            <Receipt className="h-3.5 w-3.5 text-orange-400" />
-            {pageData?.totalItems ?? 0} payments
+          <div className="flex w-full justify-end sm:w-auto">
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
+              <Receipt className="h-3.5 w-3.5 text-orange-400" />
+              {pageData?.totalItems ?? 0} payments
+            </div>
           </div>
         </div>
 
@@ -451,7 +453,7 @@ export default function ProfilePaymentHistory() {
                     <td className="px-3.5 py-3.5">
                       <p className="text-[12px] font-bold text-white">{payment.billingName || "—"}</p>
                       <p className="mt-0.5 text-[11px] table-text-muted truncate">
-                        {[payment.billingAddress, payment.billingCity].filter(Boolean).join(", ") || "No address"}
+                        {payment.billingPhoneNumber || "No number"}
                       </p>
                     </td>
                     <td className="px-3.5 py-3.5">

@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronRight,
@@ -10,6 +12,8 @@ import {
   Edit2,
   Trash2,
   Copy,
+  Play,
+  Loader2,
 } from "lucide-react";
 import {
   DndContext,
@@ -31,8 +35,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
-import MuscleHeatmap from "@/features/user-dashboard/components/MuscleHeatmap";
-import InlineRoutineEditor from "@/features/user-dashboard/components/InlineRoutineEditor";
+import MuscleHeatmap from "@/features/routines/components/MuscleHeatmap";
+import InlineRoutineEditor from "@/features/routines/components/InlineRoutineEditor";
+import StartWorkoutDayDialog from "@/features/routines/components/StartWorkoutDayDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
 import { getExerciseByIdApi } from "@/features/exercises/api";
-import type { Routine, WorkoutDay } from "@/features/user-dashboard/routineTypes";
+import type { Routine, WorkoutDay } from "@/features/routines/routineTypes";
 import {
   normalizeDayOrder,
   getExerciseInitials,
@@ -52,7 +57,7 @@ import {
   createDefaultDay,
   generateDefaultWorkoutDayName,
   generateUniqueWorkoutDayName,
-} from "@/features/user-dashboard/routineTypes";
+} from "@/features/routines/routineTypes";
 import {
   loadRoutines,
   deleteRoutine,
@@ -61,7 +66,15 @@ import {
   initializeRoutineStore,
   addRoutine,
   refreshRoutineStore,
-} from "@/features/user-dashboard/routineStore";
+} from "@/features/routines/routineStore";
+import {
+  getMyRoutineSettingsApi,
+  routineQueryKeys,
+} from "@/features/routines/routineApi";
+import {
+  startWorkoutSessionApi,
+  workoutSessionQueryKeys,
+} from "@/features/workout-sessions/workoutSessionApi";
 
 // ============================================
 // SORTABLE DAY ROW (for reordering inside the card)
@@ -70,21 +83,27 @@ import {
 interface SortableDayRowProps {
   day: WorkoutDay;
   routineId: string;
+  routineName: string;
   routines: Routine[];
+  isUpcomingDay?: boolean;
   onViewDay: (routineId: string, dayId: string) => void;
   onEditDay: (routineId: string, dayId: string) => void;
   onDeleteDay: (routineId: string, dayId: string) => void;
   onCopyDay: (routineId: string, dayId: string, targetRoutineId: string) => void;
+  onStartWorkout: (routineId: string, dayId: string, dayName: string, routineName: string) => void;
 }
 
 function SortableDayRow({ 
   day, 
   routineId, 
+  routineName,
   routines,
+  isUpcomingDay,
   onViewDay, 
   onEditDay,
   onDeleteDay,
   onCopyDay,
+  onStartWorkout,
 }: SortableDayRowProps) {
   const {
     attributes,
@@ -133,20 +152,33 @@ function SortableDayRow({
       {/* Day Card - Click to View */}
       <div
         onClick={() => onViewDay(routineId, day.id)}
-        className="flow-panel flow-panel-interactive flex flex-1 items-center gap-3 rounded-[1.5rem] p-3"
+        className={`flow-panel flow-panel-interactive flex flex-1 items-center gap-3 rounded-[1.5rem] p-3 ${
+          isUpcomingDay ? "border border-emerald-500/40 bg-emerald-500/5" : ""
+        }`}
       >
         {/* Clickable Day Info Area */}
         <div 
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
         >
           {/* Day Order Badge */}
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-orange-600/20 text-sm font-black text-orange-600">
+          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-sm font-black ${
+            isUpcomingDay 
+              ? "bg-emerald-500/20 text-emerald-400" 
+              : "bg-orange-600/20 text-orange-600"
+          }`}>
             {day.dayOrder}
           </div>
 
           {/* Day Info */}
           <div className="min-w-0 flex-1">
-            <p className="mb-0.5 text-sm font-bold text-white">{day.name}</p>
+            <div className="mb-0.5 flex items-center gap-2">
+              <p className="text-sm font-bold text-white">{day.name}</p>
+              {isUpcomingDay && (
+                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-400">
+                  Upcoming
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-gray-500">
               {exerciseCount} exercise{exerciseCount !== 1 ? "s" : ""} •{" "}
               {setCount} set{setCount !== 1 ? "s" : ""}
@@ -182,6 +214,16 @@ function SortableDayRow({
           </div>
         </div>
 
+        {/* Start Workout Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onStartWorkout(routineId, day.id, day.name, routineName);
+          }}
+          className="flex-shrink-0 rounded-xl bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-400 transition-colors hover:bg-emerald-500/20 hover:text-emerald-300"
+        >
+          <Play className="h-4 w-4" />
+        </button>
 
         {/* Three-dot Menu - Same style as routine card */}
         <div className={`relative flex-shrink-0 ${showMenu || showCopyDialog ? "z-[60]" : ""}`}>
@@ -197,7 +239,7 @@ function SortableDayRow({
 
           {showMenu && (
             <div 
-              className="flow-panel absolute right-0 top-full z-[70] mt-2 w-56 rounded-2xl py-2 shadow-xl"
+              className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
             <button
@@ -237,7 +279,7 @@ function SortableDayRow({
         {/* Copy Dialog */}
         {showCopyDialog && (
           <div 
-            className="flow-panel absolute right-0 top-full z-[80] mt-1 w-64 rounded-2xl p-4 shadow-xl"
+            className="absolute right-0 top-full z-[80] mt-1 w-64 rounded-2xl border border-white/10 bg-[#181818] p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-3 text-sm font-bold text-white">Copy to Routine</p>
@@ -298,6 +340,9 @@ const RoutinesSection = ({
   initialInlineEditRoutineId = null,
   initialExpandedRoutineId = null,
 }: RoutinesSectionProps) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
   // State
   const [routines, setRoutines] = useState<Routine[]>([]);
   // Initialise expanded set: include the routine we just came back from
@@ -311,16 +356,54 @@ const RoutinesSection = ({
     dayId: string;
   } | null>(null);
 
+  // Start workout dialog state
+  const [startWorkoutDialog, setStartWorkoutDialog] = useState<{
+    routineId: string;
+    dayId: string;
+    dayName: string;
+    routineName: string;
+  } | null>(null);
+
   // Inline editing state
   const [inlineEditRoutineId, setInlineEditRoutineId] = useState<string | null>(initialInlineEditRoutineId);
   const [isCreatingNewRoutine, setIsCreatingNewRoutine] = useState(false);
   const [librarySecondaryLookup, setLibrarySecondaryLookup] = useState<Record<number, string[]>>({});
+
+  // Fetch active routine settings to identify the upcoming day
+  const { data: routineSettings } = useQuery({
+    queryKey: routineQueryKeys.settings(),
+    queryFn: getMyRoutineSettingsApi,
+    staleTime: 30000,
+  });
+
+  // Get the upcoming day ID from active routine settings
+  const upcomingDayId = routineSettings?.activeSetting?.currentDayId ?? null;
+  const activeRoutineBackendId = routineSettings?.activeSetting?.routineId ?? null;
 
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  // Start workout session mutation
+  const startWorkoutMutation = useMutation({
+    mutationFn: ({ routineId, dayId }: { routineId: string; dayId: string }) =>
+      startWorkoutSessionApi({
+        mode: "ROUTINE",
+        routineId,
+        routineDayId: dayId,
+      }),
+    onSuccess: (session) => {
+      queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.today() });
+      toast.success("Workout started! 💪");
+      setStartWorkoutDialog(null);
+      navigate(`/workout-session/${session.routineLogId}`);
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to start workout", { description: error.message });
+    },
+  });
 
   // Load routines from the backend-backed store
   useEffect(() => {
@@ -698,6 +781,22 @@ const RoutinesSection = ({
     [routines, refreshRoutines, refreshRoutinesFromBackend]
   );
 
+  // Handle start workout from day row
+  const handleStartWorkout = useCallback(
+    (routineId: string, dayId: string, dayName: string, routineName: string) => {
+      setStartWorkoutDialog({ routineId, dayId, dayName, routineName });
+    },
+    []
+  );
+
+  const handleConfirmStartWorkout = useCallback(() => {
+    if (!startWorkoutDialog) return;
+    startWorkoutMutation.mutate({
+      routineId: startWorkoutDialog.routineId,
+      dayId: startWorkoutDialog.dayId,
+    });
+  }, [startWorkoutDialog, startWorkoutMutation]);
+
   // Generate routine summary
   const getRoutineSummaryText = useCallback((routine: Routine): string => {
     if (routine.description) return routine.description;
@@ -944,11 +1043,18 @@ const RoutinesSection = ({
                                     key={day.id}
                                     day={day}
                                     routineId={routine.id}
+                                    routineName={routine.name}
                                     routines={routines}
+                                    isUpcomingDay={
+                                      routine.isActive && 
+                                      routine.backendId === activeRoutineBackendId &&
+                                      day.backendId === upcomingDayId
+                                    }
                                     onViewDay={handleDayClick}
                                     onEditDay={handleDayEdit}
                                     onDeleteDay={handleDayDelete}
                                     onCopyDay={handleDayCopy}
+                                    onStartWorkout={handleStartWorkout}
                                   />
                                 ))}
                             </div>
@@ -1033,8 +1139,21 @@ const RoutinesSection = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Start Workout Dialog */}
+      <StartWorkoutDayDialog
+        open={startWorkoutDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setStartWorkoutDialog(null);
+        }}
+        dayName={startWorkoutDialog?.dayName ?? ""}
+        routineName={startWorkoutDialog?.routineName ?? ""}
+        onConfirm={handleConfirmStartWorkout}
+        isStarting={startWorkoutMutation.isPending}
+      />
     </UserSectionShell>
   );
 };
 
 export default RoutinesSection;
+

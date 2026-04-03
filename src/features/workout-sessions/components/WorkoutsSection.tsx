@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Clock3, Flame, History, Dumbbell } from "lucide-react";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
-import TodaysWorkout from "@/features/user-dashboard/components/TodaysWorkout";
-import WorkoutHistory from "@/features/user-dashboard/components/WorkoutHistory";
+import UpcomingSession from "@/features/workout-sessions/components/UpcomingSession";
+import WorkoutHistory from "@/features/workout-sessions/components/WorkoutHistory";
 import {
   getWorkoutSessionHistoryApi,
   workoutSessionQueryKeys,
-} from "@/features/user-dashboard/workoutSessionApi";
+} from "@/features/workout-sessions/workoutSessionApi";
 
 interface WorkoutsSectionProps {
   onOpenRoutines?: () => void;
@@ -175,10 +175,11 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       {/* Tab Content */}
       <div className="mt-4">
         {activeTab === "today" && (
-          <TodaysWorkout onOpenRoutines={onOpenRoutines} />
+          <UpcomingSession onOpenRoutines={onOpenRoutines} />
         )}
         {activeTab === "history" && <WorkoutHistory />}
       </div>
     </UserSectionShell>
   );
 }
+

@@ -690,7 +690,7 @@ const ExercisesScreen = () => {
           {/* Header */}
           <header className="mb-6 md:mb-8">
             <h1 className="text-3xl font-black uppercase leading-none tracking-tight text-white md:text-4xl">
-              <span className="text-gradient-fire">Exercises</span>
+              Exer<span className="text-gradient-fire">cises</span>
             </h1>
             <p className="mt-2 max-w-3xl text-[10px] font-black uppercase leading-[1.6] tracking-[0.18em] text-slate-500 md:text-[11px]">
               Advanced Exercise Library

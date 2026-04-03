@@ -17,6 +17,7 @@ const NotFound = () => {
         profileCompleted: auth.profileCompleted,
         hasSubscription: auth.hasSubscription,
         hasActiveSubscription: auth.hasActiveSubscription,
+        hasDashboardAccess: auth.hasDashboardAccess,
       })
     : "/";
 
@@ -27,6 +28,8 @@ const NotFound = () => {
         ? "admin dashboard"
         : redirectTarget === PROFILE_SETUP_ROUTE
           ? "profile setup"
+          : redirectTarget === "/membership"
+            ? "membership"
           : "dashboard";
 
   useEffect(() => {

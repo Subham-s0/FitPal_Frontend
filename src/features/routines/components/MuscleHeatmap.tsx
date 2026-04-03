@@ -6,8 +6,8 @@ import {
   BODY_BACK_IMAGE_URL,
   BODY_FRONT_IMAGE_URL,
 } from "@/features/user-dashboard/constants/muscleHeatmapAssets";
-import type { RoutineExercise } from "@/features/user-dashboard/routineTypes";
-import { computeMuscleDistribution } from "@/features/user-dashboard/routineTypes";
+import type { RoutineExercise } from "@/features/routines/routineTypes";
+import { computeMuscleDistribution } from "@/features/routines/routineTypes";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 
 // ============================================
@@ -706,3 +706,4 @@ const MuscleHeatmap = ({
 };
 
 export default MuscleHeatmap;
+

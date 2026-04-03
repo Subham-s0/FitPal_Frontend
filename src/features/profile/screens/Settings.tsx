@@ -34,7 +34,6 @@ import {
   TextInput,
 } from "@/features/profile/components/ProfileSetupShell";
 import type { UserProfileResponse } from "@/features/profile/model";
-import { getMySubscriptionApi } from "@/features/subscription/api";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
@@ -81,13 +80,14 @@ const getProviderLabel = (provider: string) => {
 const syncAuthStatus = (
   profile: Pick<
     UserProfileResponse,
-    "profileCompleted" | "hasSubscription" | "hasActiveSubscription" | "emailVerified" | "linkedAuthProviders"
+    "profileCompleted" | "hasSubscription" | "hasActiveSubscription" | "hasDashboardAccess" | "emailVerified" | "linkedAuthProviders"
   >
 ) => {
   authStore.updateOnboardingStatus({
     profileCompleted: profile.profileCompleted,
     hasSubscription: profile.hasSubscription,
     hasActiveSubscription: profile.hasActiveSubscription,
+    hasDashboardAccess: profile.hasDashboardAccess,
     providers: profile.linkedAuthProviders,
     emailVerified: profile.emailVerified,
   });
@@ -112,13 +112,7 @@ const SettingsScreen = () => {
     queryFn: getMyProfileApi,
   });
 
-  const subscriptionQuery = useQuery({
-    queryKey: ["user-profile-subscription"],
-    queryFn: getMySubscriptionApi,
-  });
-
   const profile = profileQuery.data ?? null;
-  const subscription = subscriptionQuery.data?.subscription ?? null;
   const linkedProviders = profile?.linkedAuthProviders ?? auth.providers ?? [];
   const supportsLocalPassword = linkedProviders.some((provider) => provider.toUpperCase() === "LOCAL");
 
@@ -180,17 +174,17 @@ const SettingsScreen = () => {
         active: Boolean(profile?.emailVerified),
       },
       {
-        label: "Active subscription",
-        value: profile?.hasActiveSubscription ? "Active" : "Inactive",
-        active: Boolean(profile?.hasActiveSubscription),
-      },
-      {
         label: "Profile completed",
         value: profile?.profileCompleted ? "Complete" : "Incomplete",
         active: Boolean(profile?.profileCompleted),
       },
+      {
+        label: "Sign-in methods",
+        value: linkedProviders.length > 0 ? `${linkedProviders.length} linked` : "Not linked",
+        active: linkedProviders.length > 0,
+      },
     ],
-    [profile]
+    [linkedProviders.length, profile]
   );
 
   const overviewStats = useMemo(
@@ -201,14 +195,14 @@ const SettingsScreen = () => {
         hint: linkedProviders.length === 1 ? "sign-in method" : "sign-in methods",
       },
       {
-        label: "Membership",
-        value: subscription?.planName ?? "Not selected",
-        hint: subscription?.billingCycle?.toLowerCase() ?? "choose a plan",
+        label: "Password",
+        value: supportsLocalPassword ? "Available" : "Provider only",
+        hint: supportsLocalPassword ? "manage in security" : "sign in with linked provider",
       },
       {
-        label: "Subscription",
-        value: profile?.hasActiveSubscription ? "Active" : "Inactive",
-        hint: subscription?.subscriptionStatus?.toLowerCase() ?? "status unavailable",
+        label: "Profile",
+        value: profile?.profileCompleted ? "Complete" : "Incomplete",
+        hint: profile?.profileCompleted ? "ready to use" : "finish remaining setup",
       },
       {
         label: "Email",
@@ -216,7 +210,7 @@ const SettingsScreen = () => {
         hint: profile?.email ?? "not loaded",
       },
     ],
-    [linkedProviders.length, profile, subscription]
+    [linkedProviders.length, profile, supportsLocalPassword]
   );
 
   const settingsSections: SettingsListItem[] = [
@@ -525,7 +519,7 @@ const SettingsScreen = () => {
                 onClick={() => navigate("/membership")}
                 className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
               >
-                Membership Page
+                Open Membership
                 <Gem className="h-3.5 w-3.5 text-orange-400" />
               </button>
               <button
@@ -620,7 +614,7 @@ const SettingsScreen = () => {
                   onClick={() => navigate("/membership")}
                   className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
                 >
-                  Membership Page
+                  Open Membership
                   <Gem className="h-3.5 w-3.5 text-orange-400" />
                 </button>
                 <button
@@ -661,6 +655,8 @@ const SettingsScreen = () => {
                 >
                   <button
                     type="button"
+                    aria-expanded={isCollapsible ? isActive : undefined}
+                    aria-controls={isCollapsible ? `settings-section-${section.id}` : undefined}
                     onClick={() => {
                       if (section.kind === "link") {
                         navigate(section.href);
@@ -736,7 +732,12 @@ const SettingsScreen = () => {
                   </button>
 
                   {isCollapsible && isActive ? (
-                    <div className="border-t table-border-cell table-bg-alt px-5 py-6">
+                    <div 
+                      id={`settings-section-${section.id}`}
+                      role="region"
+                      aria-labelledby={`settings-button-${section.id}`}
+                      className="border-t table-border-cell table-bg-alt px-5 py-6"
+                    >
                       {renderSectionContent(section.id)}
                     </div>
                   ) : null}

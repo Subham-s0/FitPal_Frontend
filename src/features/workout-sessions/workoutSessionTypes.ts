@@ -3,7 +3,7 @@ import type {
   RoutineFocusType,
   RoutineStructureType,
   SupersetGroupResponse,
-} from "@/features/user-dashboard/routineTypes";
+} from "@/features/routines/routineTypes";
 
 export type WorkoutSessionMode = "ROUTINE" | "FREESTYLE";
 export type TodaySessionState = "NONE" | "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
@@ -103,6 +103,8 @@ export interface TodayWorkoutSessionResponse {
 export interface StartWorkoutSessionRequest {
   mode: WorkoutSessionMode;
   title?: string | null;
+  routineId?: string | null;      // Optional: specific routine to use
+  routineDayId?: string | null;   // Optional: specific day to start
 }
 
 export interface UpdateWorkoutSetRequest {
@@ -154,3 +156,4 @@ export interface AddWorkoutSetRequest {
   warmup?: boolean;
   completed?: boolean;
 }
+

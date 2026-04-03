@@ -47,11 +47,12 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
         profileCompleted: auth.profileCompleted,
         hasSubscription: auth.hasSubscription,
         hasActiveSubscription: auth.hasActiveSubscription,
+        hasDashboardAccess: auth.hasDashboardAccess,
       })
     );
 
     previousAccessTokenRef.current = auth.accessToken;
-  }, [auth.accessToken, auth.hasActiveSubscription, auth.hasSubscription, auth.profileCompleted, auth.role, navigate]);
+  }, [auth.accessToken, auth.hasActiveSubscription, auth.hasDashboardAccess, auth.hasSubscription, auth.profileCompleted, auth.role, navigate]);
 
   useEffect(() => {
     const handleOAuthMessage = (event: MessageEvent) => {
@@ -78,6 +79,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
             profileCompleted: payload.auth.profileCompleted,
             hasSubscription: payload.auth.hasSubscription,
             hasActiveSubscription: payload.auth.hasActiveSubscription,
+            hasDashboardAccess: payload.auth.hasDashboardAccess,
           })
         );
         return;
@@ -129,6 +131,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
             profileCompleted: response.profileCompleted,
             hasSubscription: response.hasSubscription,
             hasActiveSubscription: response.hasActiveSubscription,
+            hasDashboardAccess: response.hasDashboardAccess,
           }),
           { replace: true }
         );
@@ -147,6 +150,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
             profileCompleted: response.profileCompleted,
             hasSubscription: response.hasSubscription,
             hasActiveSubscription: response.hasActiveSubscription,
+            hasDashboardAccess: response.hasDashboardAccess,
           }),
           { replace: true }
         );
@@ -165,6 +169,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
             profileCompleted: response.profileCompleted,
             hasSubscription: response.hasSubscription,
             hasActiveSubscription: response.hasActiveSubscription,
+            hasDashboardAccess: response.hasDashboardAccess,
           }),
           { replace: true }
         );

@@ -4,7 +4,7 @@ import type {
   RoutineDetailResponse,
   RoutineUpsertRequest,
   UserRoutineSettingsResponse,
-} from "@/features/user-dashboard/routineTypes";
+} from "@/features/routines/routineTypes";
 
 // ============================================
 // ROUTINE CRUD API
@@ -86,3 +86,4 @@ export const routineQueryKeys = {
   detail: (routineId: string) => [...routineQueryKeys.details(), routineId] as const,
   settings: () => [...routineQueryKeys.all, "settings"] as const,
 };
+

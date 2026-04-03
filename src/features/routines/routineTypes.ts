@@ -641,6 +641,95 @@ function getSupersetMembershipKey(
   return normalizeSupersetGroupId(exercise.supersetGroupId) ?? normalizeSupersetExerciseTag(exercise.supersetTag);
 }
 
+export function reconcileWorkoutDaySupersets(day: WorkoutDay): WorkoutDay {
+  const membershipCounts = new Map<string, number>();
+
+  for (const exercise of day.exercises) {
+    const key = getSupersetMembershipKey(exercise);
+    if (!key) {
+      continue;
+    }
+    membershipCounts.set(key, (membershipCounts.get(key) ?? 0) + 1);
+  }
+
+  const validMembershipKeys = new Set(
+    Array.from(membershipCounts.entries())
+      .filter(([, count]) => count >= 2)
+      .map(([key]) => key)
+  );
+
+  return {
+    ...day,
+    exercises: day.exercises.map((exercise) => {
+      const key = getSupersetMembershipKey(exercise);
+      if (!key || validMembershipKeys.has(key)) {
+        return exercise;
+      }
+
+      return {
+        ...exercise,
+        supersetTag: undefined,
+        supersetGroupId: null,
+      };
+    }),
+    supersetGroups: (day.supersetGroups ?? []).filter((group) => {
+      const groupId = normalizeSupersetGroupId(group.backendId);
+      const label = normalizeSupersetExerciseTag(group.label);
+
+      return (
+        (groupId !== null && validMembershipKeys.has(groupId)) ||
+        (label !== null && validMembershipKeys.has(label))
+      );
+    }),
+  };
+}
+
+export function removeSupersetFromWorkoutDay(
+  day: WorkoutDay,
+  exerciseId: string
+): WorkoutDay {
+  const targetExercise = day.exercises.find((exercise) => exercise.id === exerciseId);
+  if (!targetExercise) {
+    return day;
+  }
+
+  const targetGroupId = normalizeSupersetGroupId(targetExercise.supersetGroupId);
+  const targetTag = normalizeSupersetExerciseTag(targetExercise.supersetTag);
+  if (!targetGroupId && !targetTag) {
+    return day;
+  }
+
+  return reconcileWorkoutDaySupersets({
+    ...day,
+    exercises: day.exercises.map((exercise) => {
+      const exerciseGroupId = normalizeSupersetGroupId(exercise.supersetGroupId);
+      const exerciseTag = normalizeSupersetExerciseTag(exercise.supersetTag);
+      const belongsToTargetSuperset =
+        (targetGroupId !== null && exerciseGroupId === targetGroupId) ||
+        (targetTag !== null && exerciseTag === targetTag);
+
+      if (!belongsToTargetSuperset) {
+        return exercise;
+      }
+
+      return {
+        ...exercise,
+        supersetTag: undefined,
+        supersetGroupId: null,
+      };
+    }),
+    supersetGroups: (day.supersetGroups ?? []).filter((group) => {
+      const groupId = normalizeSupersetGroupId(group.backendId);
+      const label = normalizeSupersetExerciseTag(group.label);
+
+      return !(
+        (targetGroupId !== null && groupId === targetGroupId) ||
+        (targetTag !== null && label === targetTag)
+      );
+    }),
+  });
+}
+
 export function removeExerciseAndLinkedSupersetExercises(
   day: WorkoutDay,
   exerciseId: string

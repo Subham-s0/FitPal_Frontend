@@ -39,18 +39,18 @@ import {
   getRoutinePersistenceValidationError,
   normalizeDayOrder,
   getExerciseInitials,
-} from "@/features/user-dashboard/routineTypes";
+} from "@/features/routines/routineTypes";
 
 import {
   getRoutine,
   updateRoutine,
   addRoutine,
-} from "@/features/user-dashboard/routineStore";
-import ExerciseDetailSheet from "@/features/user-dashboard/components/ExerciseDetailSheet";
+} from "@/features/routines/routineStore";
+import ExerciseDetailSheet from "@/features/routines/components/ExerciseDetailSheet";
 import {
   createExerciseDetailPreviewFromRoutineExercise,
   type ExerciseDetailPreview,
-} from "@/features/user-dashboard/components/exerciseDetailPreview";
+} from "@/features/routines/components/exerciseDetailPreview";
 import { CustomSelect } from "@/shared/ui/CustomSelect";
 import {
   AlertDialog,
@@ -195,7 +195,7 @@ function SortableDayRow({
 
             {showMenu && (
               <div
-                className="flow-panel absolute right-0 top-full z-[9999] mt-2 w-48 rounded-2xl py-2 shadow-xl"
+                className="absolute right-0 top-full z-[9999] mt-2 w-48 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
@@ -646,3 +646,4 @@ export default function InlineRoutineEditor({
     </div>
   );
 }
+

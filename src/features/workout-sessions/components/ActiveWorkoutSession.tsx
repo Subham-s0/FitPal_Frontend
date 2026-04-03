@@ -15,19 +15,22 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import WorkoutSetRow from "./WorkoutSetRow";
+import WorkoutSummarySheet from "./WorkoutSummarySheet";
+import { ExerciseLibrarySheet, type ExerciseItem } from "@/features/exercises/components/ExerciseLibraryPanel";
 import {
   getTodayWorkoutSessionApi,
   updateWorkoutSetApi,
   completeWorkoutSessionApi,
   skipWorkoutSessionApi,
   addWorkoutSetApi,
+  addWorkoutExerciseApi,
   workoutSessionQueryKeys,
-} from "@/features/user-dashboard/workoutSessionApi";
+} from "@/features/workout-sessions/workoutSessionApi";
 import type {
   WorkoutSessionResponse,
   WorkoutSessionExerciseResponse,
   UpdateWorkoutSetRequest,
-} from "@/features/user-dashboard/workoutSessionTypes";
+} from "@/features/workout-sessions/workoutSessionTypes";
 
 interface ActiveWorkoutSessionProps {
   initialSession: WorkoutSessionResponse;
@@ -217,6 +220,8 @@ export default function ActiveWorkoutSession({
   const [completeNotes, setCompleteNotes] = useState("");
   const [showCompleteDialog, setShowCompleteDialog] = useState(false);
   const [showSkipDialog, setShowSkipDialog] = useState(false);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Live timer
   useEffect(() => {
@@ -285,15 +290,33 @@ export default function ActiveWorkoutSession({
     },
   });
 
+  // Add exercise mutation
+  const addExerciseMutation = useMutation({
+    mutationFn: (exercise: ExerciseItem) =>
+      addWorkoutExerciseApi(session.routineLogId, {
+        exerciseSource: exercise.source,
+        sourceExerciseId: exercise.id,
+      }),
+    onSuccess: (_, exercise) => {
+      queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.today() });
+      setShowExercisePicker(false);
+      toast.success(`${exercise.name} added to workout`);
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to add exercise", { description: error.message });
+    },
+  });
+
   // Complete session mutation
   const completeSessionMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (notes: string) =>
       completeWorkoutSessionApi(session.routineLogId, {
-        notes: completeNotes || null,
+        notes: notes || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.all });
       toast.success("Workout completed! 💪");
+      setShowSummary(false);
       setShowCompleteDialog(false);
       onSessionComplete?.();
     },
@@ -319,6 +342,11 @@ export default function ActiveWorkoutSession({
     },
   });
 
+  // Handle completing from summary sheet
+  const handleSummaryComplete = useCallback((notes: string) => {
+    completeSessionMutation.mutate(notes);
+  }, [completeSessionMutation]);
+
   const handleSetUpdate = useCallback(
     (exerciseId: string, setId: string, updates: UpdateWorkoutSetRequest) => {
       updateSetMutation.mutate({ exerciseId, setId, updates });
@@ -331,6 +359,13 @@ export default function ActiveWorkoutSession({
       addSetMutation.mutate(exerciseId);
     },
     [addSetMutation]
+  );
+
+  const handleAddExercise = useCallback(
+    (exercise: ExerciseItem) => {
+      addExerciseMutation.mutate(exercise);
+    },
+    [addExerciseMutation]
   );
 
   return (
@@ -430,13 +465,28 @@ export default function ActiveWorkoutSession({
             onToggleExpand={() => toggleExercise(exercise.routineLogExerciseId)}
           />
         ))}
+
+        {/* Add Exercise Button */}
+        <button
+          type="button"
+          onClick={() => setShowExercisePicker(true)}
+          disabled={addExerciseMutation.isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-orange-500/30 bg-orange-500/5 px-6 py-4 text-sm font-black uppercase tracking-[0.16em] text-orange-300 transition-all hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {addExerciseMutation.isPending ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Plus className="h-5 w-5" />
+          )}
+          Add Exercise
+        </button>
       </div>
 
       {/* Action Buttons */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
-          onClick={() => setShowCompleteDialog(true)}
+          onClick={() => setShowSummary(true)}
           disabled={stats.completedSets === 0}
           className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-sm font-black uppercase tracking-[0.16em] text-white transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
@@ -530,6 +580,25 @@ export default function ActiveWorkoutSession({
           </div>
         </div>
       )}
+
+      {/* Exercise Library Sheet */}
+      <ExerciseLibrarySheet
+        isOpen={showExercisePicker}
+        onClose={() => setShowExercisePicker(false)}
+        onAddExercise={handleAddExercise}
+        showAddButton={true}
+        showCustomButton={false}
+      />
+
+      {/* Workout Summary Sheet */}
+      <WorkoutSummarySheet
+        open={showSummary}
+        onOpenChange={setShowSummary}
+        session={session}
+        onComplete={handleSummaryComplete}
+        isCompleting={completeSessionMutation.isPending}
+      />
     </div>
   );
 }
+

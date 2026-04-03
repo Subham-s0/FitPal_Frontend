@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback } from "react";
 import { Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/shared/api/client";
@@ -7,7 +7,6 @@ import { CustomDatePicker } from "@/shared/ui/CustomDatePicker";
 import { CustomSelect } from "@/shared/ui/CustomSelect";
 import {
   Field,
-  SectionLabel,
   TextInput,
 } from "@/features/profile/components/ProfileSetupShell";
 import {
@@ -26,6 +25,7 @@ import {
   validatePhone,
   validateUsername,
 } from "@/features/profile/utils/profileValidation";
+import { useEditableForm } from "@/shared/hooks/useEditableForm";
 
 const GENDER_OPTIONS: Array<{ value: Gender; label: string }> = [
   { value: "MALE", label: "Male" },
@@ -43,9 +43,6 @@ interface ProfileInfoFormState {
   weight: string;
 }
 
-type ProfileInfoField = keyof ProfileInfoFormState;
-type ProfileInfoErrors = Partial<Record<ProfileInfoField, string>>;
-
 interface ProfileInfoSectionProps {
   profile: UserProfileResponse;
   onUpdate: () => void;
@@ -62,64 +59,42 @@ const createInfoForm = (profile: UserProfileResponse): ProfileInfoFormState => (
   weight: profile.weight != null ? String(profile.weight) : "",
 });
 
+const validateInfoForm = (form: ProfileInfoFormState): Partial<Record<keyof ProfileInfoFormState, string>> => {
+  const errors: Partial<Record<keyof ProfileInfoFormState, string>> = {};
+  const usernameError = validateUsername(form.username);
+  const phoneError = validatePhone(form.phone);
+  const dobError = validatePastDate(form.dob);
+
+  if (usernameError) errors.username = usernameError;
+  if (phoneError) errors.phone = phoneError;
+  if (dobError) errors.dob = dobError;
+
+  return errors;
+};
+
 export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
-  const [form, setForm] = useState<ProfileInfoFormState>(createInfoForm(profile));
-  const [originalForm, setOriginalForm] = useState<ProfileInfoFormState>(createInfoForm(profile));
-  const [errors, setErrors] = useState<ProfileInfoErrors>({});
+  const createForm = useCallback(() => createInfoForm(profile), [profile]);
+  
+  const {
+    form,
+    isEditing,
+    isDirty,
+    isSaving,
+    isDiscardDialogOpen,
+    errors,
+    updateField,
+    handleEdit,
+    handleSave,
+    handleCancel,
+    handleConfirmDiscard,
+    setIsDiscardDialogOpen,
+  } = useEditableForm({
+    createForm,
+    validate: validateInfoForm,
+  });
 
-  useEffect(() => {
-    if (!isEditing) {
-      const newForm = createInfoForm(profile);
-      setForm(newForm);
-      setOriginalForm(newForm);
-      setErrors({});
-      setIsDirty(false);
-    }
-  }, [profile, isEditing]);
-
-  const updateField = <K extends keyof ProfileInfoFormState>(
-    field: K,
-    value: ProfileInfoFormState[K]
-  ) => {
-    setForm((current) => ({ ...current, [field]: value }));
-    setIsDirty(true);
-    setErrors((currentErrors) => {
-      if (!currentErrors[field]) return currentErrors;
-      const nextErrors = { ...currentErrors };
-      delete nextErrors[field];
-      return nextErrors;
-    });
-  };
-
-  const validateForm = (): boolean => {
-    const nextErrors: ProfileInfoErrors = {};
-    const usernameError = validateUsername(form.username);
-    const phoneError = validatePhone(form.phone);
-    const dobError = validatePastDate(form.dob);
-
-    if (usernameError) nextErrors.username = usernameError;
-    if (phoneError) nextErrors.phone = phoneError;
-    if (dobError) nextErrors.dob = dobError;
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setOriginalForm(form);
-    setIsDirty(false);
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) return;
-
-    try {
-      setIsSaving(true);
+  const onSave = () =>
+    handleSave(async () => {
       await updateProfileInfoApi({
         userName: form.username.trim(),
         firstName: form.firstName.trim() || null,
@@ -130,35 +105,11 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
         height: form.height ? Number(form.height) : null,
         weight: form.weight ? Number(form.weight) : null,
       });
-
       toast.success("Profile information updated successfully");
-      setIsEditing(false);
-      setIsDirty(false);
       onUpdate();
-    } catch (error) {
+    }).catch((error) => {
       toast.error(getApiErrorMessage(error, "Failed to update profile information"));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (isDirty) {
-      setIsDiscardDialogOpen(true);
-      return;
-    }
-    setForm(originalForm);
-    setIsEditing(false);
-    setErrors({});
-  };
-
-  const handleConfirmDiscard = () => {
-    setForm(originalForm);
-    setIsEditing(false);
-    setIsDirty(false);
-    setErrors({});
-    setIsDiscardDialogOpen(false);
-  };
+    });
 
   return (
     <>
@@ -282,7 +233,7 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
             </button>
             <button
               type="button"
-              onClick={handleSave}
+              onClick={onSave}
               disabled={isSaving || !isDirty}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-orange-500/25 transition-all duration-200 hover:shadow-orange-500/40 disabled:opacity-50"
             >

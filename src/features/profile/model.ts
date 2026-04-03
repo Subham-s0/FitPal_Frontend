@@ -31,6 +31,7 @@ export interface ProfileSetupStatusResponse {
   currentOnboardingStep: number;
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
 }
 
 export interface DocumentUploadResponse {
@@ -302,4 +303,5 @@ export interface UserProfileResponse {
   linkedAuthProviders: string[];
   hasSubscription: boolean;
   hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
 }

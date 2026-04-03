@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback } from "react";
 import { Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/shared/api/client";
@@ -28,6 +28,7 @@ import {
   validateHeight,
   validateWeight,
 } from "@/features/profile/utils/profileValidation";
+import { useEditableForm } from "@/shared/hooks/useEditableForm";
 
 const FITNESS_LEVEL_OPTIONS: Array<{ value: FitnessLevel; label: string }> = [
   { value: "BEGINNER", label: "Beginner" },
@@ -50,9 +51,6 @@ interface ProfileGoalsFormState {
   primaryFocus: string;
 }
 
-type ProfileGoalsField = keyof ProfileGoalsFormState;
-type ProfileGoalsErrors = Partial<Record<ProfileGoalsField, string>>;
-
 interface ProfileGoalsSectionProps {
   profile: UserProfileResponse;
   onUpdate: () => void;
@@ -65,66 +63,45 @@ const createGoalsForm = (profile: UserProfileResponse): ProfileGoalsFormState =>
   primaryFocus: profile.primaryFitnessFocus ?? "",
 });
 
+const validateGoalsForm = (form: ProfileGoalsFormState): Partial<Record<keyof ProfileGoalsFormState, string>> => {
+  const errors: Partial<Record<keyof ProfileGoalsFormState, string>> = {};
+  const heightError = validateHeight(form.height);
+  const weightError = validateWeight(form.weight);
+
+  if (heightError) errors.height = heightError;
+  if (weightError) errors.weight = weightError;
+
+  return errors;
+};
+
 export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
-  const [form, setForm] = useState<ProfileGoalsFormState>(createGoalsForm(profile));
-  const [originalForm, setOriginalForm] = useState<ProfileGoalsFormState>(createGoalsForm(profile));
-  const [errors, setErrors] = useState<ProfileGoalsErrors>({});
+  const createForm = useCallback(() => createGoalsForm(profile), [profile]);
 
-  useEffect(() => {
-    if (!isEditing) {
-      const newForm = createGoalsForm(profile);
-      setForm(newForm);
-      setOriginalForm(newForm);
-      setErrors({});
-      setIsDirty(false);
-    }
-  }, [profile, isEditing]);
+  const {
+    form,
+    isEditing,
+    isDirty,
+    isSaving,
+    isDiscardDialogOpen,
+    errors,
+    updateField,
+    handleEdit,
+    handleSave,
+    handleCancel,
+    handleConfirmDiscard,
+    setIsDiscardDialogOpen,
+  } = useEditableForm({
+    createForm,
+    validate: validateGoalsForm,
+  });
 
-  const updateField = <K extends keyof ProfileGoalsFormState>(
-    field: K,
-    value: ProfileGoalsFormState[K]
-  ) => {
-    setForm((current) => ({ ...current, [field]: value }));
-    setIsDirty(true);
-    setErrors((currentErrors) => {
-      if (!currentErrors[field]) return currentErrors;
-      const nextErrors = { ...currentErrors };
-      delete nextErrors[field];
-      return nextErrors;
-    });
-  };
-
-  const validateForm = (): boolean => {
-    const nextErrors: ProfileGoalsErrors = {};
-    const heightError = validateHeight(form.height);
-    const weightError = validateWeight(form.weight);
-
-    if (heightError) nextErrors.height = heightError;
-    if (weightError) nextErrors.weight = weightError;
-
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setOriginalForm(form);
-    setIsDirty(false);
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) return;
+  const onSave = () => {
     if (!profile.userName?.trim()) {
       toast.error("Set a username before updating body metrics");
       return;
     }
 
-    try {
-      setIsSaving(true);
+    handleSave(async () => {
       await Promise.all([
         updateProfileInfoApi({
           userName: profile.userName,
@@ -141,34 +118,11 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
           primaryFitnessFocus: (form.primaryFocus || null) as PrimaryFitnessFocus | null,
         }),
       ]);
-
       toast.success("Fitness goals updated successfully");
-      setIsEditing(false);
-      setIsDirty(false);
       onUpdate();
-    } catch (error) {
+    }).catch((error) => {
       toast.error(getApiErrorMessage(error, "Failed to update fitness goals"));
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCancel = () => {
-    if (isDirty) {
-      setIsDiscardDialogOpen(true);
-      return;
-    }
-    setForm(originalForm);
-    setIsEditing(false);
-    setErrors({});
-  };
-
-  const handleConfirmDiscard = () => {
-    setForm(originalForm);
-    setIsEditing(false);
-    setIsDirty(false);
-    setErrors({});
-    setIsDiscardDialogOpen(false);
+    });
   };
 
   return (
@@ -312,7 +266,7 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
             </button>
             <button
               type="button"
-              onClick={handleSave}
+              onClick={onSave}
               disabled={isSaving || !isDirty}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-orange-500/25 transition-all duration-200 hover:shadow-orange-500/40 disabled:opacity-50"
             >

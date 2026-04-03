@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Gem, Target, User, ArrowUpRight, Check } from "lucide-react";
+import { Gem, Target, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { getMyProfileApi } from "@/features/profile/api";
@@ -14,9 +14,10 @@ import { cn } from "@/shared/lib/utils";
 import { ProfileImageSection } from "@/features/profile/components/ProfileImageSection";
 import { ProfileInfoSection } from "@/features/profile/components/ProfileInfoSection";
 import { ProfileGoalsSection } from "@/features/profile/components/ProfileGoalsSection";
+import { ProfileMembershipTab } from "@/features/profile/components/ProfileMembershipTab";
 import { QuickStats } from "@/features/profile/components/QuickStats";
-import { SectionLabel } from "@/features/profile/components/ProfileSetupShell";
 import type { UserProfileResponse } from "@/features/profile/model";
+import "@/shared/lib/animations.css";
 
 type ProfileTab = "profile" | "membership" | "goals";
 
@@ -26,18 +27,13 @@ const resolveTab = (search: string): ProfileTab => {
   return "profile";
 };
 
-const formatMoney = (amount: number) =>
-  new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-
 const syncAuthStatus = (
   profile: Pick<
     UserProfileResponse,
     | "profileCompleted"
     | "hasSubscription"
     | "hasActiveSubscription"
+    | "hasDashboardAccess"
     | "emailVerified"
     | "linkedAuthProviders"
   >
@@ -46,6 +42,7 @@ const syncAuthStatus = (
     profileCompleted: profile.profileCompleted,
     hasSubscription: profile.hasSubscription,
     hasActiveSubscription: profile.hasActiveSubscription,
+    hasDashboardAccess: profile.hasDashboardAccess,
     providers: profile.linkedAuthProviders,
     emailVerified: profile.emailVerified,
   });
@@ -75,9 +72,7 @@ const ProfileContainer = () => {
 
   const profile = profileQuery.data ?? null;
   const subscription = subscriptionQuery.data?.subscription ?? null;
-
   const activePlan = plansQuery.data?.find((p) => p.planId === subscription?.planId);
-  const planFeatures = activePlan?.features || [];
 
   useEffect(() => {
     if (!profile) return;
@@ -203,135 +198,13 @@ const ProfileContainer = () => {
             )}
 
             {activeTab === "membership" && (
-              <div className="animate-fade-in space-y-5 sm:space-y-6">
-                <div className="rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-7">
-                  <SectionLabel>Membership</SectionLabel>
-                  {subscription ? (
-                    <>
-                      <div className="rounded-[22px] border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5 sm:p-7">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <h3 className="text-xl font-black uppercase text-white sm:text-2xl">
-                              {subscription.planName}
-                            </h3>
-                            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-orange-400 sm:text-xs">
-                              {subscription.planType} · {subscription.billingCycle}
-                            </p>
-                          </div>
-                          <span className="self-start rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[9px] font-bold uppercase tracking-wider text-white sm:text-[10px]">
-                            {subscription.subscriptionStatus}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4 sm:gap-3">
-                          {[
-                            { label: "Base", value: formatMoney(subscription.baseAmount) },
-                            { label: "Billed", value: formatMoney(subscription.billedAmount) },
-                            { label: "Tax", value: formatMoney(subscription.taxAmount) },
-                            { label: "Total", value: formatMoney(subscription.totalAmount) },
-                          ].map((item) => (
-                            <div
-                              key={item.label}
-                              className="rounded-xl border table-border bg-black/40 p-3.5 text-center transition-all hover:border-orange-500/30 hover:bg-orange-500/5 shadow-sm"
-                            >
-                              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                                {item.label}
-                              </p>
-                              <p className="mt-1 text-base font-black text-white sm:text-lg">
-                                {item.value}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="mt-4 flex flex-wrap gap-2 sm:mt-5">
-                          <button
-                            type="button"
-                            onClick={() => navigate("/membership")}
-                            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-orange-500/20 transition-all hover:shadow-orange-500/35 hover:-translate-y-0.5"
-                          >
-                            Upgrade Membership
-                            <ArrowUpRight className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate("/membership")
-                            }
-                            className="rounded-full border border-white/20 table-bg-alt px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
-                          >
-                            View Plans
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-[18px] border table-border table-bg-alt px-5 py-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                            Status
-                          </p>
-                          <p className="mt-1 text-[15px] font-black text-white">
-                            {subscription.hasActiveSubscription ? "Active" : "Pending"}
-                          </p>
-                        </div>
-                        <div className="rounded-[18px] border table-border table-bg-alt px-5 py-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                            Auto Renew
-                          </p>
-                          <p className="mt-1 text-[15px] font-black text-white">
-                            {subscription.autoRenew ? "Enabled" : "Disabled"}
-                          </p>
-                        </div>
-                        <div className="rounded-[18px] border table-border table-bg-alt px-5 py-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-                            Discount
-                          </p>
-                          <p className="mt-1 text-[15px] font-black text-white">
-                            {subscription.discountAmount > 0
-                              ? `${formatMoney(subscription.discountAmount)} (${subscription.discountPercent.toFixed(0)}%)`
-                              : "None"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {planFeatures.length > 0 && (
-                        <div className="mt-5 border-t table-border-cell pt-5 sm:mt-7 sm:pt-7">
-                          <p className="mb-4 text-[11px] font-black uppercase tracking-[0.16em] text-orange-500">
-                            Features Included
-                          </p>
-                          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            {planFeatures.map((feature, i) => (
-                              <li key={i} className="flex items-center gap-3.5 rounded-[14px] border table-border table-bg p-3.5 transition-colors hover:border-white/20 hover:bg-white/[0.02]">
-                                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500/15 shadow-[0_0_10px_rgba(249,115,22,0.2)]">
-                                  <Check className="h-3.5 w-3.5 text-orange-400 stroke-[3px]" />
-                                </div>
-                                <p className="text-[12px] font-bold text-slate-200">{feature}</p>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center rounded-3xl border table-border table-bg-alt p-10 text-center">
-                      <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10 border border-orange-500/20 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
-                        <Gem className="h-8 w-8 text-orange-500" />
-                      </div>
-                      <p className="text-lg font-black uppercase text-white">No Subscription</p>
-                      <p className="mt-2 text-sm text-slate-400">Choose a plan to upgrade your membership today.</p>
-                      
-                      <button
-                        type="button"
-                        onClick={() => navigate("/membership")}
-                        className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.14em] text-white shadow-lg shadow-orange-500/20 transition-all hover:shadow-orange-500/35 hover:-translate-y-0.5"
-                      >
-                        View Plans
-                        <ArrowUpRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ProfileMembershipTab
+                subscription={subscription}
+                activePlan={activePlan}
+                plans={plansQuery.data ?? []}
+                isPlansLoading={plansQuery.isLoading}
+                isPlansError={plansQuery.isError}
+              />
             )}
 
             {activeTab === "goals" && (

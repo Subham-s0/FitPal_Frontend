@@ -11,8 +11,8 @@ import {
   RotateCw,
 } from "lucide-react";
 
-import { getMyRoutineSettingsApi } from "@/features/user-dashboard/routineApi";
-import type { UserRoutineSettingItemResponse } from "@/features/user-dashboard/routineTypes";
+import { getMyRoutineSettingsApi } from "@/features/routines/routineApi";
+import type { UserRoutineSettingItemResponse } from "@/features/routines/routineTypes";
 import { SectionLabel } from "@/features/profile/components/ProfileSetupShell";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { Badge } from "@/shared/ui/badge";
@@ -183,8 +183,33 @@ export default function ProfileRoutineSettings() {
       </div>
 
       {routineSettingsQuery.isLoading ? (
-        <div className="flex items-center justify-center rounded-2xl border border-white/5 bg-black/20 py-16">
-          <Loader2 className="h-7 w-7 animate-spin text-orange-500" />
+        <div className="space-y-3">
+          {/* Loading skeleton for routine settings */}
+          <div className="rounded-2xl border border-white/5 bg-black/20 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-40 animate-pulse rounded bg-white/10" />
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-white/10" />
+                </div>
+                <div className="h-3 w-32 animate-pulse rounded bg-white/5" />
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.03] p-4">
+                  <div className="h-2 w-16 animate-pulse rounded bg-white/10" />
+                  <div className="mt-3 h-4 w-24 animate-pulse rounded bg-white/10" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-white/5 bg-black/20 p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+              <span className="text-sm text-slate-400">Loading routine settings...</span>
+            </div>
+          </div>
         </div>
       ) : data?.activeSetting ? (
         <div className="rounded-2xl border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-4 sm:p-5">
@@ -255,3 +280,4 @@ export default function ProfileRoutineSettings() {
     </div>
   );
 }
+

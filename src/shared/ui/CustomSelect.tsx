@@ -60,7 +60,7 @@ export function CustomSelect({
         >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent className="border-white/10 bg-[#111] text-slate-100">
+        <SelectContent className="border-white/10 bg-[#181818] text-slate-100 shadow-xl backdrop-blur-none">
           {options.map((option) => (
             <SelectItem key={option.value} value={option.value} className="focus:bg-orange-600/20 focus:text-white">
               <span className="flex items-center gap-2">

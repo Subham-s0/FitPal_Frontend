@@ -1011,6 +1011,7 @@ const FitPalGymSetup: FC = () => {
       approved: profile.approved,
       hasSubscription: false,
       hasActiveSubscription: false,
+      hasDashboardAccess: false,
     });
   };
 

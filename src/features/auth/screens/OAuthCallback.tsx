@@ -64,6 +64,7 @@ const OAuthCallback = () => {
           profileCompleted: authPayload.profileCompleted,
           hasSubscription: authPayload.hasSubscription,
           hasActiveSubscription: authPayload.hasActiveSubscription,
+          hasDashboardAccess: authPayload.hasDashboardAccess,
         }),
         { replace: true }
       );

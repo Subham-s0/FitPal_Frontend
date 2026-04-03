@@ -32,7 +32,7 @@ import type {
   WorkoutDay,
   RoutineExercise,
   RoutineSet,
-} from "@/features/user-dashboard/routineTypes";
+} from "@/features/routines/routineTypes";
 import {
   getExerciseInitials,
   getVisibleSetFields,
@@ -41,20 +41,22 @@ import {
   getWorkoutDayMinimumValidationError,
   getWorkoutDayPersistenceValidationError,
   normalizeDayOrder,
+  reconcileWorkoutDaySupersets,
   removeExerciseAndLinkedSupersetExercises,
-} from "@/features/user-dashboard/routineTypes";
+  removeSupersetFromWorkoutDay,
+} from "@/features/routines/routineTypes";
 import {
   deleteRoutine,
   getRoutine,
   updateRoutine,
-} from "@/features/user-dashboard/routineStore";
-import MuscleHeatmap from "@/features/user-dashboard/components/MuscleHeatmap";
-import ExerciseDetailSheet from "@/features/user-dashboard/components/ExerciseDetailSheet";
+} from "@/features/routines/routineStore";
+import MuscleHeatmap from "@/features/routines/components/MuscleHeatmap";
+import ExerciseDetailSheet from "@/features/routines/components/ExerciseDetailSheet";
 import {
   createExerciseDetailPreviewFromExerciseItem,
   createExerciseDetailPreviewFromRoutineExercise,
   type ExerciseDetailPreview,
-} from "@/features/user-dashboard/components/exerciseDetailPreview";
+} from "@/features/routines/components/exerciseDetailPreview";
 
 // ============================================
 // PROPS
@@ -211,6 +213,7 @@ interface ExerciseCardProps {
   onRemoveExercise?: (exerciseId: string) => void;
   onUpdateNotes?: (exerciseId: string, notes: string) => void;
   onLinkSuperset?: (exerciseId: string, partnerId: string) => void;
+  onRemoveSuperset?: (exerciseId: string) => void;
 }
 
 const ExerciseCard = ({
@@ -226,6 +229,7 @@ const ExerciseCard = ({
   onRemoveExercise,
   onUpdateNotes,
   onLinkSuperset,
+  onRemoveSuperset,
 }: ExerciseCardProps) => {
   const fields = getVisibleSetFields(exercise.exerciseType);
   const totalSets = exercise.sets.length;
@@ -234,7 +238,11 @@ const ExerciseCard = ({
   const [showSupersetPicker, setShowSupersetPicker] = useState(false);
   const exMenuBtnRef = useRef<HTMLButtonElement>(null);
   const [exMenuPos, setExMenuPos] = useState({ top: 0, right: 0 });
-  const supersetCandidates = allExercises.filter((ex) => ex.id !== exercise.id);
+  const supersetKey = exercise.supersetGroupId?.trim() || exercise.supersetTag?.trim() || null;
+  const isInSuperset = supersetKey !== null;
+  const supersetCandidates = allExercises.filter(
+    (ex) => ex.id !== exercise.id && !(ex.supersetGroupId?.trim() || ex.supersetTag?.trim())
+  );
 
   return (
     <div className="flow-panel rounded-[1.75rem] border border-white/10 bg-[rgba(10,10,10,0.88)] p-4 transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)]">
@@ -329,7 +337,18 @@ const ExerciseCard = ({
                   style={{ top: exMenuPos.top, right: exMenuPos.right }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {supersetCandidates.length > 0 && (
+                  {isInSuperset ? (
+                    <button
+                      onClick={() => {
+                        setShowExMenu(false);
+                        onRemoveSuperset?.(exercise.id);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-amber-300 transition-colors hover:bg-amber-500/10"
+                    >
+                      <X className="h-4 w-4" />
+                      Remove Superset
+                    </button>
+                  ) : supersetCandidates.length > 0 ? (
                     <button
                       onClick={() => { setShowExMenu(false); setShowSupersetPicker(true); }}
                       className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/5"
@@ -337,7 +356,7 @@ const ExerciseCard = ({
                       <Link className="h-4 w-4 text-purple-400" />
                       Add to Superset
                     </button>
-                  )}
+                  ) : null}
                   <button
                     onClick={() => { setShowExMenu(false); onRemoveExercise?.(exercise.id); }}
                     className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
@@ -741,6 +760,13 @@ const WorkoutDetail = ({
     });
   }, []);
 
+  const handleRemoveSuperset = useCallback((exerciseId: string) => {
+    setLocalDay((prev) => {
+      if (!prev) return prev;
+      return removeSupersetFromWorkoutDay(prev, exerciseId);
+    });
+  }, []);
+
   const handleAddExercise = useCallback((exerciseItem: ExerciseItem) => {
     setShowLibrarySheet(false);
 
@@ -787,9 +813,10 @@ const WorkoutDetail = ({
 
   const handleSave = useCallback(async () => {
     if (!routine || !localDay) return;
+    const dayToPersist = reconcileWorkoutDaySupersets(localDay);
 
     const validationError =
-      getWorkoutDayPersistenceValidationError(localDay) || getWorkoutDayMinimumValidationError(localDay);
+      getWorkoutDayPersistenceValidationError(dayToPersist) || getWorkoutDayMinimumValidationError(dayToPersist);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -798,11 +825,11 @@ const WorkoutDetail = ({
     try {
       const updatedRoutine = await updateRoutine(routineId, {
         ...routine,
-        days: routine.days.map((d) => (d.id === dayId ? localDay : d)),
+        days: routine.days.map((d) => (d.id === dayId ? dayToPersist : d)),
       }, { throwOnSyncError: true });
       setRoutine(updatedRoutine);
       const updatedDay = updatedRoutine.days.find((item) => item.id === dayId) ?? null;
-      setLocalDay(updatedDay ? { ...updatedDay } : localDay);
+      setLocalDay(updatedDay ? { ...updatedDay } : dayToPersist);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save workout day.");
       return;
@@ -1121,6 +1148,7 @@ const WorkoutDetail = ({
                           onRemoveExercise={handleRemoveExercise}
                           onUpdateNotes={handleUpdateNotes}
                           onLinkSuperset={handleLinkSuperset}
+                          onRemoveSuperset={handleRemoveSuperset}
                         />
                       )}
                     </SortableExerciseWrapper>
@@ -1238,3 +1266,4 @@ const WorkoutDetail = ({
 };
 
 export default WorkoutDetail;
+

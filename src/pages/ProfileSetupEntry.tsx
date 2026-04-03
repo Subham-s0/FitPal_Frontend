@@ -12,10 +12,10 @@ const ProfileSetupEntry = () => {
   useEffect(() => {
     // Only redirect regular users with active subscriptions
     // Gym users don't require subscriptions
-    if (!isGymRole && auth.hasActiveSubscription) {
+    if (!isGymRole && auth.hasDashboardAccess) {
       navigate("/dashboard", { replace: true });
     }
-  }, [isGymRole, auth.hasActiveSubscription, navigate]);
+  }, [isGymRole, auth.hasDashboardAccess, navigate]);
 
   return isGymRole ? <GymProfileSetupScreen /> : <UserProfileSetupScreen />;
 };
