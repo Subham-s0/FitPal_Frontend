@@ -10,6 +10,7 @@ import type {
   PaymentFailureFeedback,
   PaymentGateway,
 } from "@/features/payment/checkout";
+import { PROFILE_SETUP_ROUTE } from "@/features/auth/auth-routing";
 import { authStore } from "@/features/auth/store";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { getMyProfileApi } from "@/features/profile/api";
@@ -57,14 +58,14 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
     : ["Payment sent to Khalti", "Verifying with FitPal", "Activating membership"];
 
   const navigateToRecoveryFlow = () => {
-    navigate(isMembershipFlow ? "/membership" : "/profile-setup", {
+    navigate(isMembershipFlow ? "/membership" : PROFILE_SETUP_ROUTE, {
       replace: true,
       state: failureFeedback ? { paymentFeedback: failureFeedback, openPaymentStep: true } : undefined,
     });
   };
 
   const navigateToPlanSelection = () => {
-    navigate(isMembershipFlow ? "/membership" : "/profile-setup", { replace: true });
+    navigate(isMembershipFlow ? "/membership" : PROFILE_SETUP_ROUTE, { replace: true });
   };
 
   useEffect(() => {
@@ -158,8 +159,8 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
         redirectTimeout = setTimeout(() => {
           navigate(
             profile.profileCompleted
-              ? (profile.hasDashboardAccess ? "/dashboard" : "/membership")
-              : "/profile-setup",
+              ? (profile.hasDashboardAccess ? "/dashboard" : PROFILE_SETUP_ROUTE)
+              : PROFILE_SETUP_ROUTE,
             { replace: true }
           );
         }, 2000);

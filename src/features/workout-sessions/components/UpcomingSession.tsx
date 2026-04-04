@@ -198,7 +198,7 @@ function SkippedCard({ title }: { title: string }) {
           </p>
           <h3 className="mt-1 text-xl font-black text-white">{title}</h3>
           <p className="mt-2 text-sm text-gray-400">
-            You skipped today's workout. No worries, get back at it tomorrow!
+            You skipped this workout. You can still start another workout today.
           </p>
         </div>
       </div>
@@ -266,7 +266,7 @@ export default function UpcomingSession({ onOpenRoutines }: UpcomingSessionProps
     mutationFn: (routineLogId: string) => skipWorkoutSessionApi(routineLogId, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.today() });
-      toast.info("Session skipped");
+      toast.info("Session skipped. You can still start another workout today.");
     },
     onError: (error: Error) => {
       toast.error("Failed to skip session", { description: error.message });
@@ -282,7 +282,7 @@ export default function UpcomingSession({ onOpenRoutines }: UpcomingSessionProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.today() });
-      toast.info("Session skipped");
+      toast.info("Session skipped. You can still start another workout today.");
     },
     onError: (error: Error) => {
       toast.error("Failed to skip session", { description: error.message });

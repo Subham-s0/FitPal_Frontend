@@ -1212,8 +1212,7 @@ const MembershipUpgrade = () => {
     }
     closeActionSurface();
   };
-  const isFlexibleInfoOpen = false;
-  const setIsFlexibleInfoOpen = (_open: boolean) => { };
+  const [isFlexibleInfoOpen, setIsFlexibleInfoOpen] = useState(false);
 
   useEffect(() => {
     const handlePageShow = () => {
@@ -1472,6 +1471,7 @@ const MembershipUpgrade = () => {
 
   const handleUpgrade = async () => {
     if (isBusy || isNextMembershipSelectionLocked) return;
+    if (checkoutLaunchInFlightRef.current) return;
     if (!validatePaymentSelection()) return;
 
     if (selectedPaymentMethod === "khalti") {
@@ -1779,6 +1779,15 @@ const MembershipUpgrade = () => {
                               ? "No pause slots remain in this billing window."
                               : `Schedule a pause from 1–30 days starting tomorrow.`}
                     </p>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsFlexibleInfoOpen(true)}
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] border border-white/10 bg-white/[0.03] px-5 py-2.5 text-[12px] font-black uppercase tracking-[0.1em] text-slate-200 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
+                    >
+                      <Eye size={14} />
+                      View Flexible Guide
+                    </button>
 
                     <div className="mt-4 grid gap-2.5">
                       <button

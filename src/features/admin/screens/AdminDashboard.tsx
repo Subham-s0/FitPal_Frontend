@@ -30,7 +30,9 @@ import { DefaultLayout } from "@/shared/layout/dashboard-shell";
 import ManageGyms from "@/features/admin/components/ManageGyms";
 import ManagePayments from "@/features/admin/components/ManagePayments";
 import ManagePlans from "@/features/admin/components/ManagePlans";
+import ManageSettlements from "@/features/admin/components/ManageSettlements";
 import ManageUsers from "@/features/admin/components/ManageUsers";
+import AdminSettings from "@/features/admin/components/AdminSettings";
 import { cn } from "@/shared/lib/utils";
 import { useLocation } from "react-router-dom";
 
@@ -122,12 +124,6 @@ const healthStats: HealthStat[] = [
     icon: <AlertTriangle className="h-5 w-5 text-amber-400" />,
     panelClassName: "border-amber-500/15 bg-amber-500/[0.04]",
   },
-];
-
-const settlementRows = [
-  { cycle: "Mar 15, 2026", gyms: 18, amount: "Rs. 482,000", status: "Processed" },
-  { cycle: "Mar 20, 2026", gyms: 12, amount: "Rs. 318,500", status: "Queued" },
-  { cycle: "Mar 25, 2026", gyms: 21, amount: "Rs. 596,200", status: "Pending Review" },
 ];
 
 const adminNotices = [
@@ -389,66 +385,7 @@ const AdminDashboard = () => {
       case "payments":
         return <ManagePayments />;
       case "settlements":
-        return (
-          <div className="mx-auto max-w-[1400px] space-y-6">
-            <div>
-              <h1 className="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
-                Settlement <span className="text-gradient-fire">Center</span>
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                Track payout cycles, review pending transfers, and reconcile gym settlement batches.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <KPICard title="Pending Cycles" value="03" subtext="Awaiting finance review" icon={<CalendarRange className="h-5 w-5 text-orange-400" />} />
-              <KPICard title="This Week" value="Rs. 1.39M" change="+9.4%" icon={<DollarSign className="h-5 w-5 text-orange-400" />} />
-              <KPICard title="Completed" value="51" subtext="Settlement runs this quarter" icon={<CheckCircle className="h-5 w-5 text-orange-300" />} />
-            </div>
-
-            <SectionCard>
-              <div className="mb-6 flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="flex items-center gap-2 text-lg font-bold text-white">
-                    <DollarSign className="h-5 w-5 text-orange-400" />
-                    Upcoming Settlement Runs
-                  </h3>
-                  <p className="mt-1 text-sm text-zinc-400">Latest payout windows across partner gyms.</p>
-                </div>
-                <button className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400 transition hover:border-orange-500/30 hover:text-white">
-                  Export
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left">
-                  <thead>
-                    <tr className="border-b border-white/10 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500">
-                      <th className="pb-3 pl-2">Cycle</th>
-                      <th className="pb-3 text-center">Gyms</th>
-                      <th className="pb-3 text-center">Amount</th>
-                      <th className="pb-3 pr-2 text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-[11px] font-bold">
-                    {settlementRows.map((row) => (
-                      <tr key={row.cycle} className="border-b border-white/[0.06] last:border-b-0">
-                        <td className="py-3 pl-2 text-white">{row.cycle}</td>
-                        <td className="py-3 text-center text-zinc-300">{row.gyms}</td>
-                        <td className="py-3 text-center text-zinc-300">{row.amount}</td>
-                        <td className="py-3 pr-2 text-right">
-                          <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-[9px] uppercase tracking-[0.18em] text-orange-200">
-                            {row.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </SectionCard>
-          </div>
-        );
+        return <ManageSettlements />;
       case "notices":
         return (
           <div className="mx-auto max-w-[1200px] space-y-6">
@@ -496,16 +433,8 @@ const AdminDashboard = () => {
         );
       case "settings":
         return (
-          <div className="mx-auto max-w-4xl">
-            <SectionCard>
-              <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
-                Admin <span className="text-gradient-fire">Settings</span>
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-                Settings now inherit the same original admin palette as the rest of the dashboard shell.
-                This section is ready for deeper configuration controls whenever you want to add them.
-              </p>
-            </SectionCard>
+          <div className="mx-auto max-w-[1400px]">
+            <AdminSettings />
           </div>
         );
       default:

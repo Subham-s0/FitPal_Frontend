@@ -45,7 +45,7 @@ export function getPostAuthRoute(state: AuthRoutingState) {
     }
 
     if (!state.hasDashboardAccess) {
-      return "/membership";
+      return PROFILE_SETUP_ROUTE;
     }
   }
 

@@ -49,6 +49,10 @@ export interface KhaltiLookupPaymentRequest {
   pidx?: string;
 }
 
+export interface EsewaLookupPaymentRequest {
+  paymentAttemptId: number;
+}
+
 export interface EsewaConfirmPaymentRequest {
   paymentAttemptId: number;
   data: string;

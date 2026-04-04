@@ -343,7 +343,7 @@ const RoutinesSection = ({
   const queryClient = useQueryClient();
 
   // State
-  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>(() => loadRoutines());
   // Initialise expanded set: include the routine we just came back from
   const [expandedRoutines, setExpandedRoutines] = useState<Set<string>>(
     () => new Set(initialExpandedRoutineId ? [initialExpandedRoutineId] : [])
@@ -377,16 +377,16 @@ const RoutinesSection = ({
 
   // Subscribe to routine list query to trigger refresh when invalidated
   // This ensures the local store is refreshed when sync-to-routine updates the backend
-  useQuery({
+  const routinesListQuery = useQuery({
     queryKey: routineQueryKeys.list(),
-    queryFn: async () => {
-      // Refresh the local routine store from backend
-      const refreshedRoutines = await refreshRoutineStore();
-      setRoutines(refreshedRoutines);
-      return refreshedRoutines;
-    },
+    queryFn: refreshRoutineStore,
     staleTime: 30000,
   });
+
+  useEffect(() => {
+    if (!routinesListQuery.data) return;
+    setRoutines(routinesListQuery.data);
+  }, [routinesListQuery.data]);
 
   // Get the upcoming day ID from active routine settings
   const upcomingDayId = routineSettings?.activeSetting?.currentDayId ?? null;

@@ -63,6 +63,8 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
 import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui/badge";
+import { cn } from "@/shared/lib/utils";
 import type {
   AdminAccountRole,
   AdminUserDetailResponse,
@@ -168,30 +170,31 @@ const SORTS: SortChoice[] = [
 
 function RolePill({ role }: { role: AdminAccountRole }) {
   const m: Record<AdminAccountRole, { label: string; dot: string; cls: string }> = {
-    USER: { label: "Member", dot: "bg-green-400", cls: "bg-green-500/10 text-green-400 border-green-500/25" },
-    GYM: { label: "Gym owner", dot: "bg-orange-400", cls: "bg-orange-500/10 text-orange-400 border-orange-500/25" },
-    SUPERADMIN: { label: "Admin", dot: "bg-violet-400", cls: "bg-violet-500/10 text-violet-300 border-violet-500/25" },
+    USER: { label: "Member", dot: "bg-green-500", cls: "bg-green-500/10 text-green-500 border-green-500/30" },
+    GYM: { label: "Gym owner", dot: "bg-orange-500", cls: "bg-orange-500/10 text-orange-500 border-orange-500/30" },
+    SUPERADMIN: { label: "Admin", dot: "bg-violet-500", cls: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
   };
   const cfg = m[role];
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${cfg.cls}`}>
+    <Badge className={cn("gap-1.5 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider", cfg.cls)}>
       <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${cfg.dot}`} />
       {cfg.label}
-    </span>
+    </Badge>
   );
 }
 
 function StatusPill({ active, emailVerified }: { active: boolean; emailVerified: boolean }) {
   return (
     <div className="flex flex-col gap-1">
-      <span
-        className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider ${
-          active ? "border-green-500/25 bg-green-500/10 text-green-400" : "border-red-500/25 bg-red-500/10 text-red-400"
-        }`}
+      <Badge
+        className={cn(
+          "w-fit gap-1.5 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider",
+          active ? "border-green-500/30 bg-green-500/10 text-green-500" : "border-red-500/30 bg-red-500/10 text-red-500"
+        )}
       >
-        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${active ? "bg-green-400" : "bg-red-400"}`} />
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${active ? "bg-green-500" : "bg-red-500"}`} />
         {active ? "Active" : "Suspended"}
-      </span>
+      </Badge>
       <span className="text-[10px] table-text-muted">
         Email:{" "}
         {emailVerified ? <span className="font-semibold text-green-400/90">Verified</span> : <span className="text-yellow-400">Unverified</span>}

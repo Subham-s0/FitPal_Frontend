@@ -40,7 +40,6 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   const role = auth.role?.toUpperCase();
   const isSetupRoute = isProfileSetupRoute(location.pathname);
-  const isMembershipRoute = location.pathname === "/membership";
 
   if (role === "SUPERADMIN") {
     return <Navigate to={ADMIN_DASHBOARD_ROUTE} replace />;
@@ -59,8 +58,9 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       return <Navigate to={PROFILE_SETUP_ROUTE} replace />;
     }
 
-    if (auth.profileCompleted && !auth.hasDashboardAccess && !isSetupRoute && !isMembershipRoute) {
-      return <Navigate to="/membership" replace />;
+    // No live membership (unpaid, pending, or expired): finish or renew via profile setup (plan + payment steps).
+    if (auth.profileCompleted && !auth.hasDashboardAccess && !isSetupRoute) {
+      return <Navigate to={PROFILE_SETUP_ROUTE} replace />;
     }
 
     if (auth.profileCompleted && auth.hasDashboardAccess && isSetupRoute) {

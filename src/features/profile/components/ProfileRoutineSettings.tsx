@@ -12,82 +12,12 @@ import {
 } from "lucide-react";
 
 import { getMyRoutineSettingsApi } from "@/features/routines/routineApi";
-import type { UserRoutineSettingItemResponse } from "@/features/routines/routineTypes";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { SectionLabel } from "@/features/profile/components/ProfileSetupShell";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/lib/utils";
 import { formatDateTime, formatRoutineType, formatStructureType } from "@/shared/lib/formatters";
-
-function RoutineSettingCard({ setting }: { setting: UserRoutineSettingItemResponse }) {
-  return (
-    <div
-      className={cn(
-        "rounded-2xl border p-4 transition-colors",
-        setting.active
-          ? "border-orange-500/25 bg-orange-500/5"
-          : "border-white/5 bg-black/20 hover:border-white/10"
-      )}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-black uppercase tracking-tight text-white">
-              {setting.routineName}
-            </p>
-            <Badge
-              className={cn(
-                "border-0",
-                setting.active
-                  ? "bg-emerald-500/12 text-emerald-400 hover:bg-emerald-500/20"
-                  : "bg-white/10 text-slate-300"
-              )}
-            >
-              {setting.active ? "ACTIVE" : "INACTIVE"}
-            </Badge>
-          </div>
-          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-400">
-            {formatStructureType(setting.structureType)} · {formatRoutineType(setting.routineType)}
-          </p>
-        </div>
-
-        <div className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
-          {setting.totalDays} day{setting.totalDays === 1 ? "" : "s"}
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Current Day</p>
-          <p className="mt-1 text-sm font-bold text-white">{setting.currentDayName || "Not set"}</p>
-          <p className="mt-1 text-[11px] text-slate-400">
-            {setting.currentDayOrder != null ? `Day ${setting.currentDayOrder}` : "No tracked day"}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Cycles Completed</p>
-          <p className="mt-1 text-sm font-black text-white">{setting.cyclesCompleted}</p>
-        </div>
-
-        <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Activated</p>
-          <p className="mt-1 text-xs text-slate-200">{formatDateTime(setting.activatedAt)}</p>
-        </div>
-
-        <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Last Session</p>
-          <p className="mt-1 text-xs text-slate-200">{formatDateTime(setting.lastSessionAt)}</p>
-          {!setting.active && setting.deactivatedAt && (
-            <p className="mt-1 text-[10px] text-slate-500">Ended {formatDateTime(setting.deactivatedAt)}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ProfileRoutineSettings() {
   const navigate = useNavigate();
@@ -97,15 +27,6 @@ export default function ProfileRoutineSettings() {
   });
 
   const data = routineSettingsQuery.data ?? null;
-
-  const summary = useMemo(() => {
-    const settings = data?.settings ?? [];
-    return {
-      tracked: settings.length,
-      active: settings.filter((item) => item.active).length,
-      cycles: settings.reduce((sum, item) => sum + item.cyclesCompleted, 0),
-    };
-  }, [data]);
 
   if (routineSettingsQuery.isError) {
     return (
@@ -125,23 +46,21 @@ export default function ProfileRoutineSettings() {
           <div>
             <SectionLabel className="!mb-2">Routine Settings</SectionLabel>
             <p className="text-xs text-slate-400">
-              Review active routine progress, tracked cycles, and last session timing.
+              View your active routine, activation date, and last session timing.
             </p>
           </div>
           <div className="flex items-center gap-2 self-start rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
             <Dumbbell className="h-3.5 w-3.5 text-orange-400" />
-            {summary.tracked} tracked routines
+            {data?.activeSetting ? "1 active routine" : "No active routine"}
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-400">Active Routines</p>
-            <p className="mt-1 text-xl font-black text-white">{summary.active}</p>
-          </div>
-          <div className="rounded-xl border border-sky-500/15 bg-sky-500/5 p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-sky-400">Cycles Completed</p>
-            <p className="mt-1 text-xl font-black text-white">{summary.cycles}</p>
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-400">Status</p>
+            <p className="mt-1 text-xl font-black text-white">
+              {data?.activeSetting ? "Active" : "Inactive"}
+            </p>
           </div>
           <div className="rounded-xl border border-orange-500/15 bg-orange-500/5 p-4">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-orange-400">Current Focus</p>
@@ -185,7 +104,6 @@ export default function ProfileRoutineSettings() {
 
       {routineSettingsQuery.isLoading ? (
         <div className="space-y-3">
-          {/* Loading skeleton for routine settings */}
           <div className="rounded-2xl border border-white/5 bg-black/20 p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-2">
@@ -259,25 +177,6 @@ export default function ProfileRoutineSettings() {
           </p>
         </div>
       )}
-
-      {data?.settings?.length ? (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-white">Tracked Routine History</p>
-            <p className="text-[11px] text-slate-400">{data.settings.length} entries</p>
-          </div>
-          {data.settings.map((setting) => (
-            <RoutineSettingCard key={setting.userRoutineSettingId} setting={setting} />
-          ))}
-        </div>
-      ) : !routineSettingsQuery.isLoading ? (
-        <div className="rounded-2xl border border-white/5 bg-black/20 px-6 py-12 text-center">
-          <p className="text-sm font-bold text-white">No tracked routine settings yet</p>
-          <p className="mt-2 text-xs text-slate-400">
-            Activate a routine first and the progress settings will appear here.
-          </p>
-        </div>
-      ) : null}
     </div>
   );
 }

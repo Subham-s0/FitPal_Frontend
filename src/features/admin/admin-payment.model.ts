@@ -34,6 +34,8 @@ export type AdminPaymentHistoryItemResponse = {
   paymentAttemptId: number;
   accountId: number;
   accountEmail: string;
+  /** Member username (USER accounts); omitted on older API responses */
+  accountUserName?: string | null;
   subscriptionId: number | null;
   planId: number | null;
   planType: string | null;

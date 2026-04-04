@@ -74,10 +74,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Clock,
   Loader2,
   LogOut,
   Map,
+  MapPin,
   MapPinned,
   Maximize2,
   Pause,
@@ -214,7 +216,7 @@ const buildActivityCellClass = (displayState: DashboardMonthlyActivityDayRespons
       " border border-red-500/20 bg-red-500/[0.06] text-red-400 hover:scale-[1.08] hover:-rotate-[4deg] hover:border-red-300/35";
   } else if (displayState === "TODAY") {
     classes +=
-      " border-2 border-orange-600 bg-gradient-to-br from-orange-600 to-yellow-400 text-black shadow-[0_0_15px_rgba(234,88,12,0.5)]";
+      " border-2 border-orange-600 bg-gradient-to-br from-orange-600 to-yellow-400 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]";
   } else {
     classes +=
       " border border-white/5 bg-white/[0.02] text-white/15 hover:scale-[1.08] hover:-rotate-[4deg] hover:border-white/20";
@@ -765,6 +767,10 @@ const UserDashboard = () => {
     setActiveSection("routines");
   };
 
+  const handleOpenRoutinesSection = () => {
+    setActiveSection("routines");
+  };
+
   const handlePauseOrResume = () => {
     if (isUpdatingMembership) {
       return;
@@ -868,7 +874,7 @@ const UserDashboard = () => {
               /* Active Check-In Card */
               <>
                 <div className="mb-3 flex flex-wrap items-center gap-3 lg:mb-2.5 lg:gap-2.5">
-                  <Check className="h-7 w-7 shrink-0 text-emerald-500 lg:h-6 lg:w-6" />
+                  <Check className="h-7 w-7 shrink-0 text-green-500 lg:h-6 lg:w-6" />
                   <h2 className="text-2xl font-black uppercase tracking-[-0.03em]">
                     Active <span className="text-gradient-fire">Session</span>
                   </h2>
@@ -878,21 +884,28 @@ const UserDashboard = () => {
                 </p>
 
                 <div className="mt-1 flex flex-1 flex-col gap-6 lg:gap-6">
-                  <div className="relative flex min-h-[196px] flex-1 flex-col items-center justify-center overflow-hidden rounded-3xl border border-emerald-500/20 bg-[rgba(16,35,25,0.6)] p-6 lg:min-h-[198px]">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(74,222,128,0.12),transparent_65%)] opacity-60" />
+                  <div className="relative flex flex-1 flex-col overflow-hidden rounded-[1.75rem] border border-green-500/28 bg-green-500/[0.08] p-5 lg:min-h-[198px]">
+                    <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(74,222,128,0.15),transparent_70%)]" />
 
-                    <div className="relative z-10 text-center">
-                      <h3 className="mb-4 text-xl font-black uppercase text-emerald-400 lg:text-2xl">
-                        {activeCheckIn.gymName || "Unknown Gym"}
-                      </h3>
-
-                      <div className="mb-2 flex items-center justify-center gap-2">
-                        <Clock className="h-5 w-5 text-emerald-500" />
-                        <span className="font-mono text-4xl font-black text-emerald-400 lg:text-5xl">
-                          {elapsedTime}
-                        </span>
+                    <div className="relative z-10 flex flex-1 flex-col">
+                      <div className="mb-3 flex items-center gap-2">
+                        <MapPin className="h-[18px] w-[18px] text-green-500" />
+                        <h3 className="text-lg font-black tracking-tight text-white">
+                          {activeCheckIn.gymName || "Unknown Gym"}
+                        </h3>
                       </div>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">Time Elapsed</p>
+
+                      <div className="flex flex-1 flex-col items-center justify-center rounded-[1.25rem] border border-green-500/20 bg-green-500/[0.04] p-4 text-center">
+                        <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-green-500/60">
+                          Session Time
+                        </p>
+                        <div className="font-mono text-[42px] font-black tracking-tight text-green-500 leading-none">
+                          {elapsedTime}
+                        </div>
+                        <p className="mt-2 flex items-center gap-1 text-[11px] text-white/40">
+                          <Clock className="h-3.5 w-3.5" /> Started at {new Date(activeCheckIn.checkInAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -1359,14 +1372,16 @@ const UserDashboard = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={handleUpcomingSessionAction}
+                    onClick={handleOpenRoutinesSection}
                     disabled={startUpcomingSessionMutation.isPending}
+                    title="Open routines"
+                    aria-label="Open routines"
                     className="btn-ghost rounded-2xl px-5 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {startUpcomingSessionMutation.isPending ? (
                       <Loader2 size={20} className="animate-spin" />
                     ) : (
-                      <Play size={20} />
+                      <ClipboardList size={20} />
                     )}
                   </button>
                 </div>

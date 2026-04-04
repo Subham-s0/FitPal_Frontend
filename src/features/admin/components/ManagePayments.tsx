@@ -41,6 +41,7 @@ import {
   type RevenueTrendGranularity,
   REVENUE_TREND_GRANULARITIES,
 } from "@/features/payment/payment.constants";
+import { PaymentAttemptDetailFields } from "@/features/payment/components/PaymentAttemptDetailFields";
 import type { PaymentMethod, PaymentStatus } from "@/features/payment/model";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { Badge } from "@/shared/ui/badge";
@@ -66,7 +67,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui/select";
-import { Label } from "@/shared/ui/label";
 import { cn } from "@/shared/lib/utils";
 
 const FIRE = "var(--gradient-fire)";
@@ -112,9 +112,9 @@ const formatDateTime = (iso: string | null | undefined) => {
 const formatTrendAxis = (iso: string, g: RevenueTrendGranularity) => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  if (g === "YEARLY") return String(d.getFullYear());
-  if (g === "MONTHLY") return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  if (g === "YEARLY") return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+  if (g === "MONTHLY") return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return d.toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
 };
 
 type StatusFilter = "ALL" | PaymentStatus;
@@ -236,7 +236,7 @@ export default function ManagePayments() {
     setPage(0);
   };
 
-  const COL_W = ["22%", "14%", "14%", "12%", "10%", "10%", "14%", "4%"];
+  const COL_W = ["17%", "11%", "12%", "14%", "11%", "9%", "9%", "10%", "7%"];
   const colStyle = (i: number) => ({ width: COL_W[i] });
 
   return (
@@ -266,63 +266,99 @@ export default function ManagePayments() {
       </div>
 
       {/* One horizontal strip: revenue + compact charts (counts for Pending/Failed/etc. live in Filters) */}
-      <div className="flex min-w-0 flex-nowrap items-stretch gap-2 overflow-x-auto pb-1">
-        <div className="flex w-[132px] shrink-0 flex-col justify-center rounded-xl border border-orange-500/25 bg-orange-500/[0.06] px-2.5 py-2">
-          <div className="flex items-center gap-1.5">
+      <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-3 overflow-x-auto pb-1">
+        <div className="flex flex-1 min-w-[140px] flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3.5">
+          <div className="mb-2 flex w-full items-center justify-between gap-1.5 opacity-90">
+            <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Revenue</span>
             <Wallet className="h-3.5 w-3.5 shrink-0 text-orange-400" />
-            <span className="text-[8px] font-black uppercase tracking-wider text-orange-400/90">Revenue</span>
           </div>
-          <p className="mt-1 truncate text-[15px] font-black leading-tight text-white">
-            {metricsQ.isLoading ? "—" : formatMoney(metrics?.totalRevenueCompleted ?? 0, currency)}
-          </p>
-          <p className="text-[8px] text-slate-500">Completed only</p>
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <p className="mb-0.5 truncate text-[22px] font-black leading-tight text-white">
+              {metricsQ.isLoading ? "—" : formatMoney(metrics?.totalRevenueCompleted ?? 0, currency)}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Completed only</p>
+          </div>
         </div>
 
-        <div className="flex w-[150px] shrink-0 flex-col rounded-xl border table-border table-bg px-1.5 py-1">
-          <div className="flex items-center justify-between gap-1 px-0.5">
-            <span className="text-[8px] font-black uppercase tracking-wider text-slate-500">Gateways</span>
-            <CreditCard className="h-3 w-3 text-orange-400/70" />
+        <div className="flex flex-1 min-w-[170px] flex-col rounded-xl border table-border table-bg p-3.5">
+          <div className="mb-2 flex w-full items-center justify-between gap-1.5 opacity-90">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Gateways</span>
+            <CreditCard className="h-3.5 w-3.5 text-orange-400/80" />
           </div>
-          <div className="relative h-[104px] w-full">
-            {gatewayPieData.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-0.5 text-center">
-                <span className="text-[10px] font-bold text-slate-500">{formatMoney(0, currency)}</span>
-                <span className="text-[8px] text-slate-600">No completed revenue</span>
+          <div className="flex flex-1 items-center gap-3">
+            <div className="relative h-[80px] flex-1">
+              {gatewayPieData.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center gap-0.5 text-center">
+                  <span className="text-[11px] font-bold text-slate-500">{formatMoney(0, currency)}</span>
+                  <span className="text-[9px] text-slate-600">No completed revenue</span>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={gatewayPieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={26}
+                      outerRadius={38}
+                      paddingAngle={2}
+                    >
+                      {gatewayPieData.map((_, i) => (
+                        <Cell key={i} fill={gatewayPieData[i].fill} stroke="transparent" />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v: number) => formatMoney(v, currency)}
+                      {...CHART_TOOLTIP}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {gatewayPieData.length > 0 && (
+              <div className="flex shrink-0 flex-col gap-2.5 pr-1">
+                {gatewayPieData.map((d) => (
+                  <div key={d.name} className="flex items-center gap-1.5 text-[11px] font-bold text-white">
+                    <div className="h-2 w-2 rounded-sm" style={{ backgroundColor: d.fill }} />
+                    {d.name}
+                  </div>
+                ))}
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={gatewayPieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={28}
-                    outerRadius={42}
-                    paddingAngle={2}
-                  >
-                    {gatewayPieData.map((_, i) => (
-                      <Cell key={i} fill={gatewayPieData[i].fill} stroke="transparent" />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: number) => formatMoney(v, currency)}
-                    {...CHART_TOOLTIP}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        <div className="min-w-[200px] flex-1 rounded-xl border table-border table-bg px-1.5 py-1">
-          <div className="mb-0.5 flex flex-wrap items-center justify-between gap-1 px-0.5">
-            <span className="text-[8px] font-black uppercase tracking-wider text-slate-500">Trend</span>
-            <div className="flex items-center gap-1">
-              <TrendingUp className="h-3 w-3 text-emerald-400/80" />
+        <div className="flex flex-1 min-w-[140px] flex-col rounded-xl border border-slate-500/20 bg-slate-500/[0.06] p-3.5">
+          <div className="mb-2 flex w-full items-center justify-between gap-1.5 opacity-90">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Outcomes</span>
+            <Check className="h-3.5 w-3.5 text-emerald-400/80" />
+          </div>
+          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 text-center">
+            <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[20px] font-black leading-none text-emerald-400">
+              {metricsQ.isLoading ? "—" : (metrics?.completedPaymentCount ?? 0)}
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">done</span>
+            </p>
+            <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[14px] font-black leading-none text-red-400/80">
+              {metricsQ.isLoading ? "—" : (metrics?.failedPaymentCount ?? 0)}
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">failed</span>
+            </p>
+            <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[14px] font-black leading-none text-slate-400">
+              {metricsQ.isLoading ? "—" : (metrics?.cancelledPaymentCount ?? 0)}
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">cancelled</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex min-w-[260px] flex-[0_0_35%] flex-col rounded-xl border table-border table-bg p-3.5">
+          <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-2 opacity-90">
+            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Trend</span>
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="hidden h-3.5 w-3.5 text-emerald-400/80 sm:block" />
               <Select value={trendGranularity} onValueChange={(v) => setTrendGranularity(v as RevenueTrendGranularity)}>
-                <SelectTrigger className="h-6 w-[108px] rounded-full border table-border table-bg px-2 text-[9px] font-bold table-text">
+                <SelectTrigger className="h-6 w-[108px] rounded-full border table-border table-bg px-2 text-[10px] font-bold table-text">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="table-border table-bg-alt text-white">
@@ -335,7 +371,7 @@ export default function ManagePayments() {
               </Select>
             </div>
           </div>
-          <div className="h-[104px] w-full">
+          <div className="h-[80px] w-full flex-1">
             {trendQ.isLoading ? (
               <div className="flex h-full items-center justify-center gap-1.5 text-[10px] table-text-muted">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-orange-500" />
@@ -344,7 +380,7 @@ export default function ManagePayments() {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={trendChartDisplay}
-                  margin={{ top: 4, right: 4, left: -18, bottom: 0 }}
+                  margin={{ top: 4, right: 4, left: -22, bottom: 0 }}
                 >
                   <defs>
                     <linearGradient id="adminPayRevenueFill" x1="0" y1="0" x2="0" y2="1">
@@ -353,9 +389,14 @@ export default function ManagePayments() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,16%)" />
-                  <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 8 }} interval="preserveStartEnd" />
-                  <YAxis
+                  <XAxis
+                    dataKey="label"
                     tick={{ fill: "#737373", fontSize: 8 }}
+                    interval={trendGranularity === "MONTHLY" ? 4 : trendGranularity === "YEARLY" ? 0 : "preserveStartEnd"}
+                    minTickGap={trendGranularity === "MONTHLY" ? 6 : 4}
+                  />
+                  <YAxis
+                    tick={{ fill: "#737373", fontSize: 9 }}
                     width={32}
                     tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))}
                     domain={[0, "auto"]}
@@ -365,7 +406,15 @@ export default function ManagePayments() {
                     labelFormatter={(label) => (String(label) === "—" ? "No data in range" : label)}
                     {...CHART_TOOLTIP}
                   />
-                  <Area type="monotone" dataKey="totalAmount" stroke="#ea580c" strokeWidth={1.5} fill="url(#adminPayRevenueFill)" isAnimationActive={false} />
+                  <Area
+                    type="linear"
+                    dataKey="totalAmount"
+                    stroke="#ea580c"
+                    strokeWidth={1.5}
+                    fill="url(#adminPayRevenueFill)"
+                    isAnimationActive={false}
+                    dot={trendGranularity === "WEEKLY" ? { r: 2.5, fill: "#ea580c", strokeWidth: 0 } : false}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -516,7 +565,7 @@ export default function ManagePayments() {
         <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="table-header-bg border-b table-border">
-              {["User", "Invoice", "Plan", "Amount", "Method", "Status", "Paid at", ""].map((h, i) => (
+              {["User", "Invoice", "Plan", "Billing", "Amount", "Method", "Status", "Paid at", ""].map((h, i) => (
                 <th
                   key={h}
                   style={colStyle(i)}
@@ -530,14 +579,14 @@ export default function ManagePayments() {
           <tbody>
             {historyQ.isLoading ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center">
+                <td colSpan={9} className="py-16 text-center">
                   <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-orange-500" />
                   <div className="text-[13px] table-text-muted">Loading payments…</div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-16 text-center">
+                <td colSpan={9} className="py-16 text-center">
                   <Search className="mx-auto mb-2 h-8 w-8 table-text-muted" strokeWidth={1.5} />
                   <div className="text-[16px] font-bold table-text">{debounced ? "No results" : "No payments yet"}</div>
                   <div className="mt-1 text-[13px] table-text-muted">
@@ -550,7 +599,10 @@ export default function ManagePayments() {
                 <tr key={row.paymentAttemptId} className="table-border-row border-b transition-colors last:border-0 hover:bg-white/[0.025]">
                   <td className="px-3.5 py-3.5 pl-5" style={colStyle(0)}>
                     <div className="min-w-0">
-                      <div className="truncate text-[13px] font-bold text-blue-400/95">{row.accountEmail}</div>
+                      <div className="truncate text-[13px] font-bold text-white">
+                        {row.accountUserName?.trim() || "—"}
+                      </div>
+                      <div className="mt-0.5 truncate text-[12px] font-medium text-slate-400">{row.accountEmail}</div>
                       <div className="truncate font-mono text-[10px] table-text-muted">#{row.accountId}</div>
                     </div>
                   </td>
@@ -560,21 +612,28 @@ export default function ManagePayments() {
                   <td className="truncate px-3.5 py-3.5 text-[12px] table-text" style={colStyle(2)}>
                     {row.planName ?? "—"}
                   </td>
-                  <td className="px-3.5 py-3.5 text-[13px] font-bold text-white" style={colStyle(3)}>
+                  <td className="px-3.5 py-3.5 align-top text-[11px] text-slate-300" style={colStyle(3)}>
+                    <p className="line-clamp-2 font-semibold text-white">{row.billingName?.trim() || "—"}</p>
+                    <p className="mt-0.5 line-clamp-2 text-[10px] text-slate-500">
+                      {[row.billingAddress, row.billingCity].filter(Boolean).join(", ") || "—"}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">{row.billingPhoneNumber || ""}</p>
+                  </td>
+                  <td className="px-3.5 py-3.5 text-[13px] font-bold text-white" style={colStyle(4)}>
                     {formatMoney(row.totalAmount, row.currency)}
                   </td>
-                  <td className="px-3.5 py-3.5 text-[11px] font-semibold" style={colStyle(4)}>
+                  <td className="px-3.5 py-3.5 text-[11px] font-semibold" style={colStyle(5)}>
                     {getPaymentMethodLabel(row.paymentMethod)}
                   </td>
-                  <td className="px-3.5 py-3.5" style={colStyle(5)}>
+                  <td className="px-3.5 py-3.5" style={colStyle(6)}>
                     <Badge className={cn("text-[10px] font-black uppercase", getPaymentStatusBadgeClassName(row.paymentStatus))}>
                       {row.paymentStatus}
                     </Badge>
                   </td>
-                  <td className="table-text truncate px-3.5 py-3.5 text-[12px]" style={colStyle(6)}>
+                  <td className="table-text truncate px-3.5 py-3.5 text-[12px]" style={colStyle(7)}>
                     {formatDateTime(row.paymentTime)}
                   </td>
-                  <td className="px-2 py-3.5 text-right" style={colStyle(7)}>
+                  <td className="px-2 py-3.5 text-right" style={colStyle(8)}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
@@ -616,8 +675,12 @@ export default function ManagePayments() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-bold text-blue-400/95">{row.accountEmail}</p>
+                  <p className="truncate text-[13px] font-bold text-white">{row.accountUserName?.trim() || "—"}</p>
+                  <p className="mt-0.5 truncate text-[12px] font-medium text-slate-400">{row.accountEmail}</p>
                   <p className="mt-1 font-mono text-[11px] table-text-muted">{row.invoiceNumber ?? `#${row.paymentAttemptId}`}</p>
+                  <p className="mt-1 line-clamp-2 text-[10px] text-slate-500">
+                    {[row.billingAddress, row.billingCity].filter(Boolean).join(", ") || "No billing address"}
+                  </p>
                   <p className="mt-2 text-[15px] font-black text-white">{formatMoney(row.totalAmount, row.currency)}</p>
                 </div>
                 <Badge className={cn("shrink-0", getPaymentStatusBadgeClassName(row.paymentStatus))}>{row.paymentStatus}</Badge>
@@ -658,7 +721,7 @@ export default function ManagePayments() {
       </div>
 
       <Dialog open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white sm:max-w-[480px]">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-lg font-black">Payment details</DialogTitle>
             <DialogDescription className="text-[13px] text-[hsl(0,0%,50%)]">
@@ -672,37 +735,14 @@ export default function ManagePayments() {
                 <Badge className={cn(getPaymentStatusBadgeClassName(detail.paymentStatus))}>{detail.paymentStatus}</Badge>
                 <p className="font-mono text-[11px] table-text-muted">{detail.invoiceNumber ?? `Attempt #${detail.paymentAttemptId}`}</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-[13px]">
-                <div>
-                  <Label className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Account</Label>
-                  <p className="font-semibold text-blue-400/95">{detail.accountEmail}</p>
-                  <p className="font-mono text-[11px] table-text-muted">#{detail.accountId}</p>
-                </div>
-                <div>
-                  <Label className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Paid at</Label>
-                  <p className="font-semibold">{formatDateTime(detail.paymentTime)}</p>
-                </div>
-                <div>
-                  <Label className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Method</Label>
-                  <p>{getPaymentMethodLabel(detail.paymentMethod)}</p>
-                </div>
-                <div>
-                  <Label className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Plan</Label>
-                  <p>{detail.planName ?? "—"}</p>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Gateway</Label>
-                  <p className="break-all font-mono text-[11px] table-text-muted">
-                    {detail.gatewayTransactionId ?? detail.gatewayReference ?? "—"}
-                  </p>
-                </div>
-                {detail.gatewayResponseMessage ? (
-                  <div className="col-span-2">
-                    <Label className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Gateway message</Label>
-                    <p className="text-[12px] text-slate-300">{detail.gatewayResponseMessage}</p>
-                  </div>
-                ) : null}
-              </div>
+              <PaymentAttemptDetailFields
+                detail={detail}
+                account={{
+                  userName: detail.accountUserName,
+                  email: detail.accountEmail,
+                  accountId: detail.accountId,
+                }}
+              />
             </div>
           )}
           <DialogFooter>

@@ -1,30 +1,12 @@
 import { Star, Quote } from "lucide-react";
-
-const testimonials = [
-  {
-    name: "Arun Sharma",
-    role: "Fitness Enthusiast",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face",
-    content: "FitPal changed my workout routine completely. I can now try different gyms based on my mood and location. The QR check-in is incredibly convenient!",
-    rating: 5,
-  },
-  {
-    name: "Priya Adhikari",
-    role: "Yoga Instructor",
-    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face",
-    content: "As someone who travels frequently, having access to multiple gyms with one subscription is a game-changer. The personalized workout plans are spot on!",
-    rating: 5,
-  },
-  {
-    name: "Bikash Thapa",
-    role: "CrossFit Athlete",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face",
-    content: "The progress tracking dashboard helps me stay motivated. I love seeing my improvement over time. Best fitness investment I've ever made!",
-    rating: 5,
-  },
-];
+import { useCmsStore } from "@/features/marketing/cms-store";
 
 const Testimonials = () => {
+  const cms = useCmsStore();
+  const approved = cms.testimonials.filter((t) => t.approved);
+
+  if (approved.length === 0) return null;
+
   return (
     <section className="relative py-24">
       <div className="container mx-auto px-4">
@@ -43,9 +25,9 @@ const Testimonials = () => {
 
         {/* Testimonial Cards */}
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {testimonials.map((testimonial, index) => (
+          {approved.map((testimonial, index) => (
             <div
-              key={testimonial.name}
+              key={testimonial.id}
               className="relative p-8 rounded-3xl bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 group"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
@@ -54,7 +36,7 @@ const Testimonials = () => {
 
               {/* Rating */}
               <div className="flex gap-1 mb-6">
-                {[...Array(testimonial.rating)].map((_, i) => (
+                {Array.from({ length: testimonial.rating }).map((_, i) => (
                   <Star key={i} className="h-5 w-5 text-accent fill-accent" />
                 ))}
               </div>
@@ -66,11 +48,21 @@ const Testimonials = () => {
 
               {/* Author */}
               <div className="flex items-center gap-4">
-                <img
-                  src={testimonial.avatar}
-                  alt={testimonial.name}
-                  className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
-                />
+                {testimonial.avatar ? (
+                  <img
+                    src={testimonial.avatar}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-primary/20"
+                    onError={(e) => {
+                      // If avatar fails to load, hide and show initial instead
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full border-2 border-primary/20 bg-primary/10 flex items-center justify-center text-primary font-black text-lg">
+                    {testimonial.name[0]}
+                  </div>
+                )}
                 <div>
                   <div className="font-semibold">{testimonial.name}</div>
                   <div className="text-sm text-muted-foreground">{testimonial.role}</div>

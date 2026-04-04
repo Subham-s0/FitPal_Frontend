@@ -169,9 +169,7 @@ export interface UserRoutineSettingItemResponse {
   structureType: RoutineStructureType;
   routineType: RoutineFocusType | null;
   active: boolean;
-  cyclesCompleted: number;
   activatedAt: string;
-  deactivatedAt: string | null;
   lastSessionAt: string | null;
   currentDayId: string | null;
   currentDayName: string | null;
@@ -181,7 +179,6 @@ export interface UserRoutineSettingItemResponse {
 
 export interface UserRoutineSettingsResponse {
   activeSetting: UserRoutineSettingItemResponse | null;
-  settings: UserRoutineSettingItemResponse[];
 }
 
 // ============================================

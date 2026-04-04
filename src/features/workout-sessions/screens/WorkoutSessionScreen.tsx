@@ -125,10 +125,10 @@ function CompactSessionHeader({
   totalSets,
   totalVolume,
   onBack,
-  onCancel,
+  onSkip,
   onComplete,
   onSyncToRoutine,
-  isCanceling,
+  isSkipping,
   isSyncing,
   canComplete,
   isRoutineBased,
@@ -140,10 +140,10 @@ function CompactSessionHeader({
   totalSets: number;
   totalVolume: number;
   onBack: () => void;
-  onCancel: () => void;
+  onSkip: () => void;
   onComplete: () => void;
   onSyncToRoutine: () => void;
-  isCanceling: boolean;
+  isSkipping: boolean;
   isSyncing: boolean;
   canComplete: boolean;
   isRoutineBased: boolean;
@@ -203,11 +203,11 @@ function CompactSessionHeader({
             <span className="font-mono text-xs font-bold text-orange-300">{elapsedTime}</span>
           </div>
           <button
-            onClick={onCancel}
-            disabled={isCanceling}
+            onClick={onSkip}
+            disabled={isSkipping}
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-bold text-gray-300 transition-colors hover:bg-white/10 disabled:opacity-50"
           >
-            {isCanceling ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancel"}
+            {isSkipping ? <Loader2 className="h-4 w-4 animate-spin" /> : "Skip"}
           </button>
           {/* Update Routine button - only for routine-based workouts */}
           {isRoutineBased && (
@@ -809,11 +809,11 @@ export default function WorkoutSessionScreen() {
     mutationFn: () => skipWorkoutSessionApi(routineLogId!, { notes: null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.all });
-      toast.info("Session cancelled");
+      toast.info("Session skipped. You can still start another workout today.");
       navigate("/dashboard");
     },
     onError: (error: Error) => {
-      toast.error("Failed to cancel session", { description: error.message });
+      toast.error("Failed to skip session", { description: error.message });
     },
   });
 
@@ -950,7 +950,7 @@ export default function WorkoutSessionScreen() {
     [completeSessionMutation]
   );
 
-  const handleCancel = useCallback(() => {
+  const handleSkip = useCallback(() => {
     skipSessionMutation.mutate();
   }, [skipSessionMutation]);
 
@@ -964,7 +964,7 @@ export default function WorkoutSessionScreen() {
   const handleRemoveExercise = useCallback(
     (exerciseId: string) => {
       if (session && session.exercises.length <= 1) {
-        toast.error("Cannot remove the last exercise. Cancel the session instead.");
+        toast.error("Cannot remove the last exercise. Skip the session instead.");
         return;
       }
       deleteExerciseMutation.mutate(exerciseId);
@@ -1046,10 +1046,10 @@ export default function WorkoutSessionScreen() {
         totalSets={stats.totalSets}
         totalVolume={stats.totalVolume}
         onBack={() => navigate("/dashboard")}
-        onCancel={handleCancel}
+        onSkip={handleSkip}
         onComplete={() => setShowSummary(true)}
         onSyncToRoutine={() => syncToRoutineMutation.mutate()}
-        isCanceling={skipSessionMutation.isPending}
+        isSkipping={skipSessionMutation.isPending}
         isSyncing={syncToRoutineMutation.isPending}
         canComplete={stats.completedSets > 0}
         isRoutineBased={!!session.routineId}

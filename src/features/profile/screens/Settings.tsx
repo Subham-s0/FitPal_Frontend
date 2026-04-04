@@ -241,7 +241,7 @@ const SettingsScreen = () => {
       id: "routines",
       kind: "collapsible",
       label: "Routine Settings",
-      description: "Active routine progress, cycles, and training context.",
+      description: "Active routine details and training context.",
       icon: Dumbbell,
     },
   ] as const;
@@ -318,7 +318,7 @@ const SettingsScreen = () => {
           </div>
           <p className="mt-4 text-sm font-black uppercase tracking-[0.12em] text-white">Routine Settings</p>
           <p className="mt-2 text-xs leading-5 text-slate-400">
-            Track the active routine, current day, cycles completed, and session history.
+            Track the active routine, activation date, and last session timing.
           </p>
         </button>
       </div>

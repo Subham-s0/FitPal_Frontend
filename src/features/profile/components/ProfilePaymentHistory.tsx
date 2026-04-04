@@ -5,6 +5,7 @@ import {
   ArrowUp,
   CheckCircle2,
   CreditCard,
+  Eye,
   Loader2,
   RefreshCcw,
   Receipt,
@@ -27,11 +28,21 @@ import {
   getPaymentMethodLabel,
   getPaymentStatusBadgeClassName,
 } from "@/features/payment/payment.constants";
+import { PaymentAttemptDetailFields } from "@/features/payment/components/PaymentAttemptDetailFields";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { SectionLabel } from "@/features/profile/components/ProfileSetupShell";
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
 import { getApiErrorMessage } from "@/shared/api/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
+import { Button } from "@/shared/ui/button";
 
 const SORT_OPTIONS = [
   { value: "DESC", label: "Newest first" },
@@ -66,7 +77,13 @@ const formatDateTime = (value: string | null) => {
 const SortIcon = ({ direction }: { direction: "ASC" | "DESC" }) =>
   direction === "DESC" ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />;
 
-function PaymentRowCards({ items }: { items: UserPaymentHistoryItemResponse[] }) {
+function PaymentRowCards({
+  items,
+  onOpenDetail,
+}: {
+  items: UserPaymentHistoryItemResponse[];
+  onOpenDetail: (payment: UserPaymentHistoryItemResponse) => void;
+}) {
   return (
     <div className="space-y-3 md:hidden">
       {items.map((payment) => (
@@ -114,15 +131,35 @@ function PaymentRowCards({ items }: { items: UserPaymentHistoryItemResponse[] })
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Billing</p>
               <p className="mt-1 text-slate-200">{payment.billingName || "—"}</p>
+              <p className="mt-0.5 break-all text-[10px] text-slate-500">{payment.billingEmail || ""}</p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-xl border table-border table-bg-alt p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Billing Number</p>
-            <p className="mt-1 text-xs text-slate-300">
-              {payment.billingPhoneNumber || "Not provided"}
-            </p>
+          <div className="mt-4 space-y-2 rounded-xl border table-border table-bg-alt p-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Billing email</p>
+              <p className="mt-1 break-all text-xs text-slate-300">{payment.billingEmail || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Phone</p>
+              <p className="mt-1 text-xs text-slate-300">{payment.billingPhoneNumber || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Address</p>
+              <p className="mt-1 text-xs text-slate-300">
+                {[payment.billingAddress, payment.billingCity].filter(Boolean).join(", ") || "—"}
+              </p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => onOpenDetail(payment)}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-200 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            View full details
+          </button>
         </div>
       ))}
     </div>
@@ -135,6 +172,7 @@ export default function ProfilePaymentHistory() {
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
   const [page, setPage] = useState(0);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [detail, setDetail] = useState<UserPaymentHistoryItemResponse | null>(null);
   const filterRef = useRef<HTMLDivElement>(null);
 
   const historyQuery = useQuery({
@@ -397,18 +435,19 @@ export default function ProfilePaymentHistory() {
         </div>
       ) : (
         <>
-          <PaymentRowCards items={items} />
+          <PaymentRowCards items={items} onOpenDetail={setDetail} />
 
           <div className="hidden table-bg table-border border rounded-[18px] overflow-hidden md:block">
             <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr className="table-header-bg table-border border-b">
-                  <th className="px-3.5 pl-6 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "26%" }}>Payment</th>
-                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "20%" }}>Billing</th>
-                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "17%" }}>Method</th>
-                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "15%" }}>Paid At</th>
-                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "11%" }}>Status</th>
-                  <th className="px-3.5 pr-6 py-3 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "11%" }}>Total</th>
+                  <th className="px-3.5 pl-6 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "22%" }}>Payment</th>
+                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "22%" }}>Billing</th>
+                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "13%" }}>Method</th>
+                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "12%" }}>Paid At</th>
+                  <th className="px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "10%" }}>Status</th>
+                  <th className="px-3.5 py-3 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "11%" }}>Total</th>
+                  <th className="px-3.5 pr-6 py-3 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted" style={{ width: "10%" }}> </th>
                 </tr>
               </thead>
               <tbody>
@@ -432,10 +471,16 @@ export default function ProfilePaymentHistory() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-3.5 py-3.5">
+                    <td className="px-3.5 py-3.5 align-top">
                       <p className="text-[12px] font-bold text-white">{payment.billingName || "—"}</p>
+                      <p className="mt-0.5 break-all text-[11px] font-medium text-slate-400">
+                        {payment.billingEmail || "—"}
+                      </p>
                       <p className="mt-0.5 text-[11px] table-text-muted truncate">
-                        {payment.billingPhoneNumber || "No number"}
+                        {payment.billingPhoneNumber || "—"}
+                      </p>
+                      <p className="mt-1 line-clamp-2 text-[10px] text-slate-500">
+                        {[payment.billingAddress, payment.billingCity].filter(Boolean).join(", ") || "—"}
                       </p>
                     </td>
                     <td className="px-3.5 py-3.5">
@@ -454,13 +499,23 @@ export default function ProfilePaymentHistory() {
                         {payment.paymentStatus}
                       </Badge>
                     </td>
-                    <td className="px-3.5 pr-6 py-3.5 text-right">
+                    <td className="px-3.5 py-3.5 text-right">
                       <p className="text-[13px] font-black text-white">
                         {formatMoney(payment.totalAmount, payment.currency)}
                       </p>
                       <p className="mt-0.5 text-[11px] table-text-muted mt-1 whitespace-nowrap">
                         Tax {formatMoney(payment.taxAmount, payment.currency)}
                       </p>
+                    </td>
+                    <td className="px-3.5 pr-6 py-3.5 text-right align-middle">
+                      <button
+                        type="button"
+                        onClick={() => setDetail(payment)}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-200 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        Details
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -497,6 +552,39 @@ export default function ProfilePaymentHistory() {
               </button>
             </div>
           </div>
+
+          <Dialog open={detail !== null} onOpenChange={(open) => !open && setDetail(null)}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto border-white/10 bg-[#0a0a0a] text-white sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-black">Payment details</DialogTitle>
+                <DialogDescription className="text-[13px] text-slate-500">
+                  Same layout as admin payment review: billing from checkout, amounts, and gateway references.
+                </DialogDescription>
+              </DialogHeader>
+              {detail ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center gap-2 border-b border-white/10 pb-4">
+                    <p className="text-3xl font-black">{formatMoney(detail.totalAmount, detail.currency)}</p>
+                    <Badge className={cn(getPaymentStatusBadgeClassName(detail.paymentStatus))}>{detail.paymentStatus}</Badge>
+                    <p className="font-mono text-[11px] text-slate-500">
+                      {detail.invoiceNumber ?? `Attempt #${detail.paymentAttemptId}`}
+                    </p>
+                  </div>
+                  <PaymentAttemptDetailFields detail={detail} />
+                </div>
+              ) : null}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-slate-400 hover:bg-white/10 hover:text-white"
+                  onClick={() => setDetail(null)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

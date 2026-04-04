@@ -26,6 +26,8 @@ interface CustomDatePickerProps {
   minDate?: Date;
   ariaLabel?: string;
   ariaDescribedBy?: string;
+  /** Set when used inside a Dialog so the calendar popover stays interactive (Radix focus). */
+  nestedInDialog?: boolean;
 }
 
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -72,6 +74,7 @@ export function CustomDatePicker({
   minDate,
   ariaLabel,
   ariaDescribedBy,
+  nestedInDialog,
 }: CustomDatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -121,7 +124,11 @@ export function CustomDatePicker({
   // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   return (
-    <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={disabled ? undefined : setOpen}
+      modal={nestedInDialog ? false : undefined}
+    >
       {/* â”€â”€ Trigger â”€â”€ */}
       <PopoverTrigger asChild>
         <Button

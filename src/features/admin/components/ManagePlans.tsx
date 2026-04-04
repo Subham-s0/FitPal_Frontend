@@ -71,6 +71,14 @@ import { Textarea } from "@/shared/ui/textarea";
 import { ScrollArea } from "@/shared/ui/scroll-area";
 import { cn } from "@/shared/lib/utils";
 
+const FIRE = "var(--gradient-fire)";
+const fireStyle = {
+  background: FIRE,
+  WebkitBackgroundClip: "text" as const,
+  WebkitTextFillColor: "transparent",
+  backgroundClip: "text" as const,
+};
+
 const formatMoney = (value: number) =>
   value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
@@ -287,10 +295,10 @@ const ManagePlans = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter text-white">
-            Manage <span className="text-gradient-fire">Subscription Plans</span>
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-[32px] font-black tracking-tight text-white">
+            Manage <span style={fireStyle}>Plans</span>
+          </h1>
+          <p className="mt-1 text-[13px] table-text-muted">
             Create, edit, or remove plans. Currency: <span className="font-bold text-orange-400">{currency}</span>
           </p>
         </div>

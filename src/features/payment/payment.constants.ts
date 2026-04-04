@@ -50,7 +50,7 @@ export function getPaymentMethodLabel(method: PaymentMethod): string {
 export function revenueTrendGranularityLabel(g: RevenueTrendGranularity): string {
   switch (g) {
     case "WEEKLY":
-      return "Weekly";
+      return "7 days";
     case "MONTHLY":
       return "Monthly";
     case "YEARLY":

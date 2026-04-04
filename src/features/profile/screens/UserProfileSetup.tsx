@@ -177,10 +177,8 @@ const ProfileSetup = () => {
   const isWideStep = currentStep.id === "profile" || currentStep.id === "subscription" || currentStep.id === "payment";
   const isGoogle = (auth.providers ?? []).some((p) => p.toUpperCase() === "GOOGLE");
   const displayName = auth.email?.split("@")[0] || "FitPal Member";
-  // During profile setup, allow users to edit all fields freely
-  // Name fields are editable even if pre-filled from Google
-  const firstNameLocked = false;
-  const lastNameLocked = false;
+  const firstNameLocked = isGoogle && Boolean(userData.firstName.trim());
+  const lastNameLocked = isGoogle && Boolean(userData.lastName.trim());
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
 
   const transformedProfileImageUrl = useMemo(() => {
@@ -310,8 +308,7 @@ const ProfileSetup = () => {
           setBillingCycle(fromApiBillingCycle(subscription.billingCycle));
         }
         setStepIndex(shouldOpenPaymentStep ? 4 : resolveResumeStepIndex(profile));
-        syncAuthOnboardingStatus(profile);
-      } catch (error) {
+   } catch (error) {
         toast.error(getApiErrorMessage(error, "Failed to load onboarding profile"));
       } finally {
         if (!cancelled) setIsLoadingProfile(false);
@@ -593,7 +590,7 @@ const ProfileSetup = () => {
             <Field label="First name" error={userErrors.firstName}>
               {firstNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.firstName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="First name" value={userData.firstName} onChange={(e) => { setUser({ firstName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
             </Field>
-            <Field label="Last name" error={userErrors.lastName}>
+            <Field label="Last name">
               {lastNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.lastName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="Last name" value={userData.lastName} onChange={(e) => { setUser({ lastName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
             </Field>
           </div>

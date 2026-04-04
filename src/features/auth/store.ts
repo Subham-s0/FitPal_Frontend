@@ -46,7 +46,8 @@ const getInitialState = (): AuthState => {
         approved: Boolean(parsed.approved),
         hasSubscription: Boolean(parsed.hasSubscription),
         hasActiveSubscription: Boolean(parsed.hasActiveSubscription),
-        hasDashboardAccess: Boolean(parsed.hasDashboardAccess ?? parsed.hasActiveSubscription),
+        // Never infer dashboard access from active-subscription alone (expired / pending payment must stay false).
+        hasDashboardAccess: parsed.hasDashboardAccess === true,
       };
     }
   } catch {

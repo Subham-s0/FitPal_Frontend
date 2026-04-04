@@ -1,4 +1,4 @@
-import type { PaymentMethod, PaymentStatus } from "./model";
+import type { PaymentMethod, PaymentStatus } from "@/features/payment/model";
 
 /**
  * Centralized query keys for the profile feature.
@@ -27,14 +27,14 @@ export const profileQueryKeys = {
   paymentHistory: (
     status?: PaymentStatus | "all" | null,
     method?: PaymentMethod | "all" | null,
-    sortDirection?: "asc" | "desc",
+    sortDirection?: "ASC" | "DESC",
     page?: number
   ) => [
     ...profileQueryKeys.all,
     "payment-history",
     status ?? "all",
     method ?? "all",
-    sortDirection ?? "desc",
+    sortDirection ?? "DESC",
     page ?? 0,
   ] as const,
 };
