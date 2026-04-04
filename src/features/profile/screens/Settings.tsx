@@ -26,6 +26,7 @@ import {
   getMyProfileApi,
   requestMyEmailVerificationApi,
 } from "@/features/profile/api";
+import { profileQueryKeys } from "@/features/profile/queryKeys";
 import ProfileRoutineSettings from "@/features/profile/components/ProfileRoutineSettings";
 import ProfileSecurityModal from "@/features/profile/components/ProfileSecurityModal";
 import {
@@ -108,7 +109,7 @@ const SettingsScreen = () => {
   const [verificationError, setVerificationError] = useState("");
 
   const profileQuery = useQuery({
-    queryKey: ["user-profile"],
+    queryKey: profileQueryKeys.user(),
     queryFn: getMyProfileApi,
   });
 

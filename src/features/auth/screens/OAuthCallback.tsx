@@ -57,7 +57,6 @@ const OAuthCallback = () => {
 
     if (authPayload?.accessToken) {
       authStore.setAuth(authPayload);
-      toast.success(authPayload.message || "Signed in successfully");
       navigate(
         getPostAuthRoute({
           role: authPayload.role,
@@ -68,6 +67,9 @@ const OAuthCallback = () => {
         }),
         { replace: true }
       );
+      window.setTimeout(() => {
+        toast.success(authPayload.message || "Signed in successfully");
+      }, 0);
       return;
     }
 

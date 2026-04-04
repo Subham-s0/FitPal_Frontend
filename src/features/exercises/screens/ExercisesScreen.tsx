@@ -1,6 +1,15 @@
 import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Search, X, XCircle } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { getApiErrorMessage } from "@/shared/api/client";
 import {
@@ -9,9 +18,12 @@ import {
   getExerciseLibraryApi,
   getExerciseLibraryEquipmentApi,
   getExerciseLibraryMusclesApi,
+  getMyExerciseHistoryApi,
+  getMyExerciseStatsApi,
   getMyCustomExerciseByIdApi,
   getMyCustomExercisesApi,
 } from "@/features/exercises/api";
+import { exerciseQueryKeys } from "@/features/exercises/queryKeys";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +43,11 @@ import type {
   ExerciseHowToSectionResponse,
   ExerciseLibrarySummaryResponse,
   ExerciseMuscleAssignmentResponse,
+  ExerciseTrendRange,
   ExerciseType,
+  UserExerciseHistoryItemResponse,
+  UserExerciseMetricRecordResponse,
+  UserExerciseTrendPointResponse,
 } from "@/features/exercises/model";
 
 type ExerciseSource = "library" | "custom";
@@ -254,11 +270,71 @@ function matchesCustomExerciseFilters(
   return searchFields.some((value) => value?.toLowerCase().includes(normalizedQuery));
 }
 
+const EXERCISE_HISTORY_PAGE_SIZE = 10;
+const EXERCISE_TREND_RANGE_OPTIONS: Array<{ value: ExerciseTrendRange; label: string }> = [
+  { value: "MONTH", label: "Month" },
+  { value: "YEAR", label: "Year" },
+  { value: "ALL_TIME", label: "All Time" },
+];
+
+function toApiExerciseSource(source: ExerciseSource): "LIBRARY" | "CUSTOM" {
+  return source === "library" ? "LIBRARY" : "CUSTOM";
+}
+
+function formatExerciseDate(value?: string | null) {
+  if (!value) {
+    return "--";
+  }
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function getTrendChartData(points: UserExerciseTrendPointResponse[]) {
+  return points.map((point) => ({
+    periodStart: point.periodStart,
+    periodLabel: point.periodLabel,
+    value: typeof point.value === "number" ? point.value : null,
+    displayValue: point.displayValue,
+    detailLabel: point.detailLabel,
+  }));
+}
+
+function getEstimatedMetricTitle(exerciseType?: ExerciseType | null) {
+  if (exerciseType === "Weight Reps") {
+    return "Estimated 1RM";
+  }
+  if (exerciseType === "Weighted Bodyweight") {
+    return "Estimated Max Load";
+  }
+  return "Estimated Max";
+}
+
+function getTrendRangeHeading(trendRange: ExerciseTrendRange) {
+  if (trendRange === "MONTH") {
+    return "Month";
+  }
+  if (trendRange === "YEAR") {
+    return "Year";
+  }
+  return "All Time";
+}
+
 const ExercisesScreen = () => {
   const [selectedMuscle, setSelectedMuscle] = useState("all");
   const [selectedEquipment, setSelectedEquipment] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"stats" | "history" | "howto">("stats");
+  const [trendRange, setTrendRange] = useState<ExerciseTrendRange>("MONTH");
+  const [historyPage, setHistoryPage] = useState(0);
   const [selectedExerciseRef, setSelectedExerciseRef] = useState<SelectedExerciseRef | null>(null);
   const [selectedExercisePreview, setSelectedExercisePreview] =
     useState<SidebarExerciseItem | null>(null);
@@ -273,19 +349,23 @@ const ExercisesScreen = () => {
   const hasAuthToken = Boolean(auth.accessToken);
 
   const muscleOptionsQuery = useQuery({
-    queryKey: ["exercise-library-muscles"],
+    queryKey: exerciseQueryKeys.muscles(),
     queryFn: getExerciseLibraryMusclesApi,
     enabled: hasAuthToken,
   });
 
   const equipmentOptionsQuery = useQuery({
-    queryKey: ["exercise-library-equipment"],
+    queryKey: exerciseQueryKeys.equipment(),
     queryFn: getExerciseLibraryEquipmentApi,
     enabled: hasAuthToken,
   });
 
   const exercisesQuery = useQuery({
-    queryKey: ["exercise-library", deferredSearchQuery, selectedMuscle, selectedEquipment],
+    queryKey: exerciseQueryKeys.libraryList(
+      deferredSearchQuery,
+      selectedMuscle === "all" ? null : Number(selectedMuscle),
+      selectedEquipment === "all" ? null : Number(selectedEquipment)
+    ),
     queryFn: () =>
       getExerciseLibraryApi({
         query: deferredSearchQuery || undefined,
@@ -297,24 +377,58 @@ const ExercisesScreen = () => {
   });
 
   const customExercisesQuery = useQuery({
-    queryKey: ["custom-exercises"],
+    queryKey: exerciseQueryKeys.customList(),
     queryFn: getMyCustomExercisesApi,
     enabled: hasAuthToken,
   });
 
   const exerciseDetailQuery = useQuery({
-    queryKey: ["exercise-library-detail", selectedExerciseRef?.source === "library" ? selectedExerciseRef.id : null],
+    queryKey: exerciseQueryKeys.libraryDetail(
+      selectedExerciseRef?.source === "library" ? selectedExerciseRef.id : null
+    ),
     queryFn: () => getExerciseByIdApi((selectedExerciseRef as SelectedExerciseRef).id),
     enabled: hasAuthToken && selectedExerciseRef?.source === "library",
   });
 
   const customExerciseDetailQuery = useQuery({
-    queryKey: [
-      "custom-exercise-detail",
-      selectedExerciseRef?.source === "custom" ? selectedExerciseRef.id : null,
-    ],
+    queryKey: exerciseQueryKeys.customDetail(
+      selectedExerciseRef?.source === "custom" ? selectedExerciseRef.id : null
+    ),
     queryFn: () => getMyCustomExerciseByIdApi((selectedExerciseRef as SelectedExerciseRef).id),
     enabled: hasAuthToken && selectedExerciseRef?.source === "custom",
+  });
+
+  const exerciseStatsQuery = useQuery({
+    queryKey: exerciseQueryKeys.stats(
+      selectedExerciseRef?.source ?? null,
+      selectedExerciseRef?.id ?? null,
+      trendRange
+    ),
+    queryFn: () =>
+      getMyExerciseStatsApi(
+        toApiExerciseSource((selectedExerciseRef as SelectedExerciseRef).source),
+        (selectedExerciseRef as SelectedExerciseRef).id,
+        trendRange
+      ),
+    enabled: hasAuthToken && selectedExerciseRef !== null,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const exerciseHistoryQuery = useQuery({
+    queryKey: exerciseQueryKeys.history(
+      selectedExerciseRef?.source ?? null,
+      selectedExerciseRef?.id ?? null,
+      historyPage
+    ),
+    queryFn: () =>
+      getMyExerciseHistoryApi({
+        exerciseSource: toApiExerciseSource((selectedExerciseRef as SelectedExerciseRef).source),
+        sourceExerciseId: (selectedExerciseRef as SelectedExerciseRef).id,
+        page: historyPage,
+        size: EXERCISE_HISTORY_PAGE_SIZE,
+      }),
+    enabled: hasAuthToken && selectedExerciseRef !== null,
+    placeholderData: (previousData) => previousData,
   });
 
   const exercises = (exercisesQuery.data ?? []).map(toSidebarLibraryExercise);
@@ -344,6 +458,12 @@ const ExercisesScreen = () => {
       );
     }
   }, [customExercises, exercises, selectedExerciseRef]);
+
+  useEffect(() => {
+    if (selectedExerciseRef) {
+      setHistoryPage(0);
+    }
+  }, [selectedExerciseRef?.id, selectedExerciseRef?.source]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -398,6 +518,28 @@ const ExercisesScreen = () => {
     : (selectedCustomExercise?.secondaryMuscles ?? []).map((muscle) => muscle.name);
   const selectedExerciseHowToSections: ExerciseHowToSectionResponse[] =
     selectedLibraryExercise?.howToSections ?? [];
+  const selectedExerciseType =
+    selectedLibraryExercise?.exerciseType ??
+    selectedCustomExercise?.exerciseType ??
+    selectedExercisePreview?.exerciseType ??
+    null;
+  const statsErrorMessage = exerciseStatsQuery.error
+    ? getApiErrorMessage(exerciseStatsQuery.error, "Failed to load exercise stats.")
+    : null;
+  const historyErrorMessage = exerciseHistoryQuery.error
+    ? getApiErrorMessage(exerciseHistoryQuery.error, "Failed to load exercise history.")
+    : null;
+  const exerciseStats = exerciseStatsQuery.data;
+  const trendPoints = exerciseStats?.trendPoints ?? [];
+  const trendChartData = getTrendChartData(trendPoints);
+  const hasTrendData = trendChartData.some((point) => typeof point.value === "number");
+  const historyItems = exerciseHistoryQuery.data?.items ?? [];
+  const historyRangeStart = exerciseHistoryQuery.data && historyItems.length > 0
+    ? exerciseHistoryQuery.data.page * exerciseHistoryQuery.data.size + 1
+    : 0;
+  const historyRangeEnd = historyRangeStart > 0
+    ? historyRangeStart + historyItems.length - 1
+    : 0;
 
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -459,7 +601,7 @@ const ExercisesScreen = () => {
   const deleteCustomExerciseMutation = useMutation({
     mutationFn: deleteCustomExerciseApi,
     onSuccess: (_, deletedExerciseId) => {
-      queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
+      queryClient.invalidateQueries({ queryKey: exerciseQueryKeys.custom() });
       setPendingDeleteExercise(null);
       setSelectedExerciseRef((currentSelection) =>
         currentSelection?.source === "custom" && currentSelection.id === deletedExerciseId
@@ -943,48 +1085,138 @@ const ExercisesScreen = () => {
               {activeTab === "stats" && (
                 <div className="grid grid-cols-12 gap-6">
                   <div className="col-span-12 rounded-[2.5rem] border border-white/5 bg-[#111] p-8 lg:col-span-8">
-                    <div className="mb-10 flex items-center justify-between">
-                      <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">
-                        Weight Trend (12W)
-                      </h3>
-                      <div className="flex gap-2">
-                        <span className="h-3 w-3 rounded-full bg-orange-600"></span>
-                        <span className="text-[10px] font-bold uppercase text-gray-500">Weight (KG)</span>
+                    <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">
+                          {(exerciseStats?.trendLabel ?? "Progress")} Trend ({getTrendRangeHeading(trendRange)})
+                        </h3>
+                        {exerciseStatsQuery.isFetching ? (
+                          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600">
+                            Refreshing stats...
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col gap-3 sm:items-end">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {EXERCISE_TREND_RANGE_OPTIONS.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setTrendRange(option.value)}
+                              className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] transition-all ${
+                                trendRange === option.value
+                                  ? "border-orange-500/40 bg-orange-500/15 text-orange-300"
+                                  : "border-white/10 bg-black/25 text-gray-500 hover:border-orange-500/30 hover:text-orange-300"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-3 w-3 rounded-full bg-orange-600"></span>
+                          <span className="text-[10px] font-bold uppercase text-gray-500">
+                            {exerciseStats?.trendLabel ?? "Progress"}
+                            {exerciseStats?.trendUnit ? ` (${exerciseStats.trendUnit})` : ""}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="relative h-64 w-full px-2">
-                      <svg className="h-full w-full" viewBox="0 0 1000 200" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" style={{ stopColor: "rgba(249, 115, 22, 0.2)", stopOpacity: 1 }} />
-                            <stop offset="100%" style={{ stopColor: "rgba(249, 115, 22, 0)", stopOpacity: 1 }} />
-                          </linearGradient>
-                        </defs>
-                        <path
-                          d="M0,180 L150,160 L300,170 L450,130 L600,140 L750,90 L900,100 L1000,60"
-                          fill="none"
-                          stroke="rgba(249, 115, 22, 0.1)"
-                          strokeWidth="40"
-                          strokeLinecap="round"
-                        />
-                        <path
-                          className="chart-line"
-                          d="M0,180 L150,160 L300,170 L450,130 L600,140 L750,90 L900,100 L1000,60"
-                          fill="none"
-                          stroke="#f97316"
-                          strokeWidth="4"
-                          strokeLinecap="round"
-                        />
-                        <circle cx="1000" cy="60" r="5" fill="#f97316" />
-                        <circle cx="1000" cy="60" r="5" fill="#f97316" className="dot-pulse" />
-                      </svg>
-                      <div className="mt-6 flex justify-between text-[9px] font-black uppercase tracking-widest text-gray-600">
-                        <span>Week 1</span>
-                        <span>Week 4</span>
-                        <span>Week 8</span>
-                        <span>Week 12</span>
+                    {statsErrorMessage ? (
+                      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-200">
+                        {statsErrorMessage}
                       </div>
-                    </div>
+                    ) : exerciseStatsQuery.isLoading && !hasTrendData ? (
+                      <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/5 bg-white/[0.02] px-6 text-center">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                          Loading trend...
+                        </p>
+                      </div>
+                    ) : !hasTrendData && !exerciseStatsQuery.isLoading ? (
+                      <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/5 bg-white/[0.02] px-6 text-center">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                            No exercise stats yet
+                          </p>
+                          <p className="mt-2 text-sm text-gray-400">
+                            Complete this exercise in a workout to start building progress trends.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-72 rounded-[2rem] border border-white/5 bg-white/[0.02] p-3">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={trendChartData}
+                            margin={{ top: 12, right: 8, left: 8, bottom: 8 }}
+                          >
+                            <defs>
+                              <linearGradient id="exercise-trend-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#f97316" stopOpacity={0.35} />
+                                <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                            <XAxis
+                              dataKey="periodLabel"
+                              axisLine={false}
+                              tickLine={false}
+                              minTickGap={24}
+                              tick={{ fill: "#6b7280", fontSize: 10, fontWeight: 800 }}
+                            />
+                            <YAxis hide domain={["auto", "auto"]} />
+                            <Tooltip
+                              cursor={{ stroke: "rgba(249, 115, 22, 0.28)", strokeWidth: 1 }}
+                              content={(tooltip) => {
+                                if (!tooltip.active || !tooltip.payload?.length) {
+                                  return null;
+                                }
+
+                                const point = tooltip.payload[0]?.payload as {
+                                  periodLabel: string;
+                                  displayValue: string | null;
+                                  detailLabel: string | null;
+                                };
+
+                                return (
+                                  <div className="rounded-2xl border border-white/10 bg-[#111] px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                                      {point.periodLabel}
+                                    </p>
+                                    <p className="mt-2 text-lg font-black text-white">
+                                      {point.displayValue ?? "--"}
+                                      {exerciseStats?.trendUnit ? (
+                                        <span className="ml-1 text-[10px] font-black uppercase text-orange-500">
+                                          {exerciseStats.trendUnit}
+                                        </span>
+                                      ) : null}
+                                    </p>
+                                    {point.detailLabel ? (
+                                      <p className="mt-2 text-xs text-gray-400">{point.detailLabel}</p>
+                                    ) : null}
+                                  </div>
+                                );
+                              }}
+                            />
+                            <Area
+                              type="monotone"
+                              dataKey="value"
+                              stroke="#f97316"
+                              strokeWidth={3}
+                              fill="url(#exercise-trend-grad)"
+                              dot={false}
+                              activeDot={{
+                                r: 5,
+                                stroke: "#fdba74",
+                                strokeWidth: 2,
+                                fill: "#f97316",
+                              }}
+                              connectNulls={false}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                   </div>
 
                   <div className="col-span-12 space-y-4 lg:col-span-4">
@@ -992,23 +1224,69 @@ const ExercisesScreen = () => {
                       <p className="mb-4 text-[9px] font-black uppercase tracking-widest text-gray-500">
                         Personal Best
                       </p>
-                      <div className="flex items-end gap-2">
-                        <span className="text-5xl font-black text-white">92.5</span>
-                        <span className="mb-1 text-xl font-black uppercase text-orange-600">kg</span>
-                      </div>
-                      <p className="mt-2 text-[10px] font-bold uppercase text-gray-600">Achieved: Oct 12, 2023</p>
+                      {exerciseStats?.personalBest ? (
+                        <>
+                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-orange-500">
+                            {exerciseStats.personalBest.metricLabel}
+                          </p>
+                          <div className="flex items-end gap-2">
+                            <span className="text-5xl font-black text-white">
+                              {exerciseStats.personalBest.displayValue}
+                            </span>
+                            {exerciseStats.personalBest.unit ? (
+                              <span className="mb-1 text-xl font-black uppercase text-orange-600">
+                                {exerciseStats.personalBest.unit}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-2 text-[10px] font-bold uppercase text-gray-500">
+                            {exerciseStats.personalBest.detailLabel ?? "Top completed performance"}
+                          </p>
+                          <p className="mt-2 text-[10px] font-bold uppercase text-gray-600">
+                            Achieved: {formatExerciseDate(exerciseStats.personalBest.achievedOn)}
+                          </p>
+                        </>
+                      ) : exerciseStatsQuery.isLoading ? (
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                          Loading personal best...
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-400">No completed sets yet.</p>
+                      )}
                     </div>
                     <div className="glass-card rounded-[2.5rem] border-t-4 border-t-orange-600 p-6">
                       <p className="mb-4 text-[9px] font-black uppercase tracking-widest text-gray-500">
-                        Estimated 1RM
+                        {getEstimatedMetricTitle(selectedExerciseType)}
                       </p>
-                      <div className="flex items-end gap-2">
-                        <span className="text-5xl font-black text-white">104</span>
-                        <span className="mb-1 text-xl font-black uppercase text-orange-600">kg</span>
-                      </div>
-                      <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/5">
-                        <div className="bg-gradient-fire h-full w-[85%]"></div>
-                      </div>
+                      {exerciseStats?.estimatedBest ? (
+                        <>
+                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-orange-500">
+                            {exerciseStats.estimatedBest.metricLabel}
+                          </p>
+                          <div className="flex items-end gap-2">
+                            <span className="text-5xl font-black text-white">
+                              {exerciseStats.estimatedBest.displayValue}
+                            </span>
+                            {exerciseStats.estimatedBest.unit ? (
+                              <span className="mb-1 text-xl font-black uppercase text-orange-600">
+                                {exerciseStats.estimatedBest.unit}
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-2 text-[10px] font-bold uppercase text-gray-500">
+                            {exerciseStats.estimatedBest.detailLabel ?? "Best calculated set"}
+                          </p>
+                          <p className="mt-2 text-[10px] font-bold uppercase text-gray-600">
+                            Achieved: {formatExerciseDate(exerciseStats.estimatedBest.achievedOn)}
+                          </p>
+                        </>
+                      ) : exerciseStatsQuery.isLoading ? (
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                          Loading estimate...
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-400">Not available for this exercise type.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1016,10 +1294,135 @@ const ExercisesScreen = () => {
 
               {activeTab === "history" && (
                 <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-12 glass-card rounded-[2.5rem] p-8">
-                    <h3 className="mb-8 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
-                      Recent History
-                    </h3>
+                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 bg-[#111] p-8">
+                    <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">
+                          Exercise History
+                        </h3>
+                        {exerciseHistoryQuery.isFetching && historyItems.length > 0 ? (
+                          <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-600">
+                            Refreshing history...
+                          </p>
+                        ) : null}
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-500">
+                        {exerciseHistoryQuery.data
+                          ? `Showing ${historyRangeStart}-${historyRangeEnd} of ${exerciseHistoryQuery.data.totalItems} sessions`
+                          : "Paginated workout records"}
+                      </p>
+                    </div>
+                    {historyErrorMessage ? (
+                      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-200">
+                        {historyErrorMessage}
+                      </div>
+                    ) : exerciseHistoryQuery.isLoading && historyItems.length === 0 ? (
+                      <div className="table-bg table-border border rounded-[18px] px-4 py-14 text-center">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                          Loading history...
+                        </p>
+                      </div>
+                    ) : historyItems.length === 0 ? (
+                      <div className="table-bg table-border border rounded-[18px] px-4 py-14 text-center">
+                        <p className="text-sm text-gray-400">
+                          No completed workout history for this exercise yet.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="table-bg table-border border rounded-[18px] overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+                            <thead>
+                              <tr className="table-header-bg border-b table-border">
+                                <th className="w-[16%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                                  Date
+                                </th>
+                                <th className="w-[26%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                                  Session
+                                </th>
+                                <th className="w-[24%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                                  Summary
+                                </th>
+                                <th className="w-[24%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                                  Best Set
+                                </th>
+                                <th className="w-[10%] px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                                  Sets
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {historyItems.map((item: UserExerciseHistoryItemResponse) => (
+                                <tr
+                                  key={item.routineLogId}
+                                  className="border-b table-border-row transition-colors last:border-0 hover:bg-white/[0.025]"
+                                >
+                                  <td className="px-4 py-4 align-top">
+                                    <p className="text-[12px] font-bold text-white">
+                                      {formatExerciseDate(item.sessionDate)}
+                                    </p>
+                                  </td>
+                                  <td className="px-4 py-4 align-top">
+                                    <p className="truncate text-[12px] font-bold text-white">
+                                      {item.sessionTitle ?? item.routineDayName ?? item.routineName ?? "Workout session"}
+                                    </p>
+                                    <p className="mt-1 truncate text-[11px] table-text-muted">
+                                      {[item.routineName, item.routineDayName].filter(Boolean).join(" / ") || "Completed session"}
+                                    </p>
+                                  </td>
+                                  <td className="px-4 py-4 align-top">
+                                    <p className="text-[12px] font-bold text-orange-400">
+                                      {item.summaryLabel}
+                                    </p>
+                                  </td>
+                                  <td className="px-4 py-4 align-top">
+                                    <p className="text-[12px] table-text">
+                                      {item.performanceLabel ?? "No best set available"}
+                                    </p>
+                                  </td>
+                                  <td className="px-4 py-4 align-top">
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-orange-300">
+                                      {item.completedSetCount}/{item.setCount}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6 flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-[11px] table-text-muted">
+                        {exerciseHistoryQuery.data
+                          ? `Recent completed sessions, ${EXERCISE_HISTORY_PAGE_SIZE} per page`
+                          : "Recent completed sessions"}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setHistoryPage((currentPage) => Math.max(0, currentPage - 1))}
+                          disabled={!exerciseHistoryQuery.data?.hasPrevious || exerciseHistoryQuery.isFetching}
+                          className="px-4 py-1.5 rounded-full border table-border table-bg text-[11px] font-bold table-text hover:text-white hover:border-white/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <span className="px-4 py-1.5 rounded-full border table-border table-bg-alt text-[11px] font-semibold text-white">
+                          Page {(exerciseHistoryQuery.data?.page ?? 0) + 1} of {Math.max(exerciseHistoryQuery.data?.totalPages ?? 1, 1)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setHistoryPage((currentPage) => currentPage + 1)}
+                          disabled={!exerciseHistoryQuery.data?.hasNext || exerciseHistoryQuery.isFetching}
+                          className="px-4 py-1.5 rounded-full border table-border table-bg text-[11px] font-bold table-text hover:text-white hover:border-white/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+
+                    {/*
                     <div className="space-y-4">
                       <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4">
                         <div>
@@ -1040,6 +1443,7 @@ const ExercisesScreen = () => {
                         </p>
                       </div>
                     </div>
+                    */}
                   </div>
                 </div>
               )}

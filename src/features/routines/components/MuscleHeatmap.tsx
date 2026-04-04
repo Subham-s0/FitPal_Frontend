@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getExerciseLibraryMusclesApi } from "@/features/exercises/api";
 import type { MuscleResponse } from "@/features/exercises/model";
+import { exerciseQueryKeys } from "@/features/exercises/queryKeys";
 import {
   BODY_BACK_IMAGE_URL,
   BODY_FRONT_IMAGE_URL,
@@ -235,7 +236,7 @@ const MuscleHeatmap = ({
 
   // Fetch all muscles with their image URLs (cached globally)
   const musclesQuery = useQuery({
-    queryKey: ["exercise-library", "muscles"],
+    queryKey: exerciseQueryKeys.muscles(),
     queryFn: getExerciseLibraryMusclesApi,
     staleTime: Infinity,
   });

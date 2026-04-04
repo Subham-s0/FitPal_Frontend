@@ -6,6 +6,7 @@ import type {
   ExerciseHowToSectionResponse,
   ExerciseLibraryResponse,
 } from "@/features/exercises/model";
+import { exerciseQueryKeys } from "@/features/exercises/queryKeys";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import type { ExerciseDetailPreview } from "@/features/routines/components/exerciseDetailPreview";
 
@@ -58,13 +59,13 @@ export default function ExerciseDetailSheet({
   }, [open, exercise?.id]);
 
   const libraryExerciseQuery = useQuery({
-    queryKey: ["exercise-detail-sheet", "library", exercise?.id],
+    queryKey: exerciseQueryKeys.libraryDetail(exercise?.source === "library" ? exercise.id : null),
     queryFn: () => getExerciseByIdApi(exercise!.id),
     enabled: open && exercise?.source === "library",
   });
 
   const customExerciseQuery = useQuery({
-    queryKey: ["exercise-detail-sheet", "custom", exercise?.id],
+    queryKey: exerciseQueryKeys.customDetail(exercise?.source === "custom" ? exercise.id : null),
     queryFn: () => getMyCustomExerciseByIdApi(exercise!.id),
     enabled: open && exercise?.source === "custom",
   });

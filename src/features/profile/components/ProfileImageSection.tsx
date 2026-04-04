@@ -5,9 +5,11 @@ import { getApiErrorMessage } from "@/shared/api/client";
 import { uploadProfileImageApi, deleteProfileImageApi } from "@/features/profile/api";
 import { cn } from "@/shared/lib/utils";
 import type { UserProfileResponse } from "@/features/profile/model";
-
-const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-const PROFILE_IMAGE_ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+import {
+  PROFILE_IMAGE_FILE_INPUT_ACCEPT,
+  PROFILE_IMAGE_MAX_BYTES,
+  isAllowedProfileImageMimeType,
+} from "@/features/profile/profileImageUpload";
 
 interface ProfileImageSectionProps {
   profile: UserProfileResponse;
@@ -41,8 +43,8 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
     event.target.value = "";
     if (!file) return;
 
-    if (!PROFILE_IMAGE_ACCEPTED_TYPES.includes(file.type)) {
-      toast.error("Upload a PNG, JPEG, or WEBP image");
+    if (!isAllowedProfileImageMimeType(file.type)) {
+      toast.error("Upload a JPEG or PNG image");
       return;
     }
 
@@ -141,7 +143,7 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
             <input
               type="file"
               aria-label="Upload profile image"
-              accept={PROFILE_IMAGE_ACCEPTED_TYPES.join(",")}
+              accept={PROFILE_IMAGE_FILE_INPUT_ACCEPT}
               className="hidden"
               onChange={handleImageSelect}
               disabled={isUploading}

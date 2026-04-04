@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { loginApi } from "@/features/auth/api";
+import { adminLoginApi } from "@/features/auth/api";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { useAuthState } from "@/features/auth/hooks";
 import { loginSchema, type LoginRequest } from "@/features/auth/model";
@@ -49,7 +49,7 @@ const AdminLoginPortal = () => {
   }, [auth.accessToken, auth.role, navigate]);
 
   const adminLogin = useMutation({
-    mutationFn: loginApi,
+    mutationFn: adminLoginApi,
     onSuccess: (response) => {
       if (response.role?.toUpperCase() !== ADMIN_ROLE) {
         authStore.clearAuth();

@@ -1,6 +1,10 @@
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Bell, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthState } from "@/features/auth/hooks";
+import { getMyProfileApi } from "@/features/profile/api";
+import { profileQueryKeys } from "@/features/profile/queryKeys";
 import {
   getDashboardPrimaryActionLabel,
   getDashboardRoleBadgeLabel,
@@ -28,7 +32,25 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
   const searchPlaceholder = getDashboardSearchPlaceholder(roleValue);
   const isUserDashboard = dashboardRole === "USER";
   const showRoleMeta = !isUserDashboard;
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
+  const fallbackAvatarUrl = useMemo(
+    () => `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`,
+    [displayName]
+  );
+
+  const profileQuery = useQuery({
+    queryKey: profileQueryKeys.user(),
+    queryFn: getMyProfileApi,
+    enabled: isUserDashboard && Boolean(auth.accessToken),
+    staleTime: 60_000,
+  });
+
+  const profilePhotoUrl = profileQuery.data?.profileImageUrl?.trim() || null;
+  const [photoBroken, setPhotoBroken] = useState(false);
+  useEffect(() => {
+    setPhotoBroken(false);
+  }, [profilePhotoUrl]);
+
+  const avatarUrl = profilePhotoUrl && !photoBroken ? profilePhotoUrl : fallbackAvatarUrl;
   const logoHref = dashboardRole === "ADMIN" ? "/admin/dashboard" : "/";
 
   const handlePrimaryAction = () => {
@@ -132,7 +154,16 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
             )}
           </div>
           <div className="h-12 w-12 rounded-full border-2 border-orange-600 p-0.5">
-            <img src={avatarUrl} className="h-full w-full rounded-full object-cover" alt={displayName} />
+            <img
+              src={avatarUrl}
+              className="h-full w-full rounded-full object-cover"
+              alt={displayName}
+              onError={() => {
+                if (profilePhotoUrl && avatarUrl === profilePhotoUrl) {
+                  setPhotoBroken(true);
+                }
+              }}
+            />
           </div>
         </button>
       </div>

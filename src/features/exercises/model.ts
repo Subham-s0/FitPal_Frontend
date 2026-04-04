@@ -53,6 +53,16 @@ export interface ExerciseLibrarySearchRequest {
   muscleIds?: number[];
 }
 
+export interface PageResponse<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
 export type ExerciseType = 
   | "Weight Reps"
   | "Reps Only"
@@ -81,4 +91,51 @@ export interface CustomExerciseResponse {
   exerciseType: ExerciseType;
   primaryMuscle: MuscleResponse | null;
   secondaryMuscles: MuscleResponse[];
+}
+
+export type ExerciseHistorySource = "LIBRARY" | "CUSTOM";
+export type ExerciseTrendRange = "MONTH" | "YEAR" | "ALL_TIME";
+
+export interface UserExerciseHistorySearchRequest {
+  exerciseSource: ExerciseHistorySource;
+  sourceExerciseId: number;
+  page?: number;
+  size?: number;
+}
+
+export interface UserExerciseHistoryItemResponse {
+  routineLogId: string;
+  sessionDate: string;
+  sessionTitle: string | null;
+  routineName: string | null;
+  routineDayName: string | null;
+  setCount: number;
+  completedSetCount: number;
+  summaryLabel: string;
+  performanceLabel: string | null;
+}
+
+export interface UserExerciseMetricRecordResponse {
+  metricLabel: string;
+  value: number | null;
+  unit: string | null;
+  displayValue: string;
+  detailLabel: string | null;
+  achievedOn: string;
+}
+
+export interface UserExerciseTrendPointResponse {
+  periodStart: string;
+  periodLabel: string;
+  value: number | null;
+  displayValue: string | null;
+  detailLabel: string | null;
+}
+
+export interface UserExerciseStatsResponse {
+  trendLabel: string;
+  trendUnit: string | null;
+  trendPoints: UserExerciseTrendPointResponse[];
+  personalBest: UserExerciseMetricRecordResponse | null;
+  estimatedBest: UserExerciseMetricRecordResponse | null;
 }

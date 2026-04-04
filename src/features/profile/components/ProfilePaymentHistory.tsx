@@ -21,24 +21,17 @@ import type {
   PaymentStatus,
   UserPaymentHistoryItemResponse,
 } from "@/features/payment/model";
+import {
+  METHOD_FILTER_OPTIONS,
+  STATUS_FILTER_OPTIONS,
+  getPaymentMethodLabel,
+  getPaymentStatusBadgeClassName,
+} from "@/features/payment/payment.constants";
+import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { SectionLabel } from "@/features/profile/components/ProfileSetupShell";
 import { Badge } from "@/shared/ui/badge";
 import { cn } from "@/shared/lib/utils";
 import { getApiErrorMessage } from "@/shared/api/client";
-
-const STATUS_FILTER_OPTIONS = [
-  { value: "ALL", label: "All statuses" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "FAILED", label: "Failed" },
-  { value: "CANCELLED", label: "Cancelled" },
-  { value: "PENDING", label: "Pending" },
-] as const;
-
-const METHOD_FILTER_OPTIONS = [
-  { value: "ALL", label: "All methods" },
-  { value: "ESEWA", label: "eSewa" },
-  { value: "KHALTI", label: "Khalti" },
-] as const;
 
 const SORT_OPTIONS = [
   { value: "DESC", label: "Newest first" },
@@ -70,22 +63,6 @@ const formatDateTime = (value: string | null) => {
   }).format(date);
 };
 
-const getStatusBadgeClassName = (status: PaymentStatus) => {
-  switch (status) {
-    case "COMPLETED":
-      return "border-0 bg-emerald-500/12 text-emerald-400 hover:bg-emerald-500/20";
-    case "FAILED":
-      return "border-0 bg-red-500/12 text-red-400 hover:bg-red-500/20";
-    case "CANCELLED":
-      return "border-0 bg-amber-500/12 text-amber-400 hover:bg-amber-500/20";
-    case "PENDING":
-      return "border-0 bg-sky-500/12 text-sky-400 hover:bg-sky-500/20";
-    default:
-      return "border-0 bg-white/10 text-slate-300";
-  }
-};
-
-const getMethodLabel = (method: PaymentMethod) => (method === "ESEWA" ? "eSewa" : "Khalti");
 const SortIcon = ({ direction }: { direction: "ASC" | "DESC" }) =>
   direction === "DESC" ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />;
 
@@ -114,7 +91,7 @@ function PaymentRowCards({ items }: { items: UserPaymentHistoryItemResponse[] })
                 </p>
               </div>
             </div>
-            <Badge className={cn("shrink-0", getStatusBadgeClassName(payment.paymentStatus))}>
+            <Badge className={cn("shrink-0", getPaymentStatusBadgeClassName(payment.paymentStatus))}>
               {payment.paymentStatus}
             </Badge>
           </div>
@@ -128,7 +105,7 @@ function PaymentRowCards({ items }: { items: UserPaymentHistoryItemResponse[] })
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Method</p>
-              <p className="mt-1 font-bold text-slate-200">{getMethodLabel(payment.paymentMethod)}</p>
+              <p className="mt-1 font-bold text-slate-200">{getPaymentMethodLabel(payment.paymentMethod)}</p>
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Paid At</p>
@@ -161,7 +138,12 @@ export default function ProfilePaymentHistory() {
   const filterRef = useRef<HTMLDivElement>(null);
 
   const historyQuery = useQuery({
-    queryKey: ["user-payment-history", statusFilter, methodFilter, sortDirection, page],
+    queryKey: profileQueryKeys.paymentHistory(
+      statusFilter === "ALL" ? null : statusFilter,
+      methodFilter === "ALL" ? null : methodFilter,
+      sortDirection,
+      page
+    ),
     queryFn: () =>
       getMyPaymentHistoryApi({
         statuses: statusFilter === "ALL" ? undefined : [statusFilter],
@@ -457,7 +439,7 @@ export default function ProfilePaymentHistory() {
                       </p>
                     </td>
                     <td className="px-3.5 py-3.5">
-                      <p className="text-[12px] font-bold text-white">{getMethodLabel(payment.paymentMethod)}</p>
+                      <p className="text-[12px] font-bold text-white">{getPaymentMethodLabel(payment.paymentMethod)}</p>
                       <p className="mt-0.5 text-[11px] table-text-muted truncate">
                         {payment.gatewayReference || payment.gatewayTransactionId || "Gateway pending"}
                       </p>
@@ -466,7 +448,7 @@ export default function ProfilePaymentHistory() {
                       {formatDateTime(payment.paymentTime)}
                     </td>
                     <td className="px-3.5 py-3.5">
-                      <Badge className={getStatusBadgeClassName(payment.paymentStatus)}>
+                      <Badge className={getPaymentStatusBadgeClassName(payment.paymentStatus)}>
                         {payment.paymentStatus === "COMPLETED" && <CheckCircle2 className="mr-1 h-3 w-3" />}
                         {payment.paymentStatus === "FAILED" && <XCircle className="mr-1 h-3 w-3" />}
                         {payment.paymentStatus}

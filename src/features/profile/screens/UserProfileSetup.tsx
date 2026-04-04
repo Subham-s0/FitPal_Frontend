@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
 import { getPlansApi } from "@/features/plans/api";
+import { plansQueryKeys } from "@/features/plans/queryKeys";
 import { initiateEsewaPaymentApi, initiateKhaltiPaymentApi } from "@/features/payment/api";
 import {
   buildEsewaBillingPayload,
@@ -26,7 +27,7 @@ import {
   deleteProfileImageApi, getMyProfileApi,
   patchOnboardingProfileApi, uploadProfileImageApi,
 } from "@/features/profile/api";
-import { selectMySubscriptionApi } from "@/features/subscription/api";
+import { getMySubscriptionApi, selectMySubscriptionApi } from "@/features/subscription/api";
 import { authStore } from "@/features/auth/store";
 import { getApiErrorMessage } from "@/shared/api/client";
 import type { BillingCycle, UserSubscriptionResponse } from "@/features/subscription/model";
@@ -34,6 +35,11 @@ import type {
   FitnessLevel, Gender, PrimaryFitnessFocus,
   UpdateUserOnboardingRequest, UserProfileResponse,
 } from "@/features/profile/model";
+import {
+  PROFILE_IMAGE_FILE_INPUT_ACCEPT,
+  PROFILE_IMAGE_MAX_BYTES,
+  isAllowedProfileImageMimeType,
+} from "@/features/profile/profileImageUpload";
 import { CustomDatePicker } from "@/shared/ui/CustomDatePicker";
 import { CustomSelect } from "@/shared/ui/CustomSelect";
 import { NumberInput } from "@/shared/ui/number-input";
@@ -94,8 +100,6 @@ const PAYMENT_METHODS: PaymentMethodDefinition[] = [
   { id: "esewa", name: "eSewa", subtitle: "Popular digital wallet for direct payments.", badge: "e", logoUrl: "https://esewa.com.np/common/images/esewa_logo.png", colorClass: "bg-[#60bb46]/20 text-[#8ae36f]", isAvailable: true },
 ];
 
-const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-const PROFILE_IMAGE_ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const INITIAL_USER_STATE: UserSetupState = {
   username: "", firstName: "", lastName: "", profileImageUrl: "", profileImagePublicId: "",
   profileImageResourceType: "", dob: "", gender: "", phone: "", weight: "", height: "",
@@ -127,6 +131,14 @@ const getUserResumeStepIndex = (profile: UserProfileResponse) => {
   return 3;
 };
 
+/** Backend stores max completed step (1–3 for profile wizard, 4 after plan selection); never regress below that when resuming. */
+const resolveResumeStepIndex = (profile: UserProfileResponse) => {
+  const inferred = getUserResumeStepIndex(profile);
+  if (inferred >= 4) return inferred;
+  const backendFloor = Math.min(Math.max(profile.onboardingStep ?? 0, 0), 4);
+  return Math.max(inferred, backendFloor);
+};
+
 const ProfileSetup = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -134,7 +146,7 @@ const ProfileSetup = () => {
   const locationState = location.state as ProfileSetupLocationState | null;
   const shouldOpenPaymentStep = Boolean(locationState?.paymentFeedback || locationState?.openPaymentStep);
   const initialSelectedPlan = normalizePlanType(locationState?.selectedPlan);
-  const { data: plans = [], isLoading: isLoadingPlans, isError: isPlansError } = useQuery({ queryKey: ["plans"], queryFn: getPlansApi });
+  const { data: plans = [], isLoading: isLoadingPlans, isError: isPlansError } = useQuery({ queryKey: plansQueryKeys.list(), queryFn: getPlansApi });
 
   const [stepIndex, setStepIndex] = useState(0);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
@@ -165,8 +177,10 @@ const ProfileSetup = () => {
   const isWideStep = currentStep.id === "profile" || currentStep.id === "subscription" || currentStep.id === "payment";
   const isGoogle = (auth.providers ?? []).some((p) => p.toUpperCase() === "GOOGLE");
   const displayName = auth.email?.split("@")[0] || "FitPal Member";
-  const firstNameLocked = isGoogle && Boolean(userData.firstName.trim());
-  const lastNameLocked = isGoogle && Boolean(userData.lastName.trim());
+  // During profile setup, allow users to edit all fields freely
+  // Name fields are editable even if pre-filled from Google
+  const firstNameLocked = false;
+  const lastNameLocked = false;
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
 
   const transformedProfileImageUrl = useMemo(() => {
@@ -259,12 +273,18 @@ const ProfileSetup = () => {
     const loadProfile = async () => {
       setIsLoadingProfile(true);
       try {
-        const [profile, subscriptionState] = await Promise.all([
-          getMyProfileApi(),
-          getMySubscriptionApi(),
-        ]);
+        const profile = await getMyProfileApi();
         if (cancelled) return;
-        const subscription = subscriptionState.subscription;
+
+        let subscription: UserSubscriptionResponse | null = null;
+        try {
+          const subscriptionState = await getMySubscriptionApi();
+          subscription = subscriptionState.subscription ?? null;
+        } catch {
+          // Subscription may not exist yet during onboarding; do not block profile or step restore.
+        }
+        if (cancelled) return;
+
         setUserData({
           username: profile.userName ?? "", firstName: profile.firstName ?? "", lastName: profile.lastName ?? "",
           profileImageUrl: profile.profileImageUrl ?? "", profileImagePublicId: profile.profileImagePublicId ?? "",
@@ -289,7 +309,7 @@ const ProfileSetup = () => {
           setSelectedPlan(normalizePlanType(subscription.planType));
           setBillingCycle(fromApiBillingCycle(subscription.billingCycle));
         }
-        setStepIndex(shouldOpenPaymentStep ? 4 : getUserResumeStepIndex(profile));
+        setStepIndex(shouldOpenPaymentStep ? 4 : resolveResumeStepIndex(profile));
         syncAuthOnboardingStatus(profile);
       } catch (error) {
         toast.error(getApiErrorMessage(error, "Failed to load onboarding profile"));
@@ -331,7 +351,14 @@ const ProfileSetup = () => {
       else if (username.length < 3) nextErrors.username = "At least 3 characters";
       else if (username.length > 50) nextErrors.username = "At most 50 characters";
       else if (!/^[A-Za-z0-9_]+$/.test(username)) nextErrors.username = "Letters, numbers, and underscores only";
-      if (!userData.firstName.trim() && !userData.lastName.trim()) nextErrors.firstName = "Add your first name or last name";
+      const firstName = userData.firstName.trim();
+      const lastName = userData.lastName.trim();
+      if (!firstName && !lastName) {
+        nextErrors.firstName = "Add your first name or last name";
+      } else {
+        if (firstName && firstName.length < 2) nextErrors.firstName = "At least 2 characters";
+        if (lastName && lastName.length < 2) nextErrors.lastName = "At least 2 characters";
+      }
     }
     if (step === "demographics") {
       if (userData.dob) {
@@ -479,7 +506,7 @@ const ProfileSetup = () => {
   const handlePhotoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!PROFILE_IMAGE_ACCEPTED_TYPES.includes(file.type)) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Only PNG, JPG, WEBP allowed" })); event.target.value = ""; return; }
+    if (!isAllowedProfileImageMimeType(file.type)) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Only JPEG or PNG allowed" })); event.target.value = ""; return; }
     if (file.size > PROFILE_IMAGE_MAX_BYTES) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Max 5 MB" })); event.target.value = ""; return; }
     setIsUploadingPhoto(true);
     try { const profile = await uploadProfileImageApi(file); setProfileImageStateFromProfile(profile); syncAuthOnboardingStatus(profile); setIsProfileImageLoadFailed(false); clearError("profileImageUrl"); toast.success("Photo uploaded"); }
@@ -546,12 +573,12 @@ const ProfileSetup = () => {
                 )}
               </div>
               <p className="text-[15px] font-black text-white">Profile Photo</p>
-              <p className="mb-2 mt-1 text-[12px] text-slate-500">JPG, PNG, WEBP - Max 5 MB</p>
+              <p className="mb-2 mt-1 text-[12px] text-slate-500">JPG, PNG — Max 5 MB</p>
             </div>
             <div className="flex flex-col items-center gap-2.5 pt-1.5">
               <label className={cn("inline-flex cursor-pointer items-center justify-center rounded-[0.9rem] border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-[0.08em] text-white transition-all hover:bg-white/10", busy && "pointer-events-none opacity-50")}>
                 {isUploadingPhoto ? "Uploading..." : isDeletingPhoto ? "Removing..." : "Change Photo"}
-                <input type="file" className="hidden" accept="image/png,image/jpeg,image/webp" onChange={handlePhotoSelected} />
+                <input type="file" className="hidden" accept={PROFILE_IMAGE_FILE_INPUT_ACCEPT} onChange={handlePhotoSelected} />
               </label>
               {isProfileImageLoadFailed && <p className="text-[11px] text-amber-400">Unsupported format, fallback shown.</p>}
               <FieldError message={userErrors.profileImageUrl} />
@@ -566,7 +593,7 @@ const ProfileSetup = () => {
             <Field label="First name" error={userErrors.firstName}>
               {firstNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.firstName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="First name" value={userData.firstName} onChange={(e) => { setUser({ firstName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
             </Field>
-            <Field label="Last name">
+            <Field label="Last name" error={userErrors.lastName}>
               {lastNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.lastName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="Last name" value={userData.lastName} onChange={(e) => { setUser({ lastName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
             </Field>
           </div>

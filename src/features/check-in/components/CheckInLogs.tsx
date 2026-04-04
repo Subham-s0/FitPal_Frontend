@@ -21,6 +21,7 @@ import {
   getMyCheckInHistoryApi,
   getMyCheckInHistorySummaryApi,
 } from "@/features/check-in/api";
+import { checkInQueryKeys } from "@/features/check-in/queryKeys";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import type {
   CheckInStatus,
@@ -137,7 +138,7 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
   const statuses = getStatuses(filterStatus);
 
   const historyQuery = useQuery({
-    queryKey: ["check-in-history", filterStatus, deferredSearchTerm, sortDirection, page],
+    queryKey: checkInQueryKeys.history(filterStatus, deferredSearchTerm, sortDirection, page),
     queryFn: () =>
       getMyCheckInHistoryApi({
         statuses,
@@ -151,7 +152,7 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
   });
 
   const summaryQuery = useQuery({
-    queryKey: ["check-in-history-summary", filterStatus, deferredSearchTerm],
+    queryKey: checkInQueryKeys.historySummary(filterStatus, deferredSearchTerm),
     queryFn: () =>
       getMyCheckInHistorySummaryApi({
         statuses,

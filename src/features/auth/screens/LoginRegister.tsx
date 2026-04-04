@@ -72,7 +72,6 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
 
       if (payload.auth?.accessToken) {
         authStore.setAuth(payload.auth);
-        toast.success(payload.auth.message || "Signed in successfully");
         navigate(
           getPostAuthRoute({
             role: payload.auth.role,
@@ -82,6 +81,9 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
             hasDashboardAccess: payload.auth.hasDashboardAccess,
           })
         );
+        window.setTimeout(() => {
+          toast.success(payload.auth?.message || "Signed in successfully");
+        }, 0);
         return;
       }
 

@@ -1,12 +1,18 @@
 import apiClient from "@/shared/api/client";
 import type {
   ExerciseEquipmentResponse,
+  ExerciseHistorySource,
   ExerciseLibraryResponse,
   ExerciseLibrarySearchRequest,
   ExerciseLibrarySummaryResponse,
+  ExerciseTrendRange,
+  PageResponse,
   MuscleResponse,
   CustomExerciseRequest,
   CustomExerciseResponse,
+  UserExerciseHistoryItemResponse,
+  UserExerciseHistorySearchRequest,
+  UserExerciseStatsResponse,
 } from "@/features/exercises/model";
 
 function buildExerciseLibraryParams(request?: ExerciseLibrarySearchRequest) {
@@ -18,6 +24,15 @@ function buildExerciseLibraryParams(request?: ExerciseLibrarySearchRequest) {
     query: request.query?.trim() || undefined,
     equipmentIds: request.equipmentIds?.length ? request.equipmentIds.join(",") : undefined,
     muscleIds: request.muscleIds?.length ? request.muscleIds.join(",") : undefined,
+  };
+}
+
+function buildExerciseHistoryParams(request: UserExerciseHistorySearchRequest) {
+  return {
+    exerciseSource: request.exerciseSource,
+    sourceExerciseId: request.sourceExerciseId,
+    page: request.page,
+    size: request.size,
   };
 }
 
@@ -104,4 +119,34 @@ export async function getMyCustomExerciseByIdApi(
 
 export async function deleteCustomExerciseApi(customExerciseId: number): Promise<void> {
   await apiClient.delete(`/users/me/custom-exercises/${customExerciseId}`);
+}
+
+export async function getMyExerciseHistoryApi(
+  request: UserExerciseHistorySearchRequest
+): Promise<PageResponse<UserExerciseHistoryItemResponse>> {
+  const response = await apiClient.get<PageResponse<UserExerciseHistoryItemResponse>>(
+    "/users/me/exercises/history",
+    {
+      params: buildExerciseHistoryParams(request),
+    }
+  );
+  return response.data;
+}
+
+export async function getMyExerciseStatsApi(
+  exerciseSource: ExerciseHistorySource,
+  sourceExerciseId: number,
+  trendRange: ExerciseTrendRange
+): Promise<UserExerciseStatsResponse> {
+  const response = await apiClient.get<UserExerciseStatsResponse>(
+    "/users/me/exercises/history/summary",
+    {
+      params: {
+        exerciseSource,
+        sourceExerciseId,
+        trendRange,
+      },
+    }
+  );
+  return response.data;
 }

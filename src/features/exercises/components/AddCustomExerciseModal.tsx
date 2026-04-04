@@ -7,6 +7,7 @@ import { CustomSelect } from "@/shared/ui/CustomSelect";
 import { MultiSelect } from "@/shared/ui/MultiSelect";
 import { createCustomExerciseApi } from "@/features/exercises/api";
 import { getExerciseLibraryEquipmentApi, getExerciseLibraryMusclesApi } from "@/features/exercises/api";
+import { exerciseQueryKeys } from "@/features/exercises/queryKeys";
 import type { CustomExerciseResponse, ExerciseType } from "@/features/exercises/model";
 
 interface AddCustomExerciseModalProps {
@@ -68,19 +69,19 @@ export function AddCustomExerciseModal({
   }, [isOpen]);
 
   const muscleOptionsQuery = useQuery({
-    queryKey: ["exercise-library-muscles"],
+    queryKey: exerciseQueryKeys.muscles(),
     queryFn: getExerciseLibraryMusclesApi,
   });
 
   const equipmentOptionsQuery = useQuery({
-    queryKey: ["exercise-library-equipment"],
+    queryKey: exerciseQueryKeys.equipment(),
     queryFn: getExerciseLibraryEquipmentApi,
   });
 
   const createMutation = useMutation({
     mutationFn: createCustomExerciseApi,
     onSuccess: (createdExercise) => {
-      queryClient.invalidateQueries({ queryKey: ["custom-exercises"] });
+      queryClient.invalidateQueries({ queryKey: exerciseQueryKeys.custom() });
       onCreated?.(createdExercise);
       closeModal("success");
     },

@@ -13,6 +13,7 @@ import {
 
 import { getMyRoutineSettingsApi } from "@/features/routines/routineApi";
 import type { UserRoutineSettingItemResponse } from "@/features/routines/routineTypes";
+import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { SectionLabel } from "@/features/profile/components/ProfileSetupShell";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { Badge } from "@/shared/ui/badge";
@@ -91,7 +92,7 @@ function RoutineSettingCard({ setting }: { setting: UserRoutineSettingItemRespon
 export default function ProfileRoutineSettings() {
   const navigate = useNavigate();
   const routineSettingsQuery = useQuery({
-    queryKey: ["user-routine-settings"],
+    queryKey: profileQueryKeys.routineSettings(),
     queryFn: getMyRoutineSettingsApi,
   });
 

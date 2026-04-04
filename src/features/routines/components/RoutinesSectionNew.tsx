@@ -63,7 +63,6 @@ import {
   deleteRoutine,
   updateRoutine,
   setActiveRoutine,
-  initializeRoutineStore,
   addRoutine,
   refreshRoutineStore,
 } from "@/features/routines/routineStore";
@@ -376,6 +375,19 @@ const RoutinesSection = ({
     staleTime: 30000,
   });
 
+  // Subscribe to routine list query to trigger refresh when invalidated
+  // This ensures the local store is refreshed when sync-to-routine updates the backend
+  useQuery({
+    queryKey: routineQueryKeys.list(),
+    queryFn: async () => {
+      // Refresh the local routine store from backend
+      const refreshedRoutines = await refreshRoutineStore();
+      setRoutines(refreshedRoutines);
+      return refreshedRoutines;
+    },
+    staleTime: 30000,
+  });
+
   // Get the upcoming day ID from active routine settings
   const upcomingDayId = routineSettings?.activeSetting?.currentDayId ?? null;
   const activeRoutineBackendId = routineSettings?.activeSetting?.routineId ?? null;
@@ -405,27 +417,8 @@ const RoutinesSection = ({
     },
   });
 
-  // Load routines from the backend-backed store
-  useEffect(() => {
-    let cancelled = false;
-
-    void initializeRoutineStore()
-      .then((loadedRoutines) => {
-        if (!cancelled) {
-          setRoutines(loadedRoutines);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to initialize routines:", error);
-        if (!cancelled) {
-          setRoutines(loadRoutines());
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Note: Routine loading is handled by the useQuery with routineQueryKeys.list()
+  // which refreshes from backend and updates local state when invalidated
 
   useEffect(() => {
     if (!initialInlineEditRoutineId) return;

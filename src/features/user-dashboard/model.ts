@@ -28,6 +28,8 @@ export interface DashboardMonthlyActivityResponse {
   year: number;
   month: number;
   days: DashboardMonthlyActivityDayResponse[];
+  overallCurrentStreak: number;
+  overallMaxStreak: number;
 }
 
 export interface DashboardExercisePreviewResponse {

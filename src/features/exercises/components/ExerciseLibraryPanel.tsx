@@ -13,6 +13,7 @@ import type {
   ExerciseLibrarySummaryResponse,
   ExerciseType,
 } from "@/features/exercises/model";
+import { exerciseQueryKeys } from "@/features/exercises/queryKeys";
 import { CustomSelect } from "@/shared/ui/CustomSelect";
 import { Sheet, SheetContent, SheetTitle } from "@/shared/ui/sheet";
 import { useAuthState } from "@/features/auth/hooks";
@@ -271,19 +272,23 @@ export function ExerciseLibraryPanel({
   const hasAuthToken = Boolean(auth.accessToken);
 
   const muscleOptionsQuery = useQuery({
-    queryKey: ["exercise-library-muscles"],
+    queryKey: exerciseQueryKeys.muscles(),
     queryFn: getExerciseLibraryMusclesApi,
     enabled: hasAuthToken,
   });
 
   const equipmentOptionsQuery = useQuery({
-    queryKey: ["exercise-library-equipment"],
+    queryKey: exerciseQueryKeys.equipment(),
     queryFn: getExerciseLibraryEquipmentApi,
     enabled: hasAuthToken,
   });
 
   const exercisesQuery = useQuery({
-    queryKey: ["exercise-library", deferredSearchQuery, selectedMuscle, selectedEquipment],
+    queryKey: exerciseQueryKeys.libraryList(
+      deferredSearchQuery || undefined,
+      selectedMuscle === "all" ? null : Number(selectedMuscle),
+      selectedEquipment === "all" ? null : Number(selectedEquipment)
+    ),
     queryFn: () =>
       getExerciseLibraryApi({
         query: deferredSearchQuery || undefined,
@@ -295,7 +300,7 @@ export function ExerciseLibraryPanel({
   });
 
   const customExercisesQuery = useQuery({
-    queryKey: ["custom-exercises"],
+    queryKey: exerciseQueryKeys.customList(),
     queryFn: getMyCustomExercisesApi,
     enabled: hasAuthToken,
   });
@@ -350,62 +355,63 @@ export function ExerciseLibraryPanel({
         <div className="h-1.5 w-12 rounded-full bg-white/10" />
       </div>
 
-      {/* Header + Filters */}
-      <div className="space-y-3 border-b border-white/5 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-xs font-black uppercase tracking-widest text-white">
-              Exercise Library
-            </h3>
-            <p className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.15em] text-gray-500 md:hidden">
-              Select an exercise
-            </p>
-          </div>
-          {showCustomButton && onCustomClick && (
-            <button
-              type="button"
-              onClick={onCustomClick}
-              className="rounded-lg border border-orange-600/20 bg-orange-600/10 px-3 py-1 text-[8px] font-black uppercase tracking-widest text-orange-600 transition-all hover:bg-gradient-fire hover:text-white"
-            >
-              + Custom
-            </button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search exercises..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-10 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 pl-10 text-sm font-medium text-slate-200 transition-all placeholder:text-slate-500 hover:border-orange-600/50 focus:border-orange-600/50 focus:outline-none focus:ring-0 focus:shadow-[0_0_0_3px_rgba(234,88,12,0.08)]"
-            />
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-          </div>
-
-          <CustomSelect
-            options={muscleOptions}
-            value={selectedMuscle}
-            onChange={handleMuscleChange}
-            placeholder="All Muscles"
-            className="h-10 w-full"
-            disabled={muscleOptionsQuery.isLoading}
-          />
-
-          <CustomSelect
-            options={equipmentOptions}
-            value={selectedEquipment}
-            onChange={handleEquipmentChange}
-            placeholder="All Equipment"
-            className="h-10 w-full"
-            disabled={equipmentOptionsQuery.isLoading}
-          />
-        </div>
-      </div>
-
-      {/* Exercise List */}
+      {/* Scrollable Content (Search/Filters + List) */}
       <div className="flex-grow overflow-y-auto custom-scrollbar">
+        {/* Header + Filters */}
+        <div className="space-y-3 border-b border-white/5 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                Exercise Library
+              </h3>
+              <p className="mt-0.5 text-[8px] font-medium uppercase tracking-[0.15em] text-gray-500 md:hidden">
+                Select an exercise
+              </p>
+            </div>
+            {showCustomButton && onCustomClick && (
+              <button
+                type="button"
+                onClick={onCustomClick}
+                className="rounded-lg border border-orange-600/20 bg-orange-600/10 px-3 py-1 text-[8px] font-black uppercase tracking-widest text-orange-600 transition-all hover:bg-gradient-fire hover:text-white"
+              >
+                + Custom
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search exercises..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="h-10 w-full rounded-xl border border-white/10 bg-[#0a0a0a] px-4 pl-10 text-sm font-medium text-slate-200 transition-all placeholder:text-slate-500 hover:border-orange-600/50 focus:border-orange-600/50 focus:outline-none focus:ring-0 focus:shadow-[0_0_0_3px_rgba(234,88,12,0.08)]"
+              />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            </div>
+
+            <CustomSelect
+              options={muscleOptions}
+              value={selectedMuscle}
+              onChange={handleMuscleChange}
+              placeholder="All Muscles"
+              className="h-10 w-full"
+              disabled={muscleOptionsQuery.isLoading}
+            />
+
+            <CustomSelect
+              options={equipmentOptions}
+              value={selectedEquipment}
+              onChange={handleEquipmentChange}
+              placeholder="All Equipment"
+              className="h-10 w-full"
+              disabled={equipmentOptionsQuery.isLoading}
+            />
+          </div>
+        </div>
+
+        {/* Exercise List */}
         {/* Custom Exercises */}
         {customExercises.length > 0 && (
           <>

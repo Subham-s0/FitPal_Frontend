@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 import type { PlanResponse } from "@/features/plans/model";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
@@ -23,6 +23,8 @@ interface PlanBrowserProps {
   billingCycle: PlanBrowserBillingCycle;
   onBillingChange: (cycle: PlanBrowserBillingCycle) => void;
   compact?: boolean;
+  /** Larger rounded corners on plan cards (marketing pages); mobile carousel unchanged structurally. */
+  marketingRoundedCards?: boolean;
   desktopLayout?: DesktopLayout;
   footerMode?: FooterMode;
   selectedPlanKey?: string | number | null;
@@ -76,6 +78,7 @@ export default function PlanBrowser({
   billingCycle,
   onBillingChange,
   compact = false,
+  marketingRoundedCards = false,
   desktopLayout = "auto",
   footerMode = "action",
   selectedPlanKey = null,
@@ -203,7 +206,11 @@ export default function PlanBrowser({
         onClick={handleSelect}
         className={cn(
           "relative flex h-full flex-col text-left transition-all duration-500",
-          compact ? "rounded-[1.15rem] p-6" : "rounded-[1.25rem] p-8",
+          compact
+            ? "rounded-[1.15rem] p-6"
+            : marketingRoundedCards
+              ? "rounded-3xl p-8"
+              : "rounded-[1.25rem] p-8",
           shouldUseDesktopScroll
             ? compact
               ? "w-[82vw] max-w-[20rem] shrink-0 snap-center"
@@ -219,14 +226,15 @@ export default function PlanBrowser({
         style={{ animationDelay: `${index * 0.1}s` }}
       >
         {plan.mostPopular ? (
-          <div className="absolute left-1/2 top-0 flex -translate-x-1/2 items-center gap-2 rounded-b-xl bg-orange-600 px-4 py-1">
-            <span className="text-[9px] font-black uppercase tracking-widest text-white">
+          <div className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-3.5 py-1 shadow-[0_4px_14px_-2px_rgba(234,88,12,0.5)]">
+            <Sparkles className="h-3 w-3 shrink-0 text-white" />
+            <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white">
               Most Popular
             </span>
           </div>
         ) : null}
 
-        <div className={compact ? "mb-5 pt-2" : "mb-6 pt-2"}>
+        <div className={cn(compact ? "mb-5" : "mb-6", plan.mostPopular ? "pt-4" : "pt-2")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="mb-2 text-[13px] font-black uppercase tracking-[0.1em] text-slate-400">

@@ -4,8 +4,10 @@ import { Gem, Target, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { getMyProfileApi } from "@/features/profile/api";
+import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { getMySubscriptionApi } from "@/features/subscription/api";
 import { getPlansApi } from "@/features/plans/api";
+import { plansQueryKeys } from "@/features/plans/queryKeys";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import { useAuthState } from "@/features/auth/hooks";
@@ -56,17 +58,17 @@ const ProfileContainer = () => {
   const activeTab = resolveTab(location.search);
 
   const profileQuery = useQuery({
-    queryKey: ["user-profile"],
+    queryKey: profileQueryKeys.user(),
     queryFn: getMyProfileApi,
   });
 
   const subscriptionQuery = useQuery({
-    queryKey: ["user-profile-subscription"],
+    queryKey: profileQueryKeys.subscription(),
     queryFn: getMySubscriptionApi,
   });
 
   const plansQuery = useQuery({
-    queryKey: ["plans"],
+    queryKey: plansQueryKeys.list(),
     queryFn: getPlansApi,
   });
 

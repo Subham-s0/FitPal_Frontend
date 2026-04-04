@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { getPlansApi } from "@/features/plans/api";
+import { plansQueryKeys } from "@/features/plans/queryKeys";
 import PlanBrowser, { type PlanBrowserBillingCycle } from "@/features/plans/components/PlanBrowser";
 import { cn } from "@/shared/lib/utils";
 
@@ -25,7 +26,7 @@ const Pricing = ({
   const navigate = useNavigate();
   const location = useLocation();
   const { data: plans = [], isLoading, isError } = useQuery({
-    queryKey: ["plans"],
+    queryKey: plansQueryKeys.list(),
     queryFn: getPlansApi,
   });
 
@@ -60,7 +61,7 @@ const Pricing = ({
             <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
               Pricing
             </span>
-            <h2 className="mb-4 text-3xl font-black uppercase tracking-tight text-white md:text-5xl">
+            <h2 className="mb-4 text-3xl font-black uppercase tracking-tighter text-white md:text-5xl">
               Choose Your <span className="text-gradient-fire">Plan</span>
             </h2>
             <p className="mx-auto max-w-xl text-sm font-medium text-slate-400">
@@ -82,6 +83,7 @@ const Pricing = ({
             billingCycle={resolvedBillingCycle}
             onBillingChange={updateBilling}
             desktopLayout="auto"
+            marketingRoundedCards={!compact}
             selectedPlanKey={selectedPlanId ?? null}
             selectionKeyType="planType"
             onSelectPlan={(plan, cycle) => {

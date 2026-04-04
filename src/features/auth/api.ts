@@ -8,9 +8,15 @@ import type {
   ForgotPasswordResetRequest,
 } from "@/features/auth/model";
 
-/** POST /api/auth/login */
+/** POST /api/auth/login — members and gyms only (SUPERADMIN must use adminLoginApi) */
 export async function loginApi(data: LoginRequest): Promise<AuthResponse> {
   const res = await apiClient.post<AuthResponse>("/auth/login", data);
+  return res.data;
+}
+
+/** POST /api/auth/admin/login — SUPERADMIN only */
+export async function adminLoginApi(data: LoginRequest): Promise<AuthResponse> {
+  const res = await apiClient.post<AuthResponse>("/auth/admin/login", data);
   return res.data;
 }
 

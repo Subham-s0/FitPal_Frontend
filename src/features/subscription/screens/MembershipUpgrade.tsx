@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { useAuthState } from "@/features/auth";
 import { authStore } from "@/features/auth/store";
 import { getPlansApi } from "@/features/plans/api";
+import { plansQueryKeys } from "@/features/plans/queryKeys";
 import { initiateEsewaPaymentApi, initiateKhaltiPaymentApi } from "@/features/payment/api";
 import {
   buildEsewaBillingPayload,
@@ -869,7 +870,7 @@ const MembershipUpgrade = () => {
   const isMobile = useIsMobile();
   const locationState = location.state as UpgradeMembershipLocationState | null;
 
-  const plansQuery = useQuery({ queryKey: ["plans"], queryFn: getPlansApi });
+  const plansQuery = useQuery({ queryKey: plansQueryKeys.list(), queryFn: getPlansApi });
   const subscriptionQuery = useQuery({
     queryKey: ["membership-upgrade-subscription"],
     queryFn: getMySubscriptionApi,

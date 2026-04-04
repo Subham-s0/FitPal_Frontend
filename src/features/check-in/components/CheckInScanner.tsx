@@ -25,6 +25,8 @@ import {
   getMyCheckInsApi,
   scanMyCheckInApi,
 } from "@/features/check-in/api";
+import { checkInQueryKeys } from "@/features/check-in/queryKeys";
+import { dashboardQueryKeys } from "@/features/user-dashboard/api";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import type { CheckInStatus, GymCheckInResponse } from "@/features/check-in/model";
 
@@ -331,7 +333,7 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(0);
 
   const checkInsQuery = useQuery({
-    queryKey: ["check-ins"],
+    queryKey: checkInQueryKeys.lists(),
     queryFn: getMyCheckInsApi,
   });
 
@@ -363,9 +365,13 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
 
   async function refreshCheckInQueries() {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["check-ins"] }),
-      queryClient.invalidateQueries({ queryKey: ["check-in-history"] }),
-      queryClient.invalidateQueries({ queryKey: ["check-in-history-summary"] }),
+      queryClient.invalidateQueries({ queryKey: checkInQueryKeys.all }),
+      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
+    ]);
+
+    await Promise.all([
+      queryClient.refetchQueries({ queryKey: checkInQueryKeys.all, type: "all" }),
+      queryClient.refetchQueries({ queryKey: dashboardQueryKeys.all, type: "all" }),
     ]);
   }
 

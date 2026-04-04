@@ -121,6 +121,26 @@ export async function deleteWorkoutExerciseApi(
   );
 }
 
+export async function syncSessionToRoutineApi(
+  routineLogId: string
+): Promise<WorkoutSessionResponse> {
+  const response = await apiClient.post<WorkoutSessionResponse>(
+    `/users/me/workout-sessions/${routineLogId}/sync-to-routine`
+  );
+  return response.data;
+}
+
+export async function reorderWorkoutExercisesApi(
+  routineLogId: string,
+  exerciseIds: string[]
+): Promise<WorkoutSessionResponse> {
+  const response = await apiClient.patch<WorkoutSessionResponse>(
+    `/users/me/workout-sessions/${routineLogId}/exercises/reorder`,
+    { exerciseIds }
+  );
+  return response.data;
+}
+
 export const workoutSessionQueryKeys = {
   all: ["workout-sessions"] as const,
   today: () => [...workoutSessionQueryKeys.all, "today"] as const,

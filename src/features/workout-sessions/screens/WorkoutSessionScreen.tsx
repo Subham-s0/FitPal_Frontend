@@ -2,6 +2,23 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Clock,
   Plus,
   CheckCircle2,
@@ -14,6 +31,8 @@ import {
   Loader2,
   AlertCircle,
   Trash2,
+  RefreshCw,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +59,8 @@ import {
   deleteWorkoutExerciseApi,
   completeWorkoutSessionApi,
   skipWorkoutSessionApi,
+  syncSessionToRoutineApi,
+  reorderWorkoutExercisesApi,
   workoutSessionQueryKeys,
 } from "../workoutSessionApi";
 import { getRoutineDetailApi, routineQueryKeys } from "@/features/routines/routineApi";
@@ -106,8 +127,11 @@ function CompactSessionHeader({
   onBack,
   onCancel,
   onComplete,
+  onSyncToRoutine,
   isCanceling,
+  isSyncing,
   canComplete,
+  isRoutineBased,
 }: {
   routineName: string | null;
   title: string;
@@ -118,8 +142,11 @@ function CompactSessionHeader({
   onBack: () => void;
   onCancel: () => void;
   onComplete: () => void;
+  onSyncToRoutine: () => void;
   isCanceling: boolean;
+  isSyncing: boolean;
   canComplete: boolean;
+  isRoutineBased: boolean;
 }) {
   const percentage = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
   const formatVolume = (volume: number): string => {
@@ -182,6 +209,22 @@ function CompactSessionHeader({
           >
             {isCanceling ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancel"}
           </button>
+          {/* Update Routine button - only for routine-based workouts */}
+          {isRoutineBased && (
+            <button
+              onClick={onSyncToRoutine}
+              disabled={isSyncing}
+              className="hidden items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-bold text-blue-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/20 disabled:opacity-50 sm:inline-flex"
+              title="Update routine template with current workout"
+            >
+              {isSyncing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden md:inline">Update Routine</span>
+            </button>
+          )}
           <button
             onClick={onComplete}
             disabled={!canComplete}
@@ -212,7 +255,7 @@ function RoutineOverviewPanel({
   currentDayId: string | null;
   currentDayName: string | null;
 }) {
-  const { data: routineDetail, isLoading } = useQuery({
+  const { data: routineDetail, isLoading, dataUpdatedAt } = useQuery({
     queryKey: routineQueryKeys.detail(routineId ?? ""),
     queryFn: () => getRoutineDetailApi(routineId!),
     enabled: !!routineId,
@@ -222,9 +265,23 @@ function RoutineOverviewPanel({
     return null;
   }
 
+  // Find current day's exercises for comparison
+  const currentDay = routineDetail?.days.find(d => d.routineDayId === currentDayId);
+  const currentDayExerciseCount = currentDay?.exercises.length ?? 0;
+  const currentDaySetCount = currentDay?.exercises.reduce(
+    (sum, ex) => sum + (ex.sets?.length ?? 0), 0
+  ) ?? 0;
+
   return (
     <div className="flow-panel rounded-2xl p-4">
-      <h3 className="flow-label mb-3">Routine Overview</h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="flow-label">Routine Overview</h3>
+        {dataUpdatedAt && (
+          <span className="text-[8px] text-gray-600">
+            {new Date(dataUpdatedAt).toLocaleTimeString()}
+          </span>
+        )}
+      </div>
       <p className="mb-3 text-sm font-bold text-white">{routineName}</p>
       {isLoading ? (
         <div className="flex items-center justify-center py-4">
@@ -232,38 +289,49 @@ function RoutineOverviewPanel({
         </div>
       ) : routineDetail?.days && routineDetail.days.length > 0 ? (
         <div className="space-y-2">
-          {routineDetail.days.map((day) => (
-            <div
-              key={day.routineDayId}
-              className={`flex items-center gap-3 rounded-xl p-2 transition-colors ${
-                day.routineDayId === currentDayId
-                  ? "border border-orange-500/30 bg-orange-500/10"
-                  : "bg-white/5"
-              }`}
-            >
+          {routineDetail.days.map((day) => {
+            const exerciseCount = day.exercises?.length ?? 0;
+            const setCount = day.exercises?.reduce(
+              (sum, ex) => sum + (ex.sets?.length ?? 0), 0
+            ) ?? 0;
+            return (
               <div
-                className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                key={day.routineDayId}
+                className={`flex items-center gap-3 rounded-xl p-2 transition-colors ${
                   day.routineDayId === currentDayId
-                    ? "bg-orange-500 text-white"
-                    : "bg-white/10 text-gray-400"
+                    ? "border border-orange-500/30 bg-orange-500/10"
+                    : "bg-white/5"
                 }`}
               >
-                {day.dayOrder}
+                <div
+                  className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                    day.routineDayId === currentDayId
+                      ? "bg-orange-500 text-white"
+                      : "bg-white/10 text-gray-400"
+                  }`}
+                >
+                  {day.dayOrder}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span
+                    className={`block text-xs font-bold ${
+                      day.routineDayId === currentDayId ? "text-orange-300" : "text-gray-400"
+                    }`}
+                  >
+                    {day.name}
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    {exerciseCount} exercises • {setCount} sets
+                  </span>
+                </div>
+                {day.routineDayId === currentDayId && (
+                  <span className="ml-auto text-[8px] font-black uppercase tracking-wider text-orange-400">
+                    Current
+                  </span>
+                )}
               </div>
-              <span
-                className={`text-xs font-bold ${
-                  day.routineDayId === currentDayId ? "text-orange-300" : "text-gray-400"
-                }`}
-              >
-                {day.name}
-              </span>
-              {day.routineDayId === currentDayId && (
-                <span className="ml-auto text-[8px] font-black uppercase tracking-wider text-orange-400">
-                  Current
-                </span>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="text-xs text-gray-500">No days available</p>
@@ -481,6 +549,64 @@ function SessionExerciseCard({
 }
 
 // ============================================
+// SORTABLE EXERCISE CARD WRAPPER
+// ============================================
+
+interface SortableExerciseCardProps {
+  exercise: WorkoutSessionExerciseResponse;
+  exerciseIndex: number;
+  routineLogId: string;
+  hasRoutine: boolean;
+  templateSetCounts: Map<string, number>;
+  onSetUpdate: (exerciseId: string, setId: string, updates: UpdateWorkoutSetRequest) => void;
+  onAddSet: (exerciseId: string) => void;
+  onRemoveSet: (exerciseId: string, setId: string) => void;
+  onRemoveExercise: (exerciseId: string) => void;
+  onAddToRoutine: (exerciseId: string) => void;
+  isAddingToRoutine: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onOpenDetails: () => void;
+}
+
+function SortableExerciseCard(props: SortableExerciseCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.exercise.routineLogExerciseId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="group relative">
+      <div className="flex items-start gap-2">
+        {/* Drag Handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="mt-4 flex-shrink-0 cursor-grab text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        {/* Exercise Card */}
+        <div className="min-w-0 flex-1">
+          <SessionExerciseCard {...props} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -648,7 +774,13 @@ export default function WorkoutSessionScreen() {
       return addExerciseToRoutineApi(routineLogId!, exerciseId);
     },
     onSuccess: () => {
+      // Force refetch the session detail immediately
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.detail(routineLogId!) });
+      // Also invalidate routine queries since the routine template was modified
+      if (session?.routineId) {
+        queryClient.invalidateQueries({ queryKey: routineQueryKeys.detail(session.routineId) });
+        queryClient.invalidateQueries({ queryKey: routineQueryKeys.all });
+      }
       toast.success("Exercise added to routine! 🎯");
       setAddingToRoutineId(null);
     },
@@ -684,6 +816,78 @@ export default function WorkoutSessionScreen() {
       toast.error("Failed to cancel session", { description: error.message });
     },
   });
+
+  // Sync session to routine mutation
+  const syncToRoutineMutation = useMutation({
+    mutationFn: () => syncSessionToRoutineApi(routineLogId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.detail(routineLogId!) });
+      if (session?.routineId) {
+        queryClient.invalidateQueries({ queryKey: routineQueryKeys.detail(session.routineId) });
+        queryClient.invalidateQueries({ queryKey: routineQueryKeys.list() });
+        queryClient.invalidateQueries({ queryKey: routineQueryKeys.all });
+      }
+      toast.success("Routine updated with current workout! 🔄", {
+        description: "All exercises and sets have been synced to your routine template.",
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update routine", { description: error.message });
+    },
+  });
+
+  // Reorder exercises mutation
+  const reorderExercisesMutation = useMutation({
+    mutationFn: (exerciseIds: string[]) => reorderWorkoutExercisesApi(routineLogId!, exerciseIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.detail(routineLogId!) });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to reorder exercises", { description: error.message });
+    },
+  });
+
+  // Drag sensors for exercise reordering
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for exercise reordering
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !session) return;
+
+      const oldIndex = session.exercises.findIndex(
+        (e) => e.routineLogExerciseId === active.id
+      );
+      const newIndex = session.exercises.findIndex(
+        (e) => e.routineLogExerciseId === over.id
+      );
+
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      // Optimistically reorder locally via cache update
+      const reorderedExercises = arrayMove(session.exercises, oldIndex, newIndex);
+      const exerciseIds = reorderedExercises.map((e) => e.routineLogExerciseId);
+
+      // Update cache optimistically
+      queryClient.setQueryData(
+        workoutSessionQueryKeys.detail(routineLogId!),
+        (old: WorkoutSessionResponse | undefined) =>
+          old ? { ...old, exercises: reorderedExercises } : old
+      );
+
+      // Persist to backend
+      reorderExercisesMutation.mutate(exerciseIds);
+    },
+    [session, routineLogId, queryClient, reorderExercisesMutation]
+  );
 
   // Delete set mutation
   const deleteSetMutation = useMutation({
@@ -844,8 +1048,11 @@ export default function WorkoutSessionScreen() {
         onBack={() => navigate("/dashboard")}
         onCancel={handleCancel}
         onComplete={() => setShowSummary(true)}
+        onSyncToRoutine={() => syncToRoutineMutation.mutate()}
         isCanceling={skipSessionMutation.isPending}
+        isSyncing={syncToRoutineMutation.isPending}
         canComplete={stats.completedSets > 0}
+        isRoutineBased={!!session.routineId}
       />
 
       {/* ══ MAIN CONTENT AREA ══ */}
@@ -871,14 +1078,31 @@ export default function WorkoutSessionScreen() {
                   {stats.completedSets}/{stats.totalSets} sets
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Weight className="h-4 w-4 text-purple-400" />
-                <span className="text-sm font-bold text-white">
-                  {stats.totalVolume >= 1000
-                    ? `${(stats.totalVolume / 1000).toFixed(1)}k`
-                    : stats.totalVolume.toLocaleString()}{" "}
-                  kg
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Weight className="h-4 w-4 text-purple-400" />
+                  <span className="text-sm font-bold text-white">
+                    {stats.totalVolume >= 1000
+                      ? `${(stats.totalVolume / 1000).toFixed(1)}k`
+                      : stats.totalVolume.toLocaleString()}{" "}
+                    kg
+                  </span>
+                </div>
+                {/* Mobile Update Routine button */}
+                {session.routineId && (
+                  <button
+                    onClick={() => syncToRoutineMutation.mutate()}
+                    disabled={syncToRoutineMutation.isPending}
+                    className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs font-bold text-blue-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/20 disabled:opacity-50"
+                    title="Update routine"
+                  >
+                    {syncToRoutineMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -897,27 +1121,38 @@ export default function WorkoutSessionScreen() {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {session.exercises.map((exercise, idx) => (
-                    <SessionExerciseCard
-                      key={exercise.routineLogExerciseId}
-                      exercise={exercise}
-                      exerciseIndex={idx}
-                      routineLogId={session.routineLogId}
-                      hasRoutine={!!session.routineId}
-                      templateSetCounts={templateSetCounts}
-                      onSetUpdate={handleSetUpdate}
-                      onAddSet={handleAddSet}
-                      onRemoveSet={handleRemoveSet}
-                      onRemoveExercise={handleRemoveExercise}
-                      onAddToRoutine={handleAddToRoutine}
-                      isAddingToRoutine={addingToRoutineId === exercise.routineLogExerciseId}
-                      isExpanded={expandedExercises.has(exercise.routineLogExerciseId)}
-                      onToggleExpand={() => toggleExercise(exercise.routineLogExerciseId)}
-                      onOpenDetails={() => handleOpenExerciseDetails(exercise)}
-                    />
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={session.exercises.map((e) => e.routineLogExerciseId)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {session.exercises.map((exercise, idx) => (
+                        <SortableExerciseCard
+                          key={exercise.routineLogExerciseId}
+                          exercise={exercise}
+                          exerciseIndex={idx}
+                          routineLogId={session.routineLogId}
+                          hasRoutine={!!session.routineId}
+                          templateSetCounts={templateSetCounts}
+                          onSetUpdate={handleSetUpdate}
+                          onAddSet={handleAddSet}
+                          onRemoveSet={handleRemoveSet}
+                          onRemoveExercise={handleRemoveExercise}
+                          onAddToRoutine={handleAddToRoutine}
+                          isAddingToRoutine={addingToRoutineId === exercise.routineLogExerciseId}
+                          isExpanded={expandedExercises.has(exercise.routineLogExerciseId)}
+                          onToggleExpand={() => toggleExercise(exercise.routineLogExerciseId)}
+                          onOpenDetails={() => handleOpenExerciseDetails(exercise)}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </div>
 
