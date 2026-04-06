@@ -8,6 +8,21 @@ import type {
 export type WorkoutSessionMode = "ROUTINE" | "FREESTYLE";
 export type TodaySessionState = "NONE" | "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
 export type RoutineLogStatus = "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
+export type WorkoutInsightRange = "7d" | "30d" | "all";
+
+export interface WorkoutInsightBucketResponse {
+  key: string;
+  label: string;
+  completed: number;
+  skipped: number;
+  sets: number;
+  volume: number;
+}
+
+export interface WorkoutInsightsResponse {
+  range: WorkoutInsightRange;
+  chartData: WorkoutInsightBucketResponse[];
+}
 
 export interface WorkoutSessionSetResponse {
   routineLogSetId: string;

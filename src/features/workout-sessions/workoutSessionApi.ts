@@ -12,6 +12,8 @@ import type {
   WorkoutSessionSetResponse,
   WorkoutSessionSummaryResponse,
   WorkoutSessionHistoryPageResponse,
+  WorkoutInsightRange,
+  WorkoutInsightsResponse,
 } from "@/features/workout-sessions/workoutSessionTypes";
 
 export async function getTodayWorkoutSessionApi(): Promise<TodayWorkoutSessionResponse> {
@@ -30,6 +32,15 @@ export async function getWorkoutSessionHistoryPaginatedApi(
 ): Promise<WorkoutSessionHistoryPageResponse> {
   const response = await apiClient.get<WorkoutSessionHistoryPageResponse>(
     `/users/me/workout-sessions/history/paginated?page=${page}&size=${size}`
+  );
+  return response.data;
+}
+
+export async function getWorkoutInsightsApi(
+  range: WorkoutInsightRange = "7d"
+): Promise<WorkoutInsightsResponse> {
+  const response = await apiClient.get<WorkoutInsightsResponse>(
+    `/users/me/workout-sessions/insights?range=${range}`
   );
   return response.data;
 }
@@ -160,6 +171,7 @@ export const workoutSessionQueryKeys = {
   all: ["workout-sessions"] as const,
   today: () => [...workoutSessionQueryKeys.all, "today"] as const,
   history: () => [...workoutSessionQueryKeys.all, "history"] as const,
+  insights: (range: WorkoutInsightRange) => [...workoutSessionQueryKeys.all, "insights", range] as const,
   historyPaginated: (page: number, size: number) => [...workoutSessionQueryKeys.all, "history", "paginated", page, size] as const,
   details: () => [...workoutSessionQueryKeys.all, "detail"] as const,
   detail: (routineLogId: string) => [...workoutSessionQueryKeys.details(), routineLogId] as const,

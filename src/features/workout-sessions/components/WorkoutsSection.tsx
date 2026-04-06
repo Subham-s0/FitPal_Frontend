@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -30,14 +30,15 @@ import { toast } from "sonner";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import UpcomingSession from "@/features/workout-sessions/components/UpcomingSession";
 import {
+  getWorkoutInsightsApi,
   getWorkoutSessionHistoryApi,
   getWorkoutSessionHistoryPaginatedApi,
-  getTodayWorkoutSessionApi,
   getWorkoutSessionApi,
   deleteWorkoutSessionApi,
   workoutSessionQueryKeys,
 } from "@/features/workout-sessions/workoutSessionApi";
 import type {
+  WorkoutInsightRange,
   WorkoutSessionSummaryResponse,
 } from "@/features/workout-sessions/workoutSessionTypes";
 import {
@@ -232,6 +233,7 @@ function SessionDetail({
 
 export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps) {
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
+  const [insightRange, setInsightRange] = useState<WorkoutInsightRange>("7d");
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<WorkoutSessionSummaryResponse | null>(null);
@@ -248,9 +250,11 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
     queryFn: () => getWorkoutSessionHistoryPaginatedApi(page, pageSize),
   });
 
-  const { data: todayData } = useQuery({
-    queryKey: workoutSessionQueryKeys.today(),
-    queryFn: getTodayWorkoutSessionApi,
+  const { data: insightsData, isLoading: isInsightsLoading } = useQuery({
+    queryKey: workoutSessionQueryKeys.insights(insightRange),
+    queryFn: () => getWorkoutInsightsApi(insightRange),
+    enabled: activeTab === "insights",
+    staleTime: 30_000,
   });
 
   const deleteMutation = useMutation({
@@ -363,49 +367,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
     },
   ];
 
-  const upcomingMiniExercises = useMemo(() => {
-    const sourceExercises =
-      todayData?.state === "PLANNED" && todayData.plannedSession
-        ? todayData.plannedSession.exercises
-        : todayData?.session?.exercises ?? [];
-
-    return sourceExercises.slice(0, 4).map((exercise) => ({
-      id:
-        "routineDayExerciseId" in exercise
-          ? exercise.routineDayExerciseId || exercise.exerciseName
-          : exercise.routineLogExerciseId,
-      name: exercise.exerciseName,
-      coverUrl: exercise.coverUrl,
-      sets: exercise.sets.length,
-    }));
-  }, [todayData]);
-
-  const insightWeekData = useMemo(() => {
-    const today = new Date();
-    const days = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (6 - index));
-      const key = date.toISOString().slice(0, 10);
-      return {
-        key,
-        day: date.toLocaleDateString("en-US", { weekday: "short" }),
-        completed: 0,
-        skipped: 0,
-      };
-    });
-
-    if (!history) return days;
-
-    for (const session of history) {
-      const key = new Date(session.sessionDate).toISOString().slice(0, 10);
-      const targetDay = days.find((d) => d.key === key);
-      if (!targetDay) continue;
-      if (session.status === "COMPLETED") targetDay.completed += 1;
-      if (session.status === "SKIPPED") targetDay.skipped += 1;
-    }
-
-    return days;
-  }, [history]);
+  const insightChartData = insightsData?.chartData ?? [];
 
   // Group history by date
   const groupedHistory = historyPage?.items.reduce((acc, session) => {
@@ -443,22 +405,22 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       description="Track your workouts, view your history, and crush your fitness goals."
     >
       {/* Stats Row */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         {workoutStats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="flow-panel rounded-[1.75rem] p-5">
-              <div className="flex items-start justify-between gap-4">
+            <div key={stat.label} className="flow-panel h-full rounded-[1.4rem] p-3 sm:rounded-[1.75rem] sm:p-5">
+              <div className="flex h-full items-start justify-between gap-3 sm:gap-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-gray-500 sm:text-[10px] sm:tracking-[0.16em]">
                     {stat.label}
                   </p>
-                  <p className="mt-3 text-3xl font-black text-white">{stat.value}</p>
+                  <p className="mt-2 text-2xl font-black text-white sm:mt-3 sm:text-3xl">{stat.value}</p>
                 </div>
                 <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${stat.accentClassName}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl border sm:h-11 sm:w-11 sm:rounded-2xl ${stat.accentClassName}`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </div>
@@ -466,12 +428,12 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
         })}
       </div>
 
-      <div className="flow-panel rounded-[2rem] p-6">
+      <div className="flow-panel rounded-[1.6rem] p-4 sm:rounded-[2rem] sm:p-6">
         <div className="mb-5 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setActiveTab("upcoming")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all sm:px-4 sm:py-2.5 ${
               activeTab === "upcoming"
                 ? "bg-orange-500/20 text-orange-300"
                 : "text-gray-500 hover:bg-white/5 hover:text-white"
@@ -483,7 +445,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
           <button
             type="button"
             onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all sm:px-4 sm:py-2.5 ${
               activeTab === "history"
                 ? "bg-orange-500/20 text-orange-300"
                 : "text-gray-500 hover:bg-white/5 hover:text-white"
@@ -495,7 +457,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
           <button
             type="button"
             onClick={() => setActiveTab("insights")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all sm:px-4 sm:py-2.5 ${
               activeTab === "insights"
                 ? "bg-orange-500/20 text-orange-300"
                 : "text-gray-500 hover:bg-white/5 hover:text-white"
@@ -506,57 +468,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
           </button>
         </div>
 
-        {activeTab === "upcoming" && (
-          <div className="space-y-5">
-            <div>
-              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
-                Upcoming Session
-              </p>
-              <UpcomingSession onOpenRoutines={onOpenRoutines} />
-            </div>
-
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
-                Workout Summary
-              </p>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {upcomingMiniExercises.length > 0 ? (
-                  upcomingMiniExercises.map((exercise) => (
-                    <div
-                      key={exercise.id}
-                      className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-black/20 p-3"
-                    >
-                      {exercise.coverUrl ? (
-                        <img
-                          src={exercise.coverUrl}
-                          alt={exercise.name}
-                          className="h-10 w-10 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-gray-400">
-                          {exercise.name
-                            .split(" ")
-                            .map((word) => word[0])
-                            .join("")
-                            .slice(0, 2)
-                            .toUpperCase()}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-white">{exercise.name}</p>
-                        <p className="text-xs text-gray-500">{exercise.sets} sets planned</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="col-span-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm text-gray-500">
-                    No exercise summary available for today yet.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === "upcoming" && <UpcomingSession onOpenRoutines={onOpenRoutines} />}
 
         {activeTab === "history" &&
           (isHistoryLoading ? (
@@ -572,7 +484,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
               </p>
             </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
               {Object.entries(groupedHistory ?? {}).map(([date, sessions]) => (
                 <div key={date}>
                   <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
@@ -729,53 +641,87 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
           ))}
 
         {activeTab === "insights" && (
-          <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
-                Last 7 Days Activity
-              </p>
-              <div className="mt-3 h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={insightWeekData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-                    <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      cursor={{ fill: "rgba(255,255,255,0.03)" }}
-                      contentStyle={{
-                        background: "rgba(15,15,15,0.98)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderRadius: "12px",
-                        color: "#fff",
-                      }}
-                    />
-                    <Bar dataKey="completed" radius={[8, 8, 0, 0]} fill="#34d399" name="Completed" />
-                    <Bar dataKey="skipped" radius={[8, 8, 0, 0]} fill="#9ca3af" name="Skipped" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+          <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { key: "7d" as const, label: "Last 7 Days" },
+                { key: "30d" as const, label: "Last Month" },
+                { key: "all" as const, label: "All Time" },
+              ].map((range) => (
+                <button
+                  key={range.key}
+                  type="button"
+                  onClick={() => setInsightRange(range.key)}
+                  className={`rounded-xl px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${
+                    insightRange === range.key
+                      ? "bg-orange-500/20 text-orange-300"
+                      : "text-gray-500 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
             </div>
 
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-300">
-                  Completed Workouts
-                </p>
-                <p className="mt-2 text-3xl font-black text-white">{stats.totalCompleted}</p>
+            {isInsightsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
               </div>
-              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-300">
-                  Completion Streak
-                </p>
-                <p className="mt-2 text-3xl font-black text-white">{stats.streak} days</p>
-              </div>
-              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-300">
-                  Avg Duration
-                </p>
-                <p className="mt-2 text-3xl font-black text-white">{stats.avgDuration}m</p>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                    Sessions (Completed vs Skipped)
+                  </p>
+                  <div className="mt-3 h-60">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={insightChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                        <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                          contentStyle={{
+                            background: "rgba(15,15,15,0.98)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            borderRadius: "12px",
+                            color: "#fff",
+                          }}
+                        />
+                        <Bar dataKey="completed" radius={[8, 8, 0, 0]} fill="#34d399" name="Completed" />
+                        <Bar dataKey="skipped" radius={[8, 8, 0, 0]} fill="#9ca3af" name="Skipped" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                    Sets and Volume
+                  </p>
+                  <div className="mt-3 h-60">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={insightChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                        <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                          contentStyle={{
+                            background: "rgba(15,15,15,0.98)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            borderRadius: "12px",
+                            color: "#fff",
+                          }}
+                        />
+                        <Bar dataKey="sets" radius={[8, 8, 0, 0]} fill="#60a5fa" name="Completed Sets" />
+                        <Bar dataKey="volume" radius={[8, 8, 0, 0]} fill="#f59e0b" name="Volume (kg)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

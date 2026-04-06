@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -12,85 +12,186 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
-import ActiveWorkoutSession from "./ActiveWorkoutSession";
 import FreestyleSessionDialog from "./FreestyleSessionDialog";
+import MuscleHeatmap from "@/features/routines/components/MuscleHeatmap";
 import {
   getTodayWorkoutSessionApi,
   startWorkoutSessionApi,
   skipWorkoutSessionApi,
   workoutSessionQueryKeys,
 } from "@/features/workout-sessions/workoutSessionApi";
-import type { TodaySessionState } from "@/features/workout-sessions/workoutSessionTypes";
+import type { PlannedWorkoutSessionResponse } from "@/features/workout-sessions/workoutSessionTypes";
 
 interface UpcomingSessionProps {
   onOpenRoutines?: () => void;
 }
 
+type PlannedExercise = PlannedWorkoutSessionResponse["exercises"][number];
+
+function formatPlannedDuration(seconds: number | null): string {
+  if (seconds === null) return "";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function formatPlannedTarget(exercise: PlannedExercise): string {
+  const firstSet = exercise.sets[0];
+  if (!firstSet) return "No target";
+
+  const parts: string[] = [];
+  if (firstSet.targetReps !== null) parts.push(`${firstSet.targetReps} reps`);
+  if (firstSet.targetWeight !== null) parts.push(`${firstSet.targetWeight} kg`);
+  if (firstSet.targetDurationSeconds !== null) parts.push(formatPlannedDuration(firstSet.targetDurationSeconds));
+  if (firstSet.targetDistance !== null) parts.push(`${firstSet.targetDistance} m`);
+
+  return parts.length > 0 ? parts.join(" | ") : "No target";
+}
+
+function toHeatmapExercises(exercises: PlannedWorkoutSessionResponse["exercises"]) {
+  return exercises.map((exercise, exerciseIndex) => ({
+    primaryMuscles: exercise.primaryMuscles ?? [],
+    secondaryMuscles: exercise.secondaryMuscles ?? [],
+    sets: exercise.sets.map((set, setIndex) => ({
+      id:
+        set.routineSetTemplateId ??
+        `${exercise.routineDayExerciseId}-${exerciseIndex}-${setIndex + 1}`,
+      setOrder: set.setNo,
+      targetWeight: set.targetWeight,
+      targetReps: set.targetReps,
+      targetDurationSeconds: set.targetDurationSeconds,
+      targetDistance: set.targetDistance,
+      targetRestSeconds: set.targetRestSeconds,
+    })),
+  }));
+}
+
 function PlannedSessionCard({
   routineName,
   dayName,
-  exerciseCount,
-  routineLogId,
+  exercises,
   onStart,
   onSkip,
+  onFreestyle,
   isStarting,
   isSkipping,
+  isFreestyleStarting,
 }: {
   routineName: string;
   dayName: string;
-  exerciseCount: number;
-  routineLogId?: string | null;
+  exercises: PlannedWorkoutSessionResponse["exercises"];
   onStart: () => void;
   onSkip: () => void;
+  onFreestyle: () => void;
   isStarting: boolean;
   isSkipping: boolean;
+  isFreestyleStarting: boolean;
 }) {
+  const isAnyPending = isStarting || isSkipping || isFreestyleStarting;
+  const heatmapExercises = useMemo(() => toHeatmapExercises(exercises), [exercises]);
+
   return (
-    <div className="flow-panel rounded-[2rem] p-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-500/20 text-orange-400">
-            <Dumbbell className="h-7 w-7" />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-400">
-              Upcoming Session
-            </p>
-            <h3 className="mt-1 text-2xl font-black text-white">{dayName}</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              {routineName} • {exerciseCount} exercises
-            </p>
-          </div>
+    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
+      <div className="mb-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-400">
+          Upcoming Session
+        </p>
+        <h3 className="mt-1 text-xl font-black text-white sm:text-2xl">{dayName}</h3>
+        <p className="mt-1 text-sm text-gray-400">
+          {routineName} | {exercises.length} exercises
+        </p>
+      </div>
+
+      <div className="mt-6 flex flex-col md:flex-row md:items-start gap-6 sm:gap-8">
+        <div className="w-full max-w-[240px] sm:max-w-[280px] md:w-52 lg:w-60 flex-shrink-0 mx-auto md:mx-0">
+          <MuscleHeatmap
+            exercises={heatmapExercises}
+            variant="compact"
+            showSetBars={false}
+            showScoreLegend={false}
+            className="w-full object-contain"
+          />
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={onSkip}
-            disabled={isSkipping || isStarting}
-            className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-black uppercase tracking-[0.16em] text-gray-400 transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSkipping ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <SkipForward className="h-5 w-5" />
+        <div className="w-full flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {exercises.slice(0, 3).map((exercise, index) => (
+              <div
+                key={`${exercise.routineDayExerciseId}-${exercise.exerciseOrder}`}
+                className="flex items-center gap-3"
+              >
+                {exercise.coverUrl ? (
+                  <img
+                    src={exercise.coverUrl}
+                    alt={exercise.exerciseName}
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover bg-white/5"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/5 text-sm font-black text-gray-400">
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-white">{exercise.exerciseName}</p>
+                  <p className="truncate text-xs text-gray-500 mt-0.5">
+                    {exercise.sets.length} sets 
+                    {exercise.sets[0]?.targetReps ? ` • ${exercise.sets[0].targetReps} reps` : ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+            
+            {exercises.length > 3 && (
+              <div className="flex h-[48px] items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] text-xs font-bold uppercase tracking-wider text-gray-500 transition-colors hover:bg-white/[0.04] hover:text-gray-400">
+                +{exercises.length - 3} more exercises
+              </div>
             )}
-            Skip Session
-          </button>
-          <button
-            type="button"
-            onClick={onStart}
-            disabled={isStarting || isSkipping}
-            className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 px-8 py-4 text-sm font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.02] hover:shadow-orange-500/40 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isStarting ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Play className="h-5 w-5" />
-            )}
-            {isStarting ? "Starting..." : "Start Session"}
-          </button>
+          </div>
         </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={isAnyPending}
+          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isStarting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+          {isStarting ? "Starting..." : "Start"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onSkip}
+          disabled={isAnyPending}
+          className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-gray-300 transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isSkipping ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <SkipForward className="h-4 w-4" />
+          )}
+          Skip
+        </button>
+
+        <button
+          type="button"
+          onClick={onFreestyle}
+          disabled={isAnyPending}
+          className="flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-orange-300 transition-all hover:border-orange-500/40 hover:bg-orange-500/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isFreestyleStarting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Zap className="h-4 w-4" />
+          )}
+          Freestyle
+        </button>
       </div>
     </div>
   );
@@ -416,15 +517,13 @@ export default function UpcomingSession({ onOpenRoutines }: UpcomingSessionProps
         <PlannedSessionCard
           routineName={plannedSession.routineName}
           dayName={plannedSession.routineDayName}
-          exerciseCount={plannedSession.exercises.length}
+          exercises={plannedSession.exercises}
           onStart={() => startSessionMutation.mutate()}
           onSkip={() => skipPlannedSessionMutation.mutate()}
+          onFreestyle={() => setShowFreestyleDialog(true)}
           isStarting={startSessionMutation.isPending}
           isSkipping={skipPlannedSessionMutation.isPending}
-        />
-        <FreestyleButton
-          onClick={() => setShowFreestyleDialog(true)}
-          disabled={isAnyMutationPending}
+          isFreestyleStarting={startFreestyleMutation.isPending}
         />
         <FreestyleSessionDialog
           open={showFreestyleDialog}
