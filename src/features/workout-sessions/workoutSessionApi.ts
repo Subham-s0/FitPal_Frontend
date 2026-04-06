@@ -11,6 +11,7 @@ import type {
   WorkoutSessionResponse,
   WorkoutSessionSetResponse,
   WorkoutSessionSummaryResponse,
+  WorkoutSessionHistoryPageResponse,
 } from "@/features/workout-sessions/workoutSessionTypes";
 
 export async function getTodayWorkoutSessionApi(): Promise<TodayWorkoutSessionResponse> {
@@ -23,9 +24,23 @@ export async function getWorkoutSessionHistoryApi(): Promise<WorkoutSessionSumma
   return response.data;
 }
 
+export async function getWorkoutSessionHistoryPaginatedApi(
+  page: number = 0,
+  size: number = 10
+): Promise<WorkoutSessionHistoryPageResponse> {
+  const response = await apiClient.get<WorkoutSessionHistoryPageResponse>(
+    `/users/me/workout-sessions/history/paginated?page=${page}&size=${size}`
+  );
+  return response.data;
+}
+
 export async function getWorkoutSessionApi(routineLogId: string): Promise<WorkoutSessionResponse> {
   const response = await apiClient.get<WorkoutSessionResponse>(`/users/me/workout-sessions/${routineLogId}`);
   return response.data;
+}
+
+export async function deleteWorkoutSessionApi(routineLogId: string): Promise<void> {
+  await apiClient.delete(`/users/me/workout-sessions/${routineLogId}`);
 }
 
 export async function startWorkoutSessionApi(
@@ -145,6 +160,7 @@ export const workoutSessionQueryKeys = {
   all: ["workout-sessions"] as const,
   today: () => [...workoutSessionQueryKeys.all, "today"] as const,
   history: () => [...workoutSessionQueryKeys.all, "history"] as const,
+  historyPaginated: (page: number, size: number) => [...workoutSessionQueryKeys.all, "history", "paginated", page, size] as const,
   details: () => [...workoutSessionQueryKeys.all, "detail"] as const,
   detail: (routineLogId: string) => [...workoutSessionQueryKeys.details(), routineLogId] as const,
 };

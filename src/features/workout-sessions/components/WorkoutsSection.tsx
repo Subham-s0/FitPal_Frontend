@@ -1,77 +1,325 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Activity, Clock3, Flame, History, Dumbbell } from "lucide-react";
+import { useMemo, useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Activity,
+  Clock3,
+  Flame,
+  Dumbbell,
+  CheckCircle2,
+  SkipForward,
+  Calendar,
+  ChevronRight,
+  ChevronLeft,
+  Loader2,
+  Trash2,
+  MoreVertical,
+  Eye,
+  Trophy,
+  BarChart3,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { toast } from "sonner";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import UpcomingSession from "@/features/workout-sessions/components/UpcomingSession";
-import WorkoutHistory from "@/features/workout-sessions/components/WorkoutHistory";
 import {
   getWorkoutSessionHistoryApi,
+  getWorkoutSessionHistoryPaginatedApi,
+  getTodayWorkoutSessionApi,
+  getWorkoutSessionApi,
+  deleteWorkoutSessionApi,
   workoutSessionQueryKeys,
 } from "@/features/workout-sessions/workoutSessionApi";
+import type {
+  WorkoutSessionSummaryResponse,
+} from "@/features/workout-sessions/workoutSessionTypes";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/dropdown-menu";
 
 interface WorkoutsSectionProps {
   onOpenRoutines?: () => void;
 }
 
-type Tab = "today" | "history";
+type Tab = "upcoming" | "history" | "insights";
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatDuration(seconds: number | null): string {
+  if (!seconds) return "-";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function SessionDetail({
+  sessionId,
+  onClose,
+}: {
+  sessionId: string;
+  onClose: () => void;
+}) {
+  const { data: session, isLoading } = useQuery({
+    queryKey: workoutSessionQueryKeys.detail(sessionId),
+    queryFn: () => getWorkoutSessionApi(sessionId),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+      </div>
+    );
+  }
+
+  if (!session) return null;
+
+  const totalVolume = session.exercises.reduce((total, exercise) => {
+    const exerciseVolume = exercise.sets
+      .filter((set) => set.completed && set.actualWeight && set.actualReps)
+      .reduce((sum, set) => sum + (set.actualWeight! * set.actualReps!), 0);
+    return total + exerciseVolume;
+  }, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+            {formatDate(session.sessionDate)}
+          </p>
+          <h3 className="mt-1 text-xl font-black text-white">{session.title}</h3>
+          {session.routineName && (
+            <p className="text-sm text-gray-400">{session.routineName}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flow-button-secondary rounded-xl px-4 py-2 text-sm"
+        >
+          Back
+        </button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3">
+        <div className="flow-panel rounded-2xl p-3 text-center">
+          <p className="text-lg font-bold text-white">{session.exercises.length}</p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">Exercises</p>
+        </div>
+        <div className="flow-panel rounded-2xl p-3 text-center">
+          <p className="text-lg font-bold text-white">
+            {session.exercises.reduce(
+              (acc, ex) => acc + ex.sets.filter((s) => s.completed).length,
+              0
+            )}
+          </p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">Sets Done</p>
+        </div>
+        <div className="flow-panel rounded-2xl p-3 text-center">
+          <p className="text-lg font-bold text-white">
+            {formatDuration(session.durationSeconds)}
+          </p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500">Duration</p>
+        </div>
+        <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-3 text-center">
+          <p className="text-lg font-bold text-orange-400">
+            {totalVolume > 0 ? totalVolume.toLocaleString() : "-"}
+          </p>
+          <p className="text-[10px] uppercase tracking-wider text-orange-400/70">Volume (kg)</p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {session.exercises.map((exercise, idx) => (
+          <div key={exercise.routineLogExerciseId} className="flow-panel rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-sm font-bold text-orange-400">
+                {idx + 1}
+              </div>
+              {exercise.coverUrl ? (
+                <img
+                  src={exercise.coverUrl}
+                  alt={exercise.exerciseName}
+                  className="h-10 w-10 rounded-lg object-cover"
+                />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-gray-400">
+                  {exercise.exerciseName
+                    .split(" ")
+                    .map((w) => w[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1">
+                <h4 className="font-bold text-white">{exercise.exerciseName}</h4>
+                <p className="text-sm text-gray-500">
+                  {exercise.sets.filter((s) => s.completed).length}/{exercise.sets.length} sets
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 space-y-1">
+              {exercise.sets
+                .filter((s) => s.completed)
+                .map((set) => (
+                  <div key={set.routineLogSetId} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span className="text-gray-400">Set {set.setOrder}:</span>
+                    {set.actualWeight && <span className="text-white">{set.actualWeight}kg</span>}
+                    {set.actualReps && <span className="text-white">× {set.actualReps} reps</span>}
+                    {set.actualDurationSeconds && (
+                      <span className="text-white">
+                        {Math.floor(set.actualDurationSeconds / 60)}:
+                        {(set.actualDurationSeconds % 60).toString().padStart(2, "0")}
+                      </span>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {session.notes && (
+        <div className="flow-panel rounded-2xl p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+            Session Notes
+          </p>
+          <p className="mt-2 text-sm text-gray-300">{session.notes}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("today");
+  const [activeTab, setActiveTab] = useState<Tab>("upcoming");
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<WorkoutSessionSummaryResponse | null>(null);
+  const pageSize = 10;
+  const queryClient = useQueryClient();
 
-  // Fetch history for stats
   const { data: history } = useQuery({
     queryKey: workoutSessionQueryKeys.history(),
     queryFn: getWorkoutSessionHistoryApi,
   });
 
-  // Calculate stats from history
+  const { data: historyPage, isLoading: isHistoryLoading } = useQuery({
+    queryKey: workoutSessionQueryKeys.historyPaginated(page, pageSize),
+    queryFn: () => getWorkoutSessionHistoryPaginatedApi(page, pageSize),
+  });
+
+  const { data: todayData } = useQuery({
+    queryKey: workoutSessionQueryKeys.today(),
+    queryFn: getTodayWorkoutSessionApi,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteWorkoutSessionApi,
+    onSuccess: () => {
+      toast.success("Workout deleted");
+      queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.all });
+      setDeleteTarget(null);
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to delete workout", { description: error.message });
+    },
+  });
+
+  const handleViewSession = useCallback((sessionId: string) => {
+    setSelectedSessionId(sessionId);
+  }, []);
+
+  const handleDelete = useCallback((session: WorkoutSessionSummaryResponse) => {
+    setDeleteTarget(session);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (deleteTarget) {
+      deleteMutation.mutate(deleteTarget.routineLogId);
+    }
+  }, [deleteTarget, deleteMutation]);
+
+  // Stats from history — only COMPLETED sessions count
   const stats = (() => {
-    if (!history) return { sessionsThisWeek: 0, avgDuration: 0, streak: 0 };
+    if (!history) return { totalCompleted: 0, sessionsThisWeek: 0, avgDuration: 0, streak: 0 };
 
     const now = new Date();
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // Sessions this week
-    const sessionsThisWeek = history.filter((s) => {
+    const completedSessions = history.filter((s) => s.status === "COMPLETED");
+
+    const totalCompleted = completedSessions.length;
+
+    const sessionsThisWeek = completedSessions.filter((s) => {
       const date = new Date(s.sessionDate);
-      return date >= weekAgo && s.status === "COMPLETED";
+      return date >= weekAgo;
     }).length;
 
-    // Average duration (completed sessions only)
-    const completedSessions = history.filter(
-      (s) => s.status === "COMPLETED" && s.durationSeconds
-    );
+    const withDuration = completedSessions.filter((s) => s.durationSeconds);
     const avgDuration =
-      completedSessions.length > 0
+      withDuration.length > 0
         ? Math.round(
-            completedSessions.reduce(
-              (acc, s) => acc + (s.durationSeconds || 0),
-              0
-            ) /
-              completedSessions.length /
+            withDuration.reduce((acc, s) => acc + (s.durationSeconds || 0), 0) /
+              withDuration.length /
               60
           )
         : 0;
 
-    // Calculate streak (consecutive days with completed workouts)
     let streak = 0;
-    const sortedHistory = [...history]
-      .filter((s) => s.status === "COMPLETED")
-      .sort(
-        (a, b) =>
-          new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()
-      );
+    const sorted = [...completedSessions].sort(
+      (a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()
+    );
 
-    if (sortedHistory.length > 0) {
+    if (sorted.length > 0) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       let currentDate = today;
-      
-      for (const session of sortedHistory) {
+
+      for (const session of sorted) {
         const sessionDate = new Date(session.sessionDate);
         sessionDate.setHours(0, 0, 0, 0);
-        
+
         const diffDays = Math.floor(
           (currentDate.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24)
         );
@@ -85,29 +333,105 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       }
     }
 
-    return { sessionsThisWeek, avgDuration, streak };
+    return { totalCompleted, sessionsThisWeek, avgDuration, streak };
   })();
 
   const workoutStats = [
     {
-      label: "Sessions This Week",
+      label: "Completed",
+      value: stats.totalCompleted.toString().padStart(2, "0"),
+      icon: Trophy,
+      accentClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+    },
+    {
+      label: "This Week",
       value: stats.sessionsThisWeek.toString().padStart(2, "0"),
       icon: Activity,
       accentClassName: "border-orange-500/20 bg-orange-500/10 text-orange-400",
     },
     {
-      label: "Average Duration",
+      label: "Avg Duration",
       value: `${stats.avgDuration}m`,
       icon: Clock3,
-      accentClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+      accentClassName: "border-blue-500/20 bg-blue-500/10 text-blue-300",
     },
     {
-      label: "Active Streak",
+      label: "Streak",
       value: `${stats.streak}d`,
       icon: Flame,
       accentClassName: "border-red-500/20 bg-red-500/10 text-red-300",
     },
   ];
+
+  const upcomingMiniExercises = useMemo(() => {
+    const sourceExercises =
+      todayData?.state === "PLANNED" && todayData.plannedSession
+        ? todayData.plannedSession.exercises
+        : todayData?.session?.exercises ?? [];
+
+    return sourceExercises.slice(0, 4).map((exercise) => ({
+      id:
+        "routineDayExerciseId" in exercise
+          ? exercise.routineDayExerciseId || exercise.exerciseName
+          : exercise.routineLogExerciseId,
+      name: exercise.exerciseName,
+      coverUrl: exercise.coverUrl,
+      sets: exercise.sets.length,
+    }));
+  }, [todayData]);
+
+  const insightWeekData = useMemo(() => {
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index));
+      const key = date.toISOString().slice(0, 10);
+      return {
+        key,
+        day: date.toLocaleDateString("en-US", { weekday: "short" }),
+        completed: 0,
+        skipped: 0,
+      };
+    });
+
+    if (!history) return days;
+
+    for (const session of history) {
+      const key = new Date(session.sessionDate).toISOString().slice(0, 10);
+      const targetDay = days.find((d) => d.key === key);
+      if (!targetDay) continue;
+      if (session.status === "COMPLETED") targetDay.completed += 1;
+      if (session.status === "SKIPPED") targetDay.skipped += 1;
+    }
+
+    return days;
+  }, [history]);
+
+  // Group history by date
+  const groupedHistory = historyPage?.items.reduce((acc, session) => {
+    const date = session.sessionDate;
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(session);
+    return acc;
+  }, {} as Record<string, WorkoutSessionSummaryResponse[]>);
+
+  if (selectedSessionId) {
+    return (
+      <UserSectionShell
+        title={
+          <>
+            Session <span className="text-gradient-fire">Detail</span>
+          </>
+        }
+        description="Review your workout performance and progress."
+      >
+        <SessionDetail
+          sessionId={selectedSessionId}
+          onClose={() => setSelectedSessionId(null)}
+        />
+      </UserSectionShell>
+    );
+  }
 
   return (
     <UserSectionShell
@@ -118,8 +442,8 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       }
       description="Track your workouts, view your history, and crush your fitness goals."
     >
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {workoutStats.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -129,9 +453,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                     {stat.label}
                   </p>
-                  <p className="mt-3 text-3xl font-black text-white">
-                    {stat.value}
-                  </p>
+                  <p className="mt-3 text-3xl font-black text-white">{stat.value}</p>
                 </div>
                 <div
                   className={`flex h-11 w-11 items-center justify-center rounded-2xl border ${stat.accentClassName}`}
@@ -144,42 +466,345 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
         })}
       </div>
 
-      {/* Tab Navigation */}
-      <div className="mt-6 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("today")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-            activeTab === "today"
-              ? "bg-orange-500/20 text-orange-300"
-              : "text-gray-500 hover:bg-white/5 hover:text-white"
-          }`}
-        >
-          <Dumbbell className="h-4 w-4" />
-          Today's Session
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("history")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
-            activeTab === "history"
-              ? "bg-orange-500/20 text-orange-300"
-              : "text-gray-500 hover:bg-white/5 hover:text-white"
-          }`}
-        >
-          <History className="h-4 w-4" />
-          Workout History
-        </button>
+      <div className="flow-panel rounded-[2rem] p-6">
+        <div className="mb-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("upcoming")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "upcoming"
+                ? "bg-orange-500/20 text-orange-300"
+                : "text-gray-500 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <Dumbbell className="h-4 w-4" />
+            Upcoming Session
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("history")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "history"
+                ? "bg-orange-500/20 text-orange-300"
+                : "text-gray-500 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            Workout Logs
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("insights")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all ${
+              activeTab === "insights"
+                ? "bg-orange-500/20 text-orange-300"
+                : "text-gray-500 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Insights
+          </button>
+        </div>
+
+        {activeTab === "upcoming" && (
+          <div className="space-y-5">
+            <div>
+              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                Upcoming Session
+              </p>
+              <UpcomingSession onOpenRoutines={onOpenRoutines} />
+            </div>
+
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                Workout Summary
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {upcomingMiniExercises.length > 0 ? (
+                  upcomingMiniExercises.map((exercise) => (
+                    <div
+                      key={exercise.id}
+                      className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-black/20 p-3"
+                    >
+                      {exercise.coverUrl ? (
+                        <img
+                          src={exercise.coverUrl}
+                          alt={exercise.name}
+                          className="h-10 w-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-gray-400">
+                          {exercise.name
+                            .split(" ")
+                            .map((word) => word[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-bold text-white">{exercise.name}</p>
+                        <p className="text-xs text-gray-500">{exercise.sets} sets planned</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="col-span-2 rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm text-gray-500">
+                    No exercise summary available for today yet.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "history" &&
+          (isHistoryLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+            </div>
+          ) : !historyPage || historyPage.items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] py-12">
+              <Dumbbell className="h-12 w-12 text-gray-600" />
+              <h4 className="mt-4 text-lg font-bold text-white">No workout history</h4>
+              <p className="mt-2 text-sm text-gray-500">
+                Your completed workouts will appear here
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {Object.entries(groupedHistory ?? {}).map(([date, sessions]) => (
+                <div key={date}>
+                  <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                    {formatDate(date)}
+                  </p>
+                  <div className="space-y-2">
+                    {sessions.map((session) => {
+                      const isCompleted = session.status === "COMPLETED";
+                      const isSkipped = session.status === "SKIPPED";
+                      const isInProgress = session.status === "IN_PROGRESS";
+
+                      return (
+                        <div
+                          key={session.routineLogId}
+                          className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-white/15 hover:bg-white/[0.04]"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleViewSession(session.routineLogId)}
+                            className="flex w-full items-center gap-4 text-left"
+                          >
+                            <div
+                              className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${
+                                isCompleted
+                                  ? "bg-emerald-500/20 text-emerald-400"
+                                  : isSkipped
+                                  ? "bg-gray-500/20 text-gray-400"
+                                  : "bg-orange-500/20 text-orange-400"
+                              }`}
+                            >
+                              {isCompleted ? (
+                                <CheckCircle2 className="h-6 w-6" />
+                              ) : isSkipped ? (
+                                <SkipForward className="h-6 w-6" />
+                              ) : (
+                                <Dumbbell className="h-6 w-6" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="truncate text-base font-bold text-white">
+                                  {session.title}
+                                </h4>
+                                {session.mode === "FREESTYLE" && (
+                                  <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                                    Freestyle
+                                  </span>
+                                )}
+                                {isCompleted && (
+                                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                                    Complete
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                                {session.routineName && (
+                                  <span className="text-gray-400">{session.routineName}</span>
+                                )}
+                                {session.durationSeconds && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock3 className="h-3.5 w-3.5" />
+                                    {formatDuration(session.durationSeconds)}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Dumbbell className="h-3.5 w-3.5" />
+                                  {session.exerciseCount} exercises
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-white">
+                                {session.completedSetCount}
+                              </p>
+                              <p className="text-[10px] uppercase tracking-wider text-gray-500">
+                                Sets
+                              </p>
+                            </div>
+
+                            <ChevronRight className="h-5 w-5 flex-shrink-0 text-gray-600 transition-colors group-hover:text-white" />
+                          </button>
+
+                          {!isInProgress && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute right-2 top-2 rounded-lg p-1.5 text-gray-500 opacity-0 transition-all hover:bg-white/10 hover:text-white group-hover:opacity-100"
+                                  title="More options"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewSession(session.routineLogId);
+                                  }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(session);
+                                  }}
+                                  className="flex items-center gap-2 text-red-400 focus:bg-red-500/10 focus:text-red-400"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete Workout
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {historyPage.totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-white/5 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={!historyPage.hasPrevious}
+                    className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-500">
+                    Page {page + 1} of {historyPage.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={!historyPage.hasNext}
+                    className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+
+        {activeTab === "insights" && (
+          <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+                Last 7 Days Activity
+              </p>
+              <div className="mt-3 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={insightWeekData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                    <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                      contentStyle={{
+                        background: "rgba(15,15,15,0.98)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "12px",
+                        color: "#fff",
+                      }}
+                    />
+                    <Bar dataKey="completed" radius={[8, 8, 0, 0]} fill="#34d399" name="Completed" />
+                    <Bar dataKey="skipped" radius={[8, 8, 0, 0]} fill="#9ca3af" name="Skipped" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-300">
+                  Completed Workouts
+                </p>
+                <p className="mt-2 text-3xl font-black text-white">{stats.totalCompleted}</p>
+              </div>
+              <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-red-300">
+                  Completion Streak
+                </p>
+                <p className="mt-2 text-3xl font-black text-white">{stats.streak} days</p>
+              </div>
+              <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-300">
+                  Avg Duration
+                </p>
+                <p className="mt-2 text-3xl font-black text-white">{stats.avgDuration}m</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Tab Content */}
-      <div className="mt-4">
-        {activeTab === "today" && (
-          <UpcomingSession onOpenRoutines={onOpenRoutines} />
-        )}
-        {activeTab === "history" && <WorkoutHistory />}
-      </div>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Workout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{deleteTarget?.title}" and all its exercises and sets.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </UserSectionShell>
   );
 }
-

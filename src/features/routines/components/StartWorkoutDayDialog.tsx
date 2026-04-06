@@ -31,7 +31,7 @@ export default function StartWorkoutDayDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Play className="h-5 w-5 text-emerald-400" />
+            <Play className="h-5 w-5 text-orange-400" />
             Start Workout
           </DialogTitle>
           <DialogDescription className="pt-2">
@@ -50,7 +50,7 @@ export default function StartWorkoutDayDialog({
           <Button
             onClick={onConfirm}
             disabled={isStarting}
-            className="bg-gradient-to-r from-emerald-500 to-green-500"
+            className="bg-gradient-to-r from-orange-500 to-red-500"
           >
             {isStarting ? (
               <>

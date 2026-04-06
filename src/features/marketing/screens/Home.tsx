@@ -6,17 +6,20 @@ import Features from "@/features/marketing/components/Features";
 import Pricing from "@/features/plans/components/Pricing";
 import Testimonials from "@/features/marketing/components/Testimonials";
 import Footer from "@/features/marketing/components/Footer";
+import { usePublicCmsHome } from "@/features/marketing/usePublicCmsHome";
 
 const Index = () => {
+  const cms = usePublicCmsHome();
+
   return (
     <main className="min-h-screen bg-background">
       <Navbar />
       <Hero />
-      <Stats />
-      <HowItWorks />
-      <Features />
+      <Stats stats={cms.stats} />
+      <HowItWorks howToSteps={cms.howToSteps} />
+      <Features features={cms.features} />
       <Pricing />
-      <Testimonials />
+      <Testimonials testimonials={cms.testimonials} />
       <Footer />
     </main>
   );

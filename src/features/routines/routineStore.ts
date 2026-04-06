@@ -402,6 +402,7 @@ function mergeRemoteRoutines(remoteDetails: RoutineDetailResponse[]): void {
   const merged: Routine[] = [];
   const seenBackendIds = new Set<string>();
 
+  // First, merge remote routines with local state
   for (const detail of remoteDetails) {
     const existing = localByBackendId.get(detail.routineId);
     if (existing && existing.syncState !== "synced") {
@@ -412,14 +413,10 @@ function mergeRemoteRoutines(remoteDetails: RoutineDetailResponse[]): void {
     seenBackendIds.add(detail.routineId);
   }
 
+  // Preserve local-only routines (no backendId or pending sync)
   for (const routine of routineCache) {
     if (!routine.backendId || routine.syncState !== "synced") {
       merged.push(normalizeRoutine(routine));
-      continue;
-    }
-
-    if (!seenBackendIds.has(routine.backendId)) {
-      continue;
     }
   }
 

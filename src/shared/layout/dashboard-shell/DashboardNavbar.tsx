@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Search } from "lucide-react";
+import { Bell, Building2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthState } from "@/features/auth/hooks";
 import { getMyProfileApi } from "@/features/profile/api";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
+import { getAdminGymStatusCountsApi } from "@/features/admin/admin-gym.api";
 import {
   getDashboardPrimaryActionLabel,
   getDashboardRoleBadgeLabel,
@@ -18,9 +19,10 @@ interface DashboardNavbarProps {
   role?: string | null;
   onPrimaryAction?: () => void;
   onProfileClick?: () => void;
+  onPendingGymsClick?: () => void;
 }
 
-const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNavbarProps) => {
+const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsClick }: DashboardNavbarProps) => {
   const navigate = useNavigate();
   const auth = useAuthState();
   const roleValue = role ?? auth.role;
@@ -31,6 +33,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
   const primaryActionLabel = getDashboardPrimaryActionLabel(roleValue);
   const searchPlaceholder = getDashboardSearchPlaceholder(roleValue);
   const isUserDashboard = dashboardRole === "USER";
+  const isAdminDashboard = dashboardRole === "ADMIN";
   const showRoleMeta = !isUserDashboard;
   const fallbackAvatarUrl = useMemo(
     () => `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`,
@@ -44,6 +47,15 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
     staleTime: 60_000,
   });
 
+  const pendingGymsQuery = useQuery({
+    queryKey: ["admin-gym-counts"],
+    queryFn: getAdminGymStatusCountsApi,
+    enabled: isAdminDashboard && Boolean(auth.accessToken),
+    staleTime: 30_000,
+  });
+
+  const pendingCount = pendingGymsQuery.data?.pendingReview ?? 0;
+
   const profilePhotoUrl = profileQuery.data?.profileImageUrl?.trim() || null;
   const [photoBroken, setPhotoBroken] = useState(false);
   useEffect(() => {
@@ -52,6 +64,14 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
 
   const avatarUrl = profilePhotoUrl && !photoBroken ? profilePhotoUrl : fallbackAvatarUrl;
   const logoHref = dashboardRole === "ADMIN" ? "/admin/dashboard" : "/";
+
+  const handlePendingGymsClick = () => {
+    if (onPendingGymsClick) {
+      onPendingGymsClick();
+      return;
+    }
+    navigate("/admin/dashboard", { state: { activeSection: "gyms", filterPending: true } });
+  };
 
   const handlePrimaryAction = () => {
     if (onPrimaryAction) {
@@ -126,17 +146,33 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick }: DashboardNav
           <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-orange-600" />
         </button>
 
-        <button
-          type="button"
-          onClick={handlePrimaryAction}
-          className={`transition-all duration-300 ${
-            isUserDashboard
-              ? "rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl hover:border-orange-500 hover:bg-orange-600 hover:text-white"
-              : "rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-orange-500"
-          }`}
-        >
-          {primaryActionLabel}
-        </button>
+        {isAdminDashboard ? (
+          <button
+            type="button"
+            onClick={handlePendingGymsClick}
+            className="flex items-center gap-2 rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500 backdrop-blur-xl transition-all hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+          >
+            <Building2 className="h-4 w-4" />
+            <span>Pending Gyms</span>
+            {pendingCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white">
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handlePrimaryAction}
+            className={`transition-all duration-300 ${
+              isUserDashboard
+                ? "rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+                : "rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-orange-500"
+            }`}
+          >
+            {primaryActionLabel}
+          </button>
+        )}
 
         <div className="h-10 w-px bg-[#252525]" />
 

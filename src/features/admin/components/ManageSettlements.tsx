@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
+  ArrowUpDown,
   Banknote,
   ClipboardList,
+  Clock3,
   Filter,
   Layers,
   LayoutList,
@@ -100,6 +102,7 @@ const MG_DIALOG_CLEAR = `${MG_TOOLBAR_BASE} table-border table-bg table-text hov
 type AdminSettlementTab = "checkins" | "batches";
 type PayoutFilter = "ALL" | GymSettlementPayoutStatus;
 type BatchStatusFilter = "ALL" | PayoutSettlementStatus;
+type BatchSortKey = null | "date-desc" | "date-asc" | "amount-desc" | "amount-asc";
 
 type CheckinSortBy = "visitDate" | "createdAt" | "checkedInAt" | "gym.gymName" | "account.email";
 
@@ -127,6 +130,14 @@ const DEFAULT_BATCH_FILTERS = {
   gymId: "ALL",
   status: "ALL" as BatchStatusFilter,
 };
+
+const BATCH_SORTS: { key: BatchSortKey; label: string; Icon: typeof ArrowUpDown }[] = [
+  { key: null, label: "Sort", Icon: ArrowUpDown },
+  { key: "date-desc", label: "Date (Newest)", Icon: ArrowUpDown },
+  { key: "date-asc", label: "Date (Oldest)", Icon: ArrowUpDown },
+  { key: "amount-desc", label: "Amount (High)", Icon: ArrowUpDown },
+  { key: "amount-asc", label: "Amount (Low)", Icon: ArrowUpDown },
+];
 
 function formatMoney(amount: number, currency?: string | null) {
   const normalizedCurrency = currency?.trim() || "NPR";
@@ -366,6 +377,7 @@ export default function ManageSettlements() {
   const [draftBatchStatus, setDraftBatchStatus] = useState<BatchStatusFilter>(DEFAULT_BATCH_FILTERS.status);
   const [batchFilterDialogOpen, setBatchFilterDialogOpen] = useState(false);
   const [batchPage, setBatchPage] = useState(0);
+  const [batchSortIdx, setBatchSortIdx] = useState(0);
 
   const [payoutWizardOpen, setPayoutWizardOpen] = useState(false);
   const [payoutWizardStep, setPayoutWizardStep] = useState<0 | 1>(0);
@@ -507,16 +519,23 @@ export default function ManageSettlements() {
   });
 
   const batchesQ = useQuery({
-    queryKey: ["admin-settlements", "batches", batchGymId, batchStatus, batchPage],
-    queryFn: () =>
-      getAdminPayoutBatchesApi({
+    queryKey: ["admin-settlements", "batches", batchGymId, batchStatus, batchSortIdx, batchPage],
+    queryFn: () => {
+      const sortKey = BATCH_SORTS[batchSortIdx]?.key;
+      const sortBy =
+        sortKey === "amount-asc" || sortKey === "amount-desc" ? "grossAmount" : "createdAt";
+      const sortDirection =
+        sortKey === "date-asc" || sortKey === "amount-asc" ? "ASC" : "DESC";
+
+      return getAdminPayoutBatchesApi({
         gymId: parseNumericId(batchGymId),
         status: batchStatus === "ALL" ? undefined : batchStatus,
-        sortBy: "createdAt",
-        sortDirection: "DESC",
+        sortBy,
+        sortDirection,
         page: batchPage,
         size: BATCH_PAGE_SIZE,
-      }),
+      });
+    },
     placeholderData: (previous) => previous,
   });
 
@@ -900,6 +919,9 @@ export default function ManageSettlements() {
     return pills;
   }, [batchGymId, batchStatus, gymNameById]);
 
+  const batchSortMode = BATCH_SORTS[batchSortIdx];
+  const BatchSortIcon = batchSortMode.Icon;
+
   const applyBatchFilters = () => {
     setBatchGymId(draftBatchGymId);
     setBatchStatus(draftBatchStatus);
@@ -923,6 +945,28 @@ export default function ManageSettlements() {
   };
 
   const metrics = aggregateQ.data?.metrics;
+
+  const unpaidOrInPayoutNetTotal = useMemo(() => {
+    const items = aggregateQ.data?.items ?? [];
+    return items.reduce((sum, row) => {
+      if (row.payoutStatus === "PENDING" || row.payoutStatus === "IN_PAYOUT") {
+        return sum + (row.netAmount ?? 0);
+      }
+      return sum;
+    }, 0);
+  }, [aggregateQ.data?.items]);
+
+  const paidAmountTotal = useMemo(() => {
+    const items = aggregateQ.data?.items ?? [];
+    return items.reduce((sum, row) => {
+      if (row.payoutStatus === "PAID") {
+        return sum + (row.netAmount ?? 0);
+      }
+      return sum;
+    }, 0);
+  }, [aggregateQ.data?.items]);
+
+  const unpaidOrInPayoutCount = (metrics?.pendingCount ?? 0) + (metrics?.inPayoutCount ?? 0);
 
   const chartBarData = useMemo(() => {
     const items = aggregateQ.data?.items ?? [];
@@ -1255,23 +1299,38 @@ export default function ManageSettlements() {
             </p>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div className="flex flex-col rounded-xl border table-border table-bg p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Loaded rows</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Paid amount</span>
                 <Filter className="h-3.5 w-3.5 shrink-0 text-slate-500" />
               </div>
               <p className="text-[20px] font-black leading-tight text-white">
-                {aggregateQ.isLoading ? "—" : metrics ? `${metrics.totalRowsInSample} / ${metrics.totalItemsReported}` : "—"}
+                {aggregateQ.isLoading ? "—" : metrics ? formatMoney(paidAmountTotal, metrics.currency) : "—"}
               </p>
               {metrics?.capped ? (
                 <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-amber-500/90">Capped</p>
               ) : null}
             </div>
 
+            <div className="flex flex-col rounded-xl border table-border table-bg p-3.5">
+              <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Pending payout</span>
+                <Clock3 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              </div>
+              <p className="text-[20px] font-black leading-tight text-white">
+                {aggregateQ.isLoading ? "—" : metrics ? formatMoney(unpaidOrInPayoutNetTotal, metrics.currency) : "—"}
+              </p>
+              {metrics ? (
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                  {unpaidOrInPayoutCount} rows {metrics.capped ? "(capped sample)" : ""}
+                </p>
+              ) : null}
+            </div>
+
             <div className="flex flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Gross</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Gross Revenue</span>
                 <Wallet className="h-3.5 w-3.5 shrink-0 text-orange-400" />
               </div>
               <p className="text-[20px] font-black leading-tight text-white">
@@ -1281,7 +1340,7 @@ export default function ManageSettlements() {
 
             <div className="flex flex-col rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400/90">Net</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400/90">Net Revenue</span>
                 <Banknote className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
               </div>
               <p className="text-[20px] font-black leading-tight text-white">
@@ -1435,8 +1494,8 @@ export default function ManageSettlements() {
                 <p className="text-[12px] table-text-muted">
                   {showRowCheckboxes && selectedSettlementIds.size > 0 ? (
                     <>
-                      <span className="font-semibold text-white">{selectedSettlementIds.size}</span> selected • Gross{" "}
-                      {formatMoney(selectedSummary.gross, selectedSummary.currency)} • Net{" "}
+                      <span className="font-semibold text-white">{selectedSettlementIds.size}</span> selected • Gross Revenue{" "}
+                      {formatMoney(selectedSummary.gross, selectedSummary.currency)} • Net Revenue{" "}
                       {formatMoney(selectedSummary.net, selectedSummary.currency)}
                     </>
                   ) : (
@@ -1490,13 +1549,13 @@ export default function ManageSettlements() {
                           Visit Date
                         </th>
                         <th className="px-3 py-3 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
-                          Gross
+                          Gross Revenue
                         </th>
                         <th className="px-3 py-3 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
                           Commission
                         </th>
                         <th className="px-3 py-3 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
-                          Net
+                          Net Revenue
                         </th>
                         <th className="px-3 py-3 pr-4 text-right text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
                           Status
@@ -1604,6 +1663,14 @@ export default function ManageSettlements() {
             >
               <SlidersHorizontal className="h-4 w-4" />
               Filters
+            </button>
+            <button
+              type="button"
+              onClick={() => setBatchSortIdx((i) => (i + 1) % BATCH_SORTS.length)}
+              className={cn(MG_TOOLBAR_BASE, batchSortIdx !== 0 ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}
+            >
+              <BatchSortIcon className="h-4 w-4" />
+              {batchSortMode.label}
             </button>
             <Dialog
               open={batchFilterDialogOpen}
@@ -1765,7 +1832,7 @@ export default function ManageSettlements() {
                           scope="col"
                           className="w-[12%] whitespace-nowrap px-3 py-3 text-right align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted"
                         >
-                          Net
+                          Total Amount
                         </th>
                         <th
                           scope="col"
@@ -1815,7 +1882,7 @@ export default function ManageSettlements() {
                               {batch.settlementCount}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right align-middle text-[13px] font-bold tabular-nums text-white">
-                              {formatMoney(batch.netAmount, batch.currency)}
+                              {formatMoney(batch.grossAmount, batch.currency)}
                             </td>
                             <td className="max-w-0 px-3 py-3 align-middle font-mono text-[11px] text-slate-300">
                               <span className="block truncate" title={batch.transactionReference || undefined}>
@@ -1984,9 +2051,9 @@ export default function ManageSettlements() {
                             )}
                           </p>
                           <p>
-                            Gross: <span className="font-semibold text-white">{formatMoney(wizardPreviewSummary.gross, wizardPreviewSummary.currency)}</span>
+                            Gross Revenue: <span className="font-semibold text-white">{formatMoney(wizardPreviewSummary.gross, wizardPreviewSummary.currency)}</span>
                             {" • "}Commission: {formatMoney(wizardPreviewSummary.commission, wizardPreviewSummary.currency)}
-                            {" • "}Net: <span className="font-semibold text-emerald-300">{formatMoney(wizardPreviewSummary.net, wizardPreviewSummary.currency)}</span>
+                            {" • "}Net Revenue: <span className="font-semibold text-emerald-300">{formatMoney(wizardPreviewSummary.net, wizardPreviewSummary.currency)}</span>
                           </p>
                         </div>
                       ) : (
@@ -2005,9 +2072,9 @@ export default function ManageSettlements() {
                       <span className="font-bold text-white">{selectedSettlementIds.size}</span> rows selected
                     </p>
                     <p>
-                      Gross: <span className="font-semibold text-white">{formatMoney(selectedSummary.gross, selectedSummary.currency)}</span>
+                      Gross Revenue: <span className="font-semibold text-white">{formatMoney(selectedSummary.gross, selectedSummary.currency)}</span>
                       {" • "}Commission: {formatMoney(selectedSummary.commission, selectedSummary.currency)}
-                      {" • "}Net: <span className="font-semibold text-emerald-300">{formatMoney(selectedSummary.net, selectedSummary.currency)}</span>
+                      {" • "}Net Revenue: <span className="font-semibold text-emerald-300">{formatMoney(selectedSummary.net, selectedSummary.currency)}</span>
                     </p>
                   </div>
                 </div>

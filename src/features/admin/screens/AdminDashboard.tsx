@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
   AlertTriangle,
@@ -12,6 +13,7 @@ import {
   TrendingUp,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import {
   Bar,
@@ -33,8 +35,13 @@ import ManagePlans from "@/features/admin/components/ManagePlans";
 import ManageSettlements from "@/features/admin/components/ManageSettlements";
 import ManageUsers from "@/features/admin/components/ManageUsers";
 import AdminSettings from "@/features/admin/components/AdminSettings";
+import { getAdminPendingSettlementsApi } from "@/features/admin/admin-settlement.api";
+import { buildSettlementMetrics } from "@/features/admin/settlement-aggregate";
 import { cn } from "@/shared/lib/utils";
 import { useLocation } from "react-router-dom";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/shared/ui/select";
 
 type AdminSection =
   | "home"
@@ -193,6 +200,42 @@ const AdminDashboard = () => {
 
   const [activeSection, setActiveSection] = useState<AdminSection>(() => resolveSection(requestedSection));
 
+  // Fetch pending settlements for dashboard KPI
+  const { data: pendingSettlementsData } = useQuery({
+    queryKey: ["admin", "pending-settlements", "aggregate"],
+    queryFn: () =>
+      getAdminPendingSettlementsApi({
+        page: 0,
+        size: 100,
+        payoutStatus: "PENDING",
+      }),
+  });
+
+  // Fetch in-payout settlements for dashboard KPI
+  const { data: inPayoutSettlementsData } = useQuery({
+    queryKey: ["admin", "in-payout-settlements", "aggregate"],
+    queryFn: () =>
+      getAdminPendingSettlementsApi({
+        page: 0,
+        size: 100,
+        payoutStatus: "IN_PAYOUT",
+      }),
+  });
+
+  // Calculate total unpaid/in-payout amount
+  const unpaidAmount = (() => {
+    let total = 0;
+    if (pendingSettlementsData?.items) {
+      total += pendingSettlementsData.items.reduce((sum, item) => sum + (item.netAmount ?? 0), 0);
+    }
+    if (inPayoutSettlementsData?.items) {
+      total += inPayoutSettlementsData.items.reduce((sum, item) => sum + (item.netAmount ?? 0), 0);
+    }
+    return total;
+  })();
+
+  const totalUnpaidCount = (pendingSettlementsData?.items?.length ?? 0) + (inPayoutSettlementsData?.items?.length ?? 0);
+
   useEffect(() => {
     if (!requestedSection) return;
     setActiveSection(resolveSection(requestedSection));
@@ -216,7 +259,12 @@ const AdminDashboard = () => {
               <KPICard title="Total Revenue" value="Rs. 4.2M" change="+12.5%" icon={<DollarSign className="h-5 w-5 text-orange-400" />} />
               <KPICard title="Active Members" value="1,240" change="+5.2%" icon={<Users className="h-5 w-5 text-orange-400" />} />
               <KPICard title="Active Gyms" value="42/45" subtext="93% Active" icon={<Dumbbell className="h-5 w-5 text-orange-400" />} />
-              <KPICard title="New Users" value="156" change="+22%" icon={<UserPlus className="h-5 w-5 text-amber-400" />} />
+              <KPICard 
+                title="Unpaid Settlements" 
+                value={`Rs. ${(unpaidAmount / 100000).toFixed(1)}L`} 
+                subtext={`${totalUnpaidCount} settlements`}
+                icon={<Wallet className="h-5 w-5 text-amber-400" />} 
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -228,10 +276,15 @@ const AdminDashboard = () => {
                       Revenue Trend
                     </h3>
                   </div>
-                  <select className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400 outline-none transition focus:border-orange-500/40">
-                    <option>Last 30 Days</option>
-                    <option>Last 7 Days</option>
-                  </select>
+                  <Select defaultValue="30">
+                    <SelectTrigger className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-zinc-400 outline-none transition focus:border-orange-500/40 h-auto w-auto">
+                      <SelectValue placeholder="Select period" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#1a1a1a]">
+                      <SelectItem value="30" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Last 30 Days</SelectItem>
+                      <SelectItem value="7" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Last 7 Days</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">

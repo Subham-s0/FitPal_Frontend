@@ -1,13 +1,18 @@
-import { Dumbbell, MapPin, Trophy, Users } from "lucide-react";
-import { useCmsStore } from "@/features/marketing/cms-store";
+import { Dumbbell, MapPin, ScanLine, Trophy, Users } from "lucide-react";
+import type { CmsStat } from "@/features/marketing/cms-store";
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Dumbbell, Users, MapPin, Trophy,
+  Dumbbell,
+  Users,
+  MapPin,
+  Trophy,
+  ScanLine,
 };
 
-const Stats = () => {
-  const cms = useCmsStore();
-  const activeStats = cms.stats.filter((s) => s.active);
+type StatsProps = { stats: CmsStat[] };
+
+const Stats = ({ stats }: StatsProps) => {
+  const activeStats = stats.filter((s) => s.active);
 
   if (activeStats.length === 0) return null;
 

@@ -70,6 +70,7 @@ const COMPACT_MOBILE_BOTTOM_DOCK_SECTIONS = new Set([
   "profile",
   "settings",
   "membership",
+  "workouts",
 ]);
 
 function resolveMobileBottomNavActiveSection(activeSection: string) {

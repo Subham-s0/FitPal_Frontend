@@ -292,59 +292,6 @@ export interface RoutineEditorState {
 }
 
 // ============================================
-// LEGACY TYPES (for backward compatibility with existing components)
-// ============================================
-
-export interface LegacyRoutineSet {
-  id: string;
-  setOrder: number;
-  targetWeight: number | null;
-  targetReps: number | null;
-  targetRepRangeMin: number | null;
-  targetRepRangeMax: number | null;
-  targetRestSeconds: number | null;
-  targetDurationSeconds: number | null;
-  targetDistance: number | null;
-  isWarmup: boolean;
-}
-
-export interface LegacyRoutineExercise {
-  id: string;
-  exerciseId: number;
-  name: string;
-  equipmentName: string | null;
-  coverUrl: string | null;
-  exerciseType: ExerciseType;
-  primaryMuscles: string[];
-  sets: LegacyRoutineSet[];
-  notes: string;
-  supersetGroupId: string | null;
-}
-
-export interface SupersetGroup {
-  id: string;
-  label: string;
-  exerciseIds: string[];
-  restAfterRoundSec: number;
-}
-
-export interface LegacyWorkoutDay {
-  id: string;
-  name: string;
-  exercises: LegacyRoutineExercise[];
-  supersetGroups: SupersetGroup[];
-}
-
-export interface RoutineState {
-  title: string;
-  daysPerWeek: number;
-  goal: RoutineGoal;
-  estimatedDuration: number;
-  days: LegacyWorkoutDay[];
-  selectedDayId: string | null;
-}
-
-// ============================================
 // HELPER FUNCTIONS
 // ============================================
 

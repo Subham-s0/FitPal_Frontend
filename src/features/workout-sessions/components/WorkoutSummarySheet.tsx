@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { CheckCircle2, Clock, Dumbbell, Weight, Loader2 } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/shared/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
 import type { WorkoutSessionResponse } from "../workoutSessionTypes";
 
@@ -80,90 +81,81 @@ export default function WorkoutSummarySheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="h-auto max-h-[90vh] overflow-y-auto rounded-t-[2rem] border-t border-white/10 bg-[#0a0a0a] px-6 pb-8 pt-6"
-      >
-        <SheetHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-500/20">
+            <CheckCircle2 className="h-6 w-6 text-orange-400" />
           </div>
-          <SheetTitle className="text-2xl font-black text-white">
-            Workout Complete! 💪
-          </SheetTitle>
-          <SheetDescription className="text-gray-400">
+          <DialogTitle className="text-xl font-black text-white">
+            Workout Complete!
+          </DialogTitle>
+          <DialogDescription className="text-gray-400">
             {session.title}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Stats Grid */}
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-center">
-            <Clock className="mx-auto h-5 w-5 text-orange-400" />
-            <p className="mt-2 text-xl font-black text-white">{stats.duration}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">
-              Duration
-            </p>
+        {/* Stats Row */}
+        <div className="grid grid-cols-4 gap-2 py-4">
+          <div className="text-center">
+            <Clock className="mx-auto h-4 w-4 text-orange-400" />
+            <p className="mt-1 text-sm font-bold text-white">{stats.duration}</p>
+            <p className="text-[9px] uppercase text-gray-500">Time</p>
           </div>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-center">
-            <Dumbbell className="mx-auto h-5 w-5 text-blue-400" />
-            <p className="mt-2 text-xl font-black text-white">
-              {stats.exerciseCount}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">
-              Exercises
-            </p>
+          <div className="text-center">
+            <Dumbbell className="mx-auto h-4 w-4 text-blue-400" />
+            <p className="mt-1 text-sm font-bold text-white">{stats.exerciseCount}</p>
+            <p className="text-[9px] uppercase text-gray-500">Exercises</p>
           </div>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-center">
-            <CheckCircle2 className="mx-auto h-5 w-5 text-emerald-400" />
-            <p className="mt-2 text-xl font-black text-white">
-              {stats.completedSets}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">
-              Sets Done
-            </p>
+          <div className="text-center">
+            <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-400" />
+            <p className="mt-1 text-sm font-bold text-white">{stats.completedSets}</p>
+            <p className="text-[9px] uppercase text-gray-500">Sets</p>
           </div>
-          <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-4 text-center">
-            <Weight className="mx-auto h-5 w-5 text-purple-400" />
-            <p className="mt-2 text-xl font-black text-white">
-              {formatVolume(stats.totalVolume)}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-500">
-              Volume (kg)
-            </p>
+          <div className="text-center">
+            <Weight className="mx-auto h-4 w-4 text-purple-400" />
+            <p className="mt-1 text-sm font-bold text-white">{formatVolume(stats.totalVolume)}</p>
+            <p className="text-[9px] uppercase text-gray-500">Volume</p>
           </div>
         </div>
 
         {/* Notes Input */}
-        <div className="mt-6">
-          <label className="mb-2 block text-sm font-bold text-gray-300">
-            Session Notes
+        <div>
+          <label className="mb-1.5 block text-xs font-bold text-gray-300">
+            Notes (optional)
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="How did you feel? Any PRs? Notes for next time..."
-            className="h-24 w-full resize-none rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white placeholder-gray-500 transition-colors focus:border-orange-500/50 focus:outline-none"
+            placeholder="How did it go?"
+            className="h-16 w-full resize-none rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white placeholder-gray-500 transition-colors focus:border-orange-500/50 focus:outline-none"
           />
         </div>
 
-        {/* Complete Button */}
-        <Button
-          onClick={handleComplete}
-          disabled={isCompleting}
-          className="mt-6 w-full bg-gradient-to-r from-emerald-500 to-green-500 py-6 text-base font-black uppercase tracking-wider hover:from-emerald-400 hover:to-green-400"
-        >
-          {isCompleting ? (
-            <>
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Done"
-          )}
-        </Button>
-      </SheetContent>
-    </Sheet>
+        <DialogFooter className="mt-2">
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isCompleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleComplete}
+            disabled={isCompleting}
+            className="bg-gradient-to-r from-orange-500 to-red-500"
+          >
+            {isCompleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Complete"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

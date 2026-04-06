@@ -157,3 +157,13 @@ export interface AddWorkoutSetRequest {
   completed?: boolean;
 }
 
+export interface WorkoutSessionHistoryPageResponse {
+  items: WorkoutSessionSummaryResponse[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+

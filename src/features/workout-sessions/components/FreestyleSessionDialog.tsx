@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Loader2, Dumbbell } from "lucide-react";
+import { Loader2, Dumbbell, Play } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
@@ -37,6 +38,9 @@ export default function FreestyleSessionDialog({
             <Dumbbell className="h-5 w-5 text-orange-400" />
             Start Freestyle Session
           </DialogTitle>
+          <DialogDescription className="pt-2">
+            Create a custom workout session and add exercises as you go.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
@@ -51,8 +55,12 @@ export default function FreestyleSessionDialog({
             />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="mt-4">
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isStarting}
+          >
             Cancel
           </Button>
           <Button
@@ -61,9 +69,16 @@ export default function FreestyleSessionDialog({
             className="bg-gradient-to-r from-orange-500 to-red-500"
           >
             {isStarting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Start Session
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Starting...
+              </>
+            ) : (
+              <>
+                <Play className="mr-1 h-4 w-4" />
+                Start Session
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

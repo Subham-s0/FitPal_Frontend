@@ -2,9 +2,10 @@ import { useState } from "react";
 import {
   ArrowLeft, BookOpen, ChevronDown, Edit2, GripVertical,
   Megaphone, MessageSquare, MoreVertical, Plus, Save,
-  Star, Trash2, Zap, X, Dumbbell,
+  Star, Trash2, Zap, Dumbbell, Loader2, RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/shared/lib/utils";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -16,19 +17,30 @@ import {
 } from "@/shared/ui/dialog";
 import { Button } from "@/shared/ui/button";
 import {
-  cmsStore, useCmsStore,
-  type CmsFeature, type CmsTestimonial,
-  type CmsHowToStep, type CmsFaq, type CmsAnnouncement, type CmsStat,
-} from "@/features/marketing/cms-store";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/shared/ui/select";
+import {
+  getCmsFeaturesApi, createCmsFeatureApi, updateCmsFeatureApi, deleteCmsFeatureApi,
+  getCmsTestimonialsApi, createCmsTestimonialApi, updateCmsTestimonialApi, deleteCmsTestimonialApi,
+  getCmsHowToStepsApi, createCmsHowToStepApi, updateCmsHowToStepApi, deleteCmsHowToStepApi,
+  getCmsFaqsApi, createCmsFaqApi, updateCmsFaqApi, deleteCmsFaqApi,
+  getCmsAnnouncementsApi, createCmsAnnouncementApi, updateCmsAnnouncementApi, deleteCmsAnnouncementApi,
+  getCmsStatsApi, createCmsStatApi, updateCmsStatApi, deleteCmsStatApi,
+} from "@/features/admin/admin-settings.api";
+import type {
+  CmsFeatureResponse, CmsFeatureUpsertRequest,
+  CmsTestimonialResponse, CmsTestimonialUpsertRequest,
+  CmsHowToStepResponse, CmsHowToStepUpsertRequest,
+  CmsFaqResponse, CmsFaqUpsertRequest,
+  CmsAnnouncementResponse, CmsAnnouncementUpsertRequest,
+  CmsStatResponse, CmsStatUpsertRequest,
+} from "@/features/admin/admin-settings.model";
+import { publicCmsHomeQueryKey } from "@/features/marketing/public-cms.api";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type CmsTab = "features" | "testimonials" | "how-to" | "stats" | "faqs" | "announcements";
 
 /* ── Utilities ─────────────────────────────────────────────────────── */
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
 function StatusBadge({ label, v }: { label: string; v: "green" | "amber" | "red" | "blue" | "violet" | "slate" }) {
   const cls = {
     green:  "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
@@ -144,62 +156,121 @@ function AddBtn({ label, onClick }: { label: string; onClick: () => void }) {
 /* ─────────────────────────────────────────────────────────────────── */
 const AVAILABLE_ICONS = ["QrCode","Target","BarChart3","MapPin","CreditCard","Shield","Dumbbell","Calendar","Zap","Star","Trophy","Users","BookOpen","Lock","ScanLine","UserPlus","Search"];
 
-function emptyFeature(): CmsFeature {
-  return { id: uid(), icon: "Dumbbell", title: "", description: "", highlight: false, active: true, order: 99 };
+type FeatureForm = CmsFeatureUpsertRequest & { id?: string };
+function emptyFeature(): FeatureForm {
+  return { icon: "Dumbbell", title: "", description: "", highlight: false, active: true, order: 99 };
 }
 
 function FeaturesTab() {
-  const cms = useCmsStore();
-  const [editing, setEditing] = useState<CmsFeature | null>(null);
+  const queryClient = useQueryClient();
+  const featuresQ = useQuery({ queryKey: ["admin", "cms", "features"], queryFn: getCmsFeaturesApi });
+  const [editing, setEditing] = useState<FeatureForm | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createCmsFeatureApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "features"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Feature added");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create feature"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsFeatureUpsertRequest }) => updateCmsFeatureApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "features"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Feature updated");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update feature"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCmsFeatureApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "features"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Feature removed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete feature"),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsFeatureUpsertRequest }) => updateCmsFeatureApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "features"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
   const openNew = () => { setEditing(emptyFeature()); setIsNew(true); };
-  const openEdit = (f: CmsFeature) => { setEditing({ ...f }); setIsNew(false); };
+  const openEdit = (f: CmsFeatureResponse) => { setEditing({ ...f, id: f.id }); setIsNew(false); };
   const save = () => {
     if (!editing || !editing.title.trim()) { toast.error("Title is required"); return; }
-    cmsStore.setFeature(editing);
-    toast.success(isNew ? "Feature added" : "Feature updated");
-    setEditing(null);
+    if (!editing.description.trim()) { toast.error("Description is required"); return; }
+    const { id, ...data } = editing;
+    if (isNew) {
+      createMutation.mutate(data);
+    } else if (id) {
+      updateMutation.mutate({ id, data });
+    }
   };
-  const del = (id: string) => { cmsStore.removeFeature(id); toast.success("Feature removed"); };
+
+  const features = featuresQ.data ?? [];
 
   return (
     <div className="space-y-4">
-      <SectionHead icon={<Zap className="h-5 w-5 text-violet-400" />} title="Features" description="Shown on the home page features grid. Toggle active to hide/show." action={<AddBtn label="Add Feature" onClick={openNew} />} />
-      <TableWrap>
-        <thead>
-          <tr>
-            <Th>Feature</Th><Th>Description</Th><Th>Highlight</Th><Th>Visible</Th><Th right>Actions</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {cms.features.map((f) => (
-            <tr key={f.id} className="table-border-row border-b last:border-0 transition hover:bg-white/[0.025]">
-              <td className="px-4 py-3.5 pl-5">
-                <div className="flex items-center gap-2.5">
-                  <GripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-white/20" />
-                  <span className="text-[12px] font-mono text-slate-500 mr-1">{f.icon}</span>
-                  <span className="text-[13px] font-bold text-white">{f.title}</span>
-                </div>
-              </td>
-              <td className="max-w-[220px] truncate px-4 py-3.5 text-[12px] text-slate-400">{f.description}</td>
-              <td className="px-4 py-3.5">
-                <button type="button" onClick={() => cmsStore.setFeature({ ...f, highlight: !f.highlight })}>
-                  <StatusBadge label={f.highlight ? "Yes" : "No"} v={f.highlight ? "amber" : "slate"} />
-                </button>
-              </td>
-              <td className="px-4 py-3.5">
-                <button type="button" onClick={() => cmsStore.setFeature({ ...f, active: !f.active })}>
-                  <StatusBadge label={f.active ? "Active" : "Hidden"} v={f.active ? "green" : "slate"} />
-                </button>
-              </td>
-              <td className="px-4 py-3.5 pr-5 text-right">
-                <Dots onEdit={() => openEdit(f)} onDelete={() => del(f.id)} />
-              </td>
+      <SectionHead icon={<Zap className="h-5 w-5 text-violet-400" />} title="Features" description="Shown on the home page features grid. Toggle active to hide/show." action={
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => featuresQ.refetch()} disabled={featuresQ.isFetching} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
+            {featuresQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+          </button>
+          <AddBtn label="Add Feature" onClick={openNew} />
+        </div>
+      } />
+      {featuresQ.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+      ) : (
+        <TableWrap>
+          <thead>
+            <tr>
+              <Th>Feature</Th><Th>Description</Th><Th>Highlight</Th><Th>Visible</Th><Th right>Actions</Th>
             </tr>
-          ))}
-        </tbody>
-      </TableWrap>
+          </thead>
+          <tbody>
+            {features.map((f) => (
+              <tr key={f.id} className="table-border-row border-b last:border-0 transition hover:bg-white/[0.025]">
+                <td className="px-4 py-3.5 pl-5">
+                  <div className="flex items-center gap-2.5">
+                    <GripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-white/20" />
+                    <span className="text-[12px] font-mono text-slate-500 mr-1">{f.icon}</span>
+                    <span className="text-[13px] font-bold text-white">{f.title}</span>
+                  </div>
+                </td>
+                <td className="max-w-[220px] truncate px-4 py-3.5 text-[12px] text-slate-400">{f.description}</td>
+                <td className="px-4 py-3.5">
+                  <button type="button" onClick={() => toggleMutation.mutate({ id: f.id, data: { ...f, highlight: !f.highlight } })}>
+                    <StatusBadge label={f.highlight ? "Yes" : "No"} v={f.highlight ? "amber" : "slate"} />
+                  </button>
+                </td>
+                <td className="px-4 py-3.5">
+                  <button type="button" onClick={() => toggleMutation.mutate({ id: f.id, data: { ...f, active: !f.active } })}>
+                    <StatusBadge label={f.active ? "Active" : "Hidden"} v={f.active ? "green" : "slate"} />
+                  </button>
+                </td>
+                <td className="px-4 py-3.5 pr-5 text-right">
+                  <Dots onEdit={() => openEdit(f)} onDelete={() => deleteMutation.mutate(f.id)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TableWrap>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="border-white/10 bg-[#0f0f0f] text-white sm:max-w-[500px]">
@@ -212,19 +283,24 @@ function FeaturesTab() {
               <FieldRow label="Title"><input className={inputCls} value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="e.g. QR Check-In" /></FieldRow>
               <FieldRow label="Description"><textarea className={textareaCls} rows={2} value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} placeholder="Short benefit description…" /></FieldRow>
               <FieldRow label="Icon Name">
-                <select className={inputCls} value={editing.icon} onChange={(e) => setEditing({ ...editing, icon: e.target.value })}>
-                  {AVAILABLE_ICONS.map((i) => <option key={i} value={i}>{i}</option>)}
-                </select>
+                <Select value={editing.icon} onValueChange={(v) => setEditing({ ...editing, icon: v })}>
+                  <SelectTrigger className={inputCls}>
+                    <SelectValue placeholder="Select icon" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#1a1a1a]">
+                    {AVAILABLE_ICONS.map((i) => <SelectItem key={i} value={i} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{i}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </FieldRow>
               <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
+                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order ?? 99} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
                 <div className="flex flex-col gap-3 pt-5">
                   <label className="flex items-center gap-2 text-[12px] text-slate-300 cursor-pointer">
-                    <input type="checkbox" checked={editing.highlight} onChange={(e) => setEditing({ ...editing, highlight: e.target.checked })} className="accent-orange-500" />
+                    <input type="checkbox" checked={editing.highlight ?? false} onChange={(e) => setEditing({ ...editing, highlight: e.target.checked })} className="accent-orange-500" />
                     Highlight badge
                   </label>
                   <label className="flex items-center gap-2 text-[12px] text-slate-300 cursor-pointer">
-                    <input type="checkbox" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} className="accent-orange-500" />
+                    <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} className="accent-orange-500" />
                     Visible on home page
                   </label>
                 </div>
@@ -241,63 +317,122 @@ function FeaturesTab() {
 /* ─────────────────────────────────────────────────────────────────── */
 /* TESTIMONIALS TAB                                                     */
 /* ─────────────────────────────────────────────────────────────────── */
-function emptyTestimonial(): CmsTestimonial {
-  return { id: uid(), name: "", role: "", avatar: "", content: "", rating: 5, approved: false, order: 99 };
+type TestimonialForm = CmsTestimonialUpsertRequest & { id?: string };
+function emptyTestimonial(): TestimonialForm {
+  return { name: "", role: "", avatar: "", content: "", rating: 5, approved: false, active: true, order: 99 };
 }
 
 function TestimonialsTab() {
-  const cms = useCmsStore();
-  const [editing, setEditing] = useState<CmsTestimonial | null>(null);
+  const queryClient = useQueryClient();
+  const testimonialsQ = useQuery({ queryKey: ["admin", "cms", "testimonials"], queryFn: getCmsTestimonialsApi });
+  const [editing, setEditing] = useState<TestimonialForm | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createCmsTestimonialApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "testimonials"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Testimonial added");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create testimonial"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsTestimonialUpsertRequest }) => updateCmsTestimonialApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "testimonials"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Updated");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCmsTestimonialApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "testimonials"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Removed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete"),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsTestimonialUpsertRequest }) => updateCmsTestimonialApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "testimonials"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
   const openNew = () => { setEditing(emptyTestimonial()); setIsNew(true); };
-  const openEdit = (t: CmsTestimonial) => { setEditing({ ...t }); setIsNew(false); };
+  const openEdit = (t: CmsTestimonialResponse) => { setEditing({ ...t, id: t.id }); setIsNew(false); };
   const save = () => {
     if (!editing || !editing.name.trim()) { toast.error("Name is required"); return; }
-    cmsStore.setTestimonial(editing);
-    toast.success(isNew ? "Testimonial added" : "Updated");
-    setEditing(null);
+    const { id, ...data } = editing;
+    if (isNew) {
+      createMutation.mutate(data);
+    } else if (id) {
+      updateMutation.mutate({ id, data });
+    }
   };
+
+  const testimonials = testimonialsQ.data ?? [];
 
   return (
     <div className="space-y-4">
-      <SectionHead icon={<Star className="h-5 w-5 text-amber-400" />} title="Testimonials" description="Approved testimonials show on the home page." action={<AddBtn label="Add Testimonial" onClick={openNew} />} />
+      <SectionHead icon={<Star className="h-5 w-5 text-amber-400" />} title="Testimonials" description="Approved testimonials show on the home page." action={
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => testimonialsQ.refetch()} disabled={testimonialsQ.isFetching} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
+            {testimonialsQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+          </button>
+          <AddBtn label="Add Testimonial" onClick={openNew} />
+        </div>
+      } />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cms.testimonials.map((t) => (
-          <div key={t.id} className={cn("relative rounded-[18px] border p-5 transition", t.approved ? "border-amber-500/20 bg-amber-500/[0.04]" : "table-border table-bg opacity-60")}>
-            <div className="absolute right-3 top-3">
-              <Dots
-                onEdit={() => openEdit(t)}
-                onDelete={() => { cmsStore.removeTestimonial(t.id); toast.success("Removed"); }}
-                extra={[{
-                  label: t.approved ? "Unapprove" : "Approve",
-                  icon: <Star className="mr-2 h-3.5 w-3.5" />,
-                  fn: () => cmsStore.setTestimonial({ ...t, approved: !t.approved }),
-                }]}
-              />
-            </div>
-            <div className="mb-3 flex items-center gap-2.5">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-amber-500/25 bg-amber-500/10 text-[13px] font-black text-amber-400">
-                {t.name ? t.name[0] : "?"}
+      {testimonialsQ.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {testimonials.map((t) => (
+            <div key={t.id} className={cn("relative rounded-[18px] border p-5 transition", t.approved ? "border-amber-500/20 bg-amber-500/[0.04]" : "table-border table-bg opacity-60")}>
+              <div className="absolute right-3 top-3">
+                <Dots
+                  onEdit={() => openEdit(t)}
+                  onDelete={() => deleteMutation.mutate(t.id)}
+                  extra={[{
+                    label: t.approved ? "Unapprove" : "Approve",
+                    icon: <Star className="mr-2 h-3.5 w-3.5" />,
+                    fn: () => toggleMutation.mutate({ id: t.id, data: { ...t, approved: !t.approved } }),
+                  }]}
+                />
               </div>
-              <div>
-                <p className="text-[13px] font-black text-white">{t.name || <span className="italic text-slate-500">No name</span>}</p>
-                <p className="text-[10px] text-slate-500">{t.role}</p>
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-amber-500/25 bg-amber-500/10 text-[13px] font-black text-amber-400">
+                  {t.name ? t.name[0] : "?"}
+                </div>
+                <div>
+                  <p className="text-[13px] font-black text-white">{t.name || <span className="italic text-slate-500">No name</span>}</p>
+                  <p className="text-[10px] text-slate-500">{t.role}</p>
+                </div>
+              </div>
+              <div className="mb-2 flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className={cn("h-3 w-3", i < t.rating ? "fill-amber-400 text-amber-400" : "text-white/10")} />
+                ))}
+              </div>
+              <p className="line-clamp-3 text-[12px] leading-relaxed text-slate-400">"{t.content}"</p>
+              <div className="mt-3">
+                <StatusBadge label={t.approved ? "Approved · Home" : "Pending"} v={t.approved ? "green" : "amber"} />
               </div>
             </div>
-            <div className="mb-2 flex gap-0.5">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className={cn("h-3 w-3", i < t.rating ? "fill-amber-400 text-amber-400" : "text-white/10")} />
-              ))}
-            </div>
-            <p className="line-clamp-3 text-[12px] leading-relaxed text-slate-400">"{t.content}"</p>
-            <div className="mt-3">
-              <StatusBadge label={t.approved ? "Approved · Home" : "Pending"} v={t.approved ? "green" : "amber"} />
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="border-white/10 bg-[#0f0f0f] text-white sm:max-w-[500px]">
@@ -309,24 +444,24 @@ function TestimonialsTab() {
             <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-3">
                 <FieldRow label="Name"><input className={inputCls} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Arun Sharma" /></FieldRow>
-                <FieldRow label="Role"><input className={inputCls} value={editing.role} onChange={(e) => setEditing({ ...editing, role: e.target.value })} placeholder="Fitness Enthusiast" /></FieldRow>
+                <FieldRow label="Role"><input className={inputCls} value={editing.role ?? ""} onChange={(e) => setEditing({ ...editing, role: e.target.value })} placeholder="Fitness Enthusiast" /></FieldRow>
               </div>
-              <FieldRow label="Avatar URL (optional)"><input className={inputCls} value={editing.avatar} onChange={(e) => setEditing({ ...editing, avatar: e.target.value })} placeholder="https://…" /></FieldRow>
+              <FieldRow label="Avatar URL (optional)"><input className={inputCls} value={editing.avatar ?? ""} onChange={(e) => setEditing({ ...editing, avatar: e.target.value })} placeholder="https://…" /></FieldRow>
               <FieldRow label="Testimonial">
-                <textarea className={textareaCls} rows={3} value={editing.content} onChange={(e) => setEditing({ ...editing, content: e.target.value })} placeholder="What did they say…" />
+                <textarea className={textareaCls} rows={3} value={editing.content ?? ""} onChange={(e) => setEditing({ ...editing, content: e.target.value })} placeholder="What did they say…" />
               </FieldRow>
               <div className="flex items-center gap-4">
                 <FieldRow label="Rating">
                   <div className="flex gap-1 pt-1">
                     {[1,2,3,4,5].map((n) => (
                       <button key={n} type="button" onClick={() => setEditing({ ...editing, rating: n })}>
-                        <Star className={cn("h-5 w-5 transition-colors", n <= editing.rating ? "fill-amber-400 text-amber-400" : "text-white/20 hover:text-amber-400/50")} />
+                        <Star className={cn("h-5 w-5 transition-colors", n <= (editing.rating ?? 5) ? "fill-amber-400 text-amber-400" : "text-white/20 hover:text-amber-400/50")} />
                       </button>
                     ))}
                   </div>
                 </FieldRow>
                 <label className="flex items-center gap-2 pt-4 text-[12px] text-slate-300 cursor-pointer">
-                  <input type="checkbox" checked={editing.approved} onChange={(e) => setEditing({ ...editing, approved: e.target.checked })} className="accent-orange-500" />
+                  <input type="checkbox" checked={editing.approved ?? false} onChange={(e) => setEditing({ ...editing, approved: e.target.checked })} className="accent-orange-500" />
                   Approve (show on home)
                 </label>
               </div>
@@ -344,51 +479,111 @@ function TestimonialsTab() {
 /* ─────────────────────────────────────────────────────────────────── */
 const STEP_ICONS = ["UserPlus","Search","ScanLine","QrCode","Dumbbell","MapPin","CreditCard","BookOpen","Zap"];
 
-function emptyStep(): CmsHowToStep {
-  return { id: uid(), stepNumber: "0" + (Math.floor(Math.random() * 9) + 4), icon: "UserPlus", title: "", description: "", published: true, order: 99 };
+type HowToStepForm = CmsHowToStepUpsertRequest & { id?: string };
+function emptyStep(): HowToStepForm {
+  return { stepNumber: "0" + (Math.floor(Math.random() * 9) + 4), icon: "UserPlus", title: "", description: "", published: true, order: 99 };
 }
 
 function HowToTab() {
-  const cms = useCmsStore();
-  const [editing, setEditing] = useState<CmsHowToStep | null>(null);
+  const queryClient = useQueryClient();
+  const stepsQ = useQuery({ queryKey: ["admin", "cms", "howToSteps"], queryFn: getCmsHowToStepsApi });
+  const [editing, setEditing] = useState<HowToStepForm | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createCmsHowToStepApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "howToSteps"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Step added");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create step"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsHowToStepUpsertRequest }) => updateCmsHowToStepApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "howToSteps"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Updated");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCmsHowToStepApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "howToSteps"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Removed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete"),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsHowToStepUpsertRequest }) => updateCmsHowToStepApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "howToSteps"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
   const openNew = () => { setEditing(emptyStep()); setIsNew(true); };
+  const openEdit = (s: CmsHowToStepResponse) => { setEditing({ ...s, id: s.id }); setIsNew(false); };
   const save = () => {
     if (!editing || !editing.title.trim()) { toast.error("Title is required"); return; }
-    cmsStore.setHowToStep(editing);
-    toast.success(isNew ? "Step added" : "Updated");
-    setEditing(null);
+    const { id, ...data } = editing;
+    if (isNew) {
+      createMutation.mutate(data);
+    } else if (id) {
+      updateMutation.mutate({ id, data });
+    }
   };
+
+  const steps = stepsQ.data ?? [];
 
   return (
     <div className="space-y-4">
-      <SectionHead icon={<BookOpen className="h-5 w-5 text-blue-400" />} title="How It Works Steps" description="Steps shown in the 'How It Works' section on the home page." action={<AddBtn label="Add Step" onClick={openNew} />} />
-      <TableWrap>
-        <thead><tr><Th>#</Th><Th>Title</Th><Th>Description</Th><Th>Visible</Th><Th right>Actions</Th></tr></thead>
-        <tbody>
-          {cms.howToSteps.map((s) => (
-            <tr key={s.id} className="table-border-row border-b last:border-0 transition hover:bg-white/[0.025]">
-              <td className="px-4 py-3.5 pl-5">
-                <div className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-white/20" />
-                  <span className="rounded-full border border-blue-500/20 bg-blue-500/[0.08] px-2 py-0.5 text-[10px] font-black text-blue-300">{s.stepNumber}</span>
-                </div>
-              </td>
-              <td className="px-4 py-3.5 text-[13px] font-bold text-white">{s.title}</td>
-              <td className="max-w-[220px] truncate px-4 py-3.5 text-[12px] text-slate-400">{s.description}</td>
-              <td className="px-4 py-3.5">
-                <button type="button" onClick={() => cmsStore.setHowToStep({ ...s, published: !s.published })}>
-                  <StatusBadge label={s.published ? "Published" : "Draft"} v={s.published ? "green" : "amber"} />
-                </button>
-              </td>
-              <td className="px-4 py-3.5 pr-5 text-right">
-                <Dots onEdit={() => { setEditing({ ...s }); setIsNew(false); }} onDelete={() => { cmsStore.removeHowToStep(s.id); toast.success("Removed"); }} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableWrap>
+      <SectionHead icon={<BookOpen className="h-5 w-5 text-blue-400" />} title="How It Works Steps" description="Steps shown in the 'How It Works' section on the home page." action={
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => stepsQ.refetch()} disabled={stepsQ.isFetching} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
+            {stepsQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+          </button>
+          <AddBtn label="Add Step" onClick={openNew} />
+        </div>
+      } />
+      {stepsQ.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+      ) : (
+        <TableWrap>
+          <thead><tr><Th>#</Th><Th>Title</Th><Th>Description</Th><Th>Visible</Th><Th right>Actions</Th></tr></thead>
+          <tbody>
+            {steps.map((s) => (
+              <tr key={s.id} className="table-border-row border-b last:border-0 transition hover:bg-white/[0.025]">
+                <td className="px-4 py-3.5 pl-5">
+                  <div className="flex items-center gap-2">
+                    <GripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-white/20" />
+                    <span className="rounded-full border border-blue-500/20 bg-blue-500/[0.08] px-2 py-0.5 text-[10px] font-black text-blue-300">{s.stepNumber}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3.5 text-[13px] font-bold text-white">{s.title}</td>
+                <td className="max-w-[220px] truncate px-4 py-3.5 text-[12px] text-slate-400">{s.description}</td>
+                <td className="px-4 py-3.5">
+                  <button type="button" onClick={() => toggleMutation.mutate({ id: s.id, data: { ...s, published: !s.published } })}>
+                    <StatusBadge label={s.published ? "Published" : "Draft"} v={s.published ? "green" : "amber"} />
+                  </button>
+                </td>
+                <td className="px-4 py-3.5 pr-5 text-right">
+                  <Dots onEdit={() => openEdit(s)} onDelete={() => deleteMutation.mutate(s.id)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TableWrap>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="border-white/10 bg-[#0f0f0f] text-white sm:max-w-[480px]">
@@ -396,19 +591,24 @@ function HowToTab() {
           {editing && (
             <div className="space-y-3 py-2">
               <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="Step Number"><input className={inputCls} value={editing.stepNumber} onChange={(e) => setEditing({ ...editing, stepNumber: e.target.value })} placeholder="01" /></FieldRow>
+                <FieldRow label="Step Number"><input className={inputCls} value={editing.stepNumber ?? ""} onChange={(e) => setEditing({ ...editing, stepNumber: e.target.value })} placeholder="01" /></FieldRow>
                 <FieldRow label="Icon">
-                  <select className={inputCls} value={editing.icon} onChange={(e) => setEditing({ ...editing, icon: e.target.value })}>
-                    {STEP_ICONS.map((i) => <option key={i} value={i}>{i}</option>)}
-                  </select>
+                  <Select value={editing.icon ?? "UserPlus"} onValueChange={(v) => setEditing({ ...editing, icon: v })}>
+                    <SelectTrigger className={inputCls}>
+                      <SelectValue placeholder="Select icon" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#1a1a1a]">
+                      {STEP_ICONS.map((i) => <SelectItem key={i} value={i} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{i}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </FieldRow>
               </div>
               <FieldRow label="Title"><input className={inputCls} value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="Create Account" /></FieldRow>
-              <FieldRow label="Description"><textarea className={textareaCls} rows={2} value={editing.description} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></FieldRow>
+              <FieldRow label="Description"><textarea className={textareaCls} rows={2} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} /></FieldRow>
               <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
+                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order ?? 99} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
                 <label className="flex items-center gap-2 pt-6 text-[12px] text-slate-300 cursor-pointer">
-                  <input type="checkbox" checked={editing.published} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} className="accent-orange-500" />Published
+                  <input type="checkbox" checked={editing.published ?? true} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} className="accent-orange-500" />Published
                 </label>
               </div>
             </div>
@@ -425,59 +625,126 @@ function HowToTab() {
 /* ─────────────────────────────────────────────────────────────────── */
 const STAT_ICONS = ["Dumbbell","Users","MapPin","Trophy","Star","Zap","BarChart3","Calendar"];
 
-function emptyStat(): CmsStat {
-  return { id: uid(), icon: "Trophy", value: "0+", label: "", active: true, order: 99 };
+type StatForm = CmsStatUpsertRequest & { id?: string };
+function emptyStat(): StatForm {
+  return { icon: "Trophy", value: "0+", label: "", active: true, order: 99 };
 }
 
 function StatsTab() {
-  const cms = useCmsStore();
-  const [editing, setEditing] = useState<CmsStat | null>(null);
+  const queryClient = useQueryClient();
+  const statsQ = useQuery({ queryKey: ["admin", "cms", "stats"], queryFn: getCmsStatsApi });
+  const [editing, setEditing] = useState<StatForm | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createCmsStatApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "stats"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Stat added");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create stat"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsStatUpsertRequest }) => updateCmsStatApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "stats"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Updated");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCmsStatApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "stats"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Removed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete"),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsStatUpsertRequest }) => updateCmsStatApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "stats"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const openNew = () => { setEditing(emptyStat()); setIsNew(true); };
+  const openEdit = (s: CmsStatResponse) => { setEditing({ ...s, id: s.id }); setIsNew(false); };
   const save = () => {
-    if (!editing || !editing.label.trim()) { toast.error("Label is required"); return; }
-    cmsStore.setStat(editing);
-    toast.success(isNew ? "Stat added" : "Updated");
-    setEditing(null);
+    if (!editing || !editing.label?.trim()) { toast.error("Label is required"); return; }
+    if (!editing.value?.trim()) { toast.error("Value is required"); return; }
+    const { id, ...data } = editing;
+    if (isNew) {
+      createMutation.mutate(data);
+    } else if (id) {
+      updateMutation.mutate({ id, data });
+    }
   };
+
+  const stats = statsQ.data ?? [];
 
   return (
     <div className="space-y-4">
-      <SectionHead icon={<Dumbbell className="h-5 w-5 text-orange-400" />} title="Stats Bar" description="Numbers shown in the stats bar on the home page." action={<AddBtn label="Add Stat" onClick={() => { setEditing(emptyStat()); setIsNew(true); }} />} />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {cms.stats.map((s) => (
-          <div key={s.id} className={cn("relative rounded-[18px] border p-4 text-center transition", s.active ? "table-border table-bg" : "border-white/[0.04] opacity-50")}>
-            <div className="absolute right-2 top-2">
-              <Dots
-                onEdit={() => { setEditing({ ...s }); setIsNew(false); }}
-                onDelete={() => { cmsStore.removeStat(s.id); toast.success("Removed"); }}
-                extra={[{ label: s.active ? "Hide" : "Show", icon: <Zap className="mr-2 h-3.5 w-3.5" />, fn: () => cmsStore.setStat({ ...s, active: !s.active }) }]}
-              />
+      <SectionHead icon={<Dumbbell className="h-5 w-5 text-orange-400" />} title="Stats Bar" description="Numbers shown in the stats bar on the home page." action={
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => statsQ.refetch()} disabled={statsQ.isFetching} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
+            {statsQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+          </button>
+          <AddBtn label="Add Stat" onClick={openNew} />
+        </div>
+      } />
+      {statsQ.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.id} className={cn("relative rounded-[18px] border p-4 text-center transition", s.active ? "table-border table-bg" : "border-white/[0.04] opacity-50")}>
+              <div className="absolute right-2 top-2">
+                <Dots
+                  onEdit={() => openEdit(s)}
+                  onDelete={() => deleteMutation.mutate(s.id)}
+                  extra={[{ label: s.active ? "Hide" : "Show", icon: <Zap className="mr-2 h-3.5 w-3.5" />, fn: () => toggleMutation.mutate({ id: s.id, data: { ...s, active: !s.active } }) }]}
+                />
+              </div>
+              <p className="text-[28px] font-black text-gradient-fire">{s.value}</p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">{s.label}</p>
+              <p className="mt-2 font-mono text-[9px] text-slate-600">{s.icon}</p>
             </div>
-            <p className="text-[28px] font-black text-gradient-fire">{s.value}</p>
-            <p className="mt-1 text-[11px] font-bold text-slate-400">{s.label}</p>
-            <p className="mt-2 font-mono text-[9px] text-slate-600">{s.icon}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="border-white/10 bg-[#0f0f0f] text-white sm:max-w-[400px]">
           <DialogHeader><DialogTitle className="font-black">{isNew ? "Add Stat" : "Edit Stat"}</DialogTitle></DialogHeader>
           {editing && (
             <div className="space-y-3 py-2">
-              <FieldRow label="Value (e.g. 500+)"><input className={inputCls} value={editing.value} onChange={(e) => setEditing({ ...editing, value: e.target.value })} placeholder="500+" /></FieldRow>
-              <FieldRow label="Label"><input className={inputCls} value={editing.label} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="Partner Gyms" /></FieldRow>
+              <FieldRow label="Value (e.g. 500+)"><input className={inputCls} value={editing.value ?? ""} onChange={(e) => setEditing({ ...editing, value: e.target.value })} placeholder="500+" /></FieldRow>
+              <FieldRow label="Label"><input className={inputCls} value={editing.label ?? ""} onChange={(e) => setEditing({ ...editing, label: e.target.value })} placeholder="Partner Gyms" /></FieldRow>
               <div className="grid grid-cols-2 gap-3">
                 <FieldRow label="Icon">
-                  <select className={inputCls} value={editing.icon} onChange={(e) => setEditing({ ...editing, icon: e.target.value })}>
-                    {STAT_ICONS.map((i) => <option key={i} value={i}>{i}</option>)}
-                  </select>
+                  <Select value={editing.icon ?? "Trophy"} onValueChange={(v) => setEditing({ ...editing, icon: v })}>
+                    <SelectTrigger className={inputCls}>
+                      <SelectValue placeholder="Select icon" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#1a1a1a]">
+                      {STAT_ICONS.map((i) => <SelectItem key={i} value={i} className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">{i}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </FieldRow>
-                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
+                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order ?? 99} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
               </div>
               <label className="flex items-center gap-2 text-[12px] text-slate-300 cursor-pointer">
-                <input type="checkbox" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} className="accent-orange-500" />
+                <input type="checkbox" checked={editing.active ?? true} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} className="accent-orange-500" />
                 Visible on home page
               </label>
             </div>
@@ -492,53 +759,116 @@ function StatsTab() {
 /* ─────────────────────────────────────────────────────────────────── */
 /* FAQS TAB                                                             */
 /* ─────────────────────────────────────────────────────────────────── */
-function emptyFaq(): CmsFaq {
-  return { id: uid(), question: "", answer: "", category: "General", published: true, order: 99 };
+type FaqForm = CmsFaqUpsertRequest & { id?: string };
+function emptyFaq(): FaqForm {
+  return { question: "", answer: "", category: "General", published: true, order: 99 };
 }
 
 function FaqsTab() {
-  const cms = useCmsStore();
+  const queryClient = useQueryClient();
+  const faqsQ = useQuery({ queryKey: ["admin", "cms", "faqs"], queryFn: getCmsFaqsApi });
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [editing, setEditing] = useState<CmsFaq | null>(null);
+  const [editing, setEditing] = useState<FaqForm | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createCmsFaqApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "faqs"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("FAQ added");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create FAQ"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsFaqUpsertRequest }) => updateCmsFaqApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "faqs"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Updated");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCmsFaqApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "faqs"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Removed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete"),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsFaqUpsertRequest }) => updateCmsFaqApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "faqs"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const openNew = () => { setEditing(emptyFaq()); setIsNew(true); };
+  const openEdit = (f: CmsFaqResponse) => { setEditing({ ...f, id: f.id }); setIsNew(false); };
   const save = () => {
     if (!editing || !editing.question.trim()) { toast.error("Question is required"); return; }
-    cmsStore.setFaq(editing);
-    toast.success(isNew ? "FAQ added" : "Updated");
-    setEditing(null);
+    const { id, ...data } = editing;
+    if (isNew) {
+      createMutation.mutate(data);
+    } else if (id) {
+      updateMutation.mutate({ id, data });
+    }
   };
-  const cats = [...new Set(cms.faqs.map((f) => f.category))];
+
+  const faqs = faqsQ.data ?? [];
+  const cats = [...new Set(faqs.map((f) => f.category))];
 
   return (
     <div className="space-y-4">
-      <SectionHead icon={<MessageSquare className="h-5 w-5 text-emerald-400" />} title="FAQs" description="Frequently asked questions. Published ones shown on the home page Help section." action={<AddBtn label="Add FAQ" onClick={() => { setEditing(emptyFaq()); setIsNew(true); }} />} />
-      <div className="flex flex-wrap gap-2">
-        {cats.map((c) => <span key={c} className="rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">{c} ({cms.faqs.filter((f) => f.category === c).length})</span>)}
-      </div>
-      <div className="space-y-2">
-        {cms.faqs.map((item) => {
-          const isOpen = expanded === item.id;
-          return (
-            <div key={item.id} className={cn("overflow-hidden rounded-[16px] border transition-all", isOpen ? "border-orange-500/20 table-bg" : "table-border table-bg")}>
-              <button type="button" onClick={() => setExpanded(isOpen ? null : item.id)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">{item.category}</span>
-                  <span className="truncate text-[13px] font-bold text-white">{item.question}</span>
-                </div>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <button type="button" onClick={(e) => { e.stopPropagation(); cmsStore.setFaq({ ...item, published: !item.published }); }}>
-                    <StatusBadge label={item.published ? "Published" : "Draft"} v={item.published ? "green" : "amber"} />
+      <SectionHead icon={<MessageSquare className="h-5 w-5 text-emerald-400" />} title="FAQs" description="Frequently asked questions. Published ones shown on the home page Help section." action={
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => faqsQ.refetch()} disabled={faqsQ.isFetching} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
+            {faqsQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+          </button>
+          <AddBtn label="Add FAQ" onClick={openNew} />
+        </div>
+      } />
+      {faqsQ.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {cats.map((c) => <span key={c} className="rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-400">{c} ({faqs.filter((f) => f.category === c).length})</span>)}
+          </div>
+          <div className="space-y-2">
+            {faqs.map((item) => {
+              const isOpen = expanded === item.id;
+              return (
+                <div key={item.id} className={cn("overflow-hidden rounded-[16px] border transition-all", isOpen ? "border-orange-500/20 table-bg" : "table-border table-bg")}>
+                  <button type="button" onClick={() => setExpanded(isOpen ? null : item.id)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-400">{item.category}</span>
+                      <span className="truncate text-[13px] font-bold text-white">{item.question}</span>
+                    </div>
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <button type="button" onClick={(e) => { e.stopPropagation(); toggleMutation.mutate({ id: item.id, data: { ...item, published: !item.published } }); }}>
+                        <StatusBadge label={item.published ? "Published" : "Draft"} v={item.published ? "green" : "amber"} />
+                      </button>
+                      <Dots onEdit={() => openEdit(item)} onDelete={() => deleteMutation.mutate(item.id)} />
+                      <ChevronDown className={cn("h-4 w-4 flex-shrink-0 text-slate-500 transition-transform", isOpen && "rotate-180 text-orange-400")} />
+                    </div>
                   </button>
-                  <Dots onEdit={() => { setEditing({ ...item }); setIsNew(false); }} onDelete={() => { cmsStore.removeFaq(item.id); toast.success("Removed"); }} />
-                  <ChevronDown className={cn("h-4 w-4 flex-shrink-0 text-slate-500 transition-transform", isOpen && "rotate-180 text-orange-400")} />
+                  {isOpen && <div className="border-t table-border-cell bg-white/[0.01] px-5 py-4 text-[13px] leading-relaxed text-slate-400">{item.answer}</div>}
                 </div>
-              </button>
-              {isOpen && <div className="border-t table-border-cell bg-white/[0.01] px-5 py-4 text-[13px] leading-relaxed text-slate-400">{item.answer}</div>}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="border-white/10 bg-[#0f0f0f] text-white sm:max-w-[500px]">
@@ -546,13 +876,13 @@ function FaqsTab() {
           {editing && (
             <div className="space-y-3 py-2">
               <FieldRow label="Question"><input className={inputCls} value={editing.question} onChange={(e) => setEditing({ ...editing, question: e.target.value })} placeholder="How do I…" /></FieldRow>
-              <FieldRow label="Answer"><textarea className={textareaCls} rows={4} value={editing.answer} onChange={(e) => setEditing({ ...editing, answer: e.target.value })} /></FieldRow>
+              <FieldRow label="Answer"><textarea className={textareaCls} rows={4} value={editing.answer ?? ""} onChange={(e) => setEditing({ ...editing, answer: e.target.value })} /></FieldRow>
               <div className="grid grid-cols-2 gap-3">
-                <FieldRow label="Category"><input className={inputCls} value={editing.category} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="Billing" /></FieldRow>
-                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
+                <FieldRow label="Category"><input className={inputCls} value={editing.category ?? "General"} onChange={(e) => setEditing({ ...editing, category: e.target.value })} placeholder="Billing" /></FieldRow>
+                <FieldRow label="Order"><input type="number" className={inputCls} value={editing.order ?? 99} onChange={(e) => setEditing({ ...editing, order: parseInt(e.target.value) || 99 })} /></FieldRow>
               </div>
               <label className="flex items-center gap-2 text-[12px] text-slate-300 cursor-pointer">
-                <input type="checkbox" checked={editing.published} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} className="accent-orange-500" />
+                <input type="checkbox" checked={editing.published ?? true} onChange={(e) => setEditing({ ...editing, published: e.target.checked })} className="accent-orange-500" />
                 Published (show on help page)
               </label>
             </div>
@@ -567,52 +897,129 @@ function FaqsTab() {
 /* ─────────────────────────────────────────────────────────────────── */
 /* ANNOUNCEMENTS TAB                                                    */
 /* ─────────────────────────────────────────────────────────────────── */
-function emptyAnnouncement(): CmsAnnouncement {
-  return { id: uid(), title: "", audience: "All users", status: "draft", scheduledAt: null };
+type AnnouncementForm = CmsAnnouncementUpsertRequest & { id?: string };
+function emptyAnnouncement(): AnnouncementForm {
+  return { title: "", audience: "All users", type: "INFO", scheduledAt: null };
 }
 
 function AnnouncementsTab() {
-  const cms = useCmsStore();
-  const [editing, setEditing] = useState<CmsAnnouncement | null>(null);
+  const queryClient = useQueryClient();
+  const announcementsQ = useQuery({ queryKey: ["admin", "cms", "announcements"], queryFn: getCmsAnnouncementsApi });
+  const [editing, setEditing] = useState<AnnouncementForm | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  const createMutation = useMutation({
+    mutationFn: createCmsAnnouncementApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "announcements"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Announcement added");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to create announcement"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsAnnouncementUpsertRequest }) => updateCmsAnnouncementApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "announcements"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Updated");
+      setEditing(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteCmsAnnouncementApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "announcements"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+      toast.success("Removed");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to delete"),
+  });
+
+  const togglePublishMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CmsAnnouncementUpsertRequest }) => updateCmsAnnouncementApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "cms", "announcements"] });
+      queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to update"),
+  });
+
+  const openNew = () => { setEditing(emptyAnnouncement()); setIsNew(true); };
+  const openEdit = (a: CmsAnnouncementResponse) => {
+    setEditing({
+      id: a.id,
+      title: a.title,
+      audience: a.audience,
+      type: a.type,
+      scheduledAt: a.scheduledAt,
+    });
+    setIsNew(false);
+  };
   const save = () => {
     if (!editing || !editing.title.trim()) { toast.error("Title is required"); return; }
-    cmsStore.setAnnouncement(editing);
-    toast.success(isNew ? "Announcement added" : "Updated");
-    setEditing(null);
+    const { id, ...data } = editing;
+    if (isNew) {
+      createMutation.mutate(data);
+    } else if (id) {
+      updateMutation.mutate({ id, data });
+    }
   };
-  const statusV = (s: CmsAnnouncement["status"]) => s === "published" ? "green" : s === "scheduled" ? "blue" : "amber";
+
+  const announcements = announcementsQ.data ?? [];
+  const statusV = (isActive: boolean, scheduledAt: string | null) => {
+    if (scheduledAt && new Date(scheduledAt) > new Date()) return "blue";
+    return isActive ? "green" : "amber";
+  };
+  const statusLabel = (a: CmsAnnouncementResponse) => {
+    if (a.scheduledAt && new Date(a.scheduledAt) > new Date()) return "scheduled";
+    return a.active ? "published" : "draft";
+  };
 
   return (
     <div className="space-y-4">
-      <SectionHead icon={<Megaphone className="h-5 w-5 text-red-400" />} title="Announcements" description="Platform-wide notices and maintenance alerts." action={<AddBtn label="New" onClick={() => { setEditing(emptyAnnouncement()); setIsNew(true); }} />} />
-      <div className="space-y-3">
-        {cms.announcements.map((item) => (
-          <div key={item.id} className="flex items-start gap-4 rounded-[18px] border table-border table-bg px-5 py-4 transition hover:border-white/15">
-            <div className={cn("mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border", item.status === "published" ? "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-400" : item.status === "scheduled" ? "border-blue-500/25 bg-blue-500/[0.08] text-blue-400" : "border-amber-500/25 bg-amber-500/[0.08] text-amber-400")}>
-              <Megaphone className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="text-[14px] font-bold text-white">{item.title}</p>
-                <div className="flex items-center gap-2">
-                  <StatusBadge label={item.status} v={statusV(item.status)} />
-                  <Dots
-                    onEdit={() => { setEditing({ ...item }); setIsNew(false); }}
-                    onDelete={() => { cmsStore.removeAnnouncement(item.id); toast.success("Removed"); }}
-                    extra={item.status !== "published" ? [{ label: "Publish", icon: <Zap className="mr-2 h-3.5 w-3.5" />, fn: () => cmsStore.setAnnouncement({ ...item, status: "published" }) }] : []}
-                  />
+      <SectionHead icon={<Megaphone className="h-5 w-5 text-red-400" />} title="Announcements" description="Platform-wide notices and maintenance alerts." action={
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => announcementsQ.refetch()} disabled={announcementsQ.isFetching} className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white">
+            {announcementsQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+          </button>
+          <AddBtn label="New" onClick={openNew} />
+        </div>
+      } />
+      {announcementsQ.isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-orange-500" /></div>
+      ) : (
+        <div className="space-y-3">
+          {announcements.map((item) => (
+            <div key={item.id} className="flex items-start gap-4 rounded-[18px] border table-border table-bg px-5 py-4 transition hover:border-white/15">
+              <div className={cn("mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border", item.active ? "border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-400" : item.scheduledAt && new Date(item.scheduledAt) > new Date() ? "border-blue-500/25 bg-blue-500/[0.08] text-blue-400" : "border-amber-500/25 bg-amber-500/[0.08] text-amber-400")}>
+                <Megaphone className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="text-[14px] font-bold text-white">{item.title}</p>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge label={statusLabel(item)} v={statusV(item.active, item.scheduledAt)} />
+                    <Dots
+                      onEdit={() => openEdit(item)}
+                      onDelete={() => deleteMutation.mutate(item.id)}
+                      extra={!item.active ? [{ label: "Publish", icon: <Zap className="mr-2 h-3.5 w-3.5" />, fn: () => togglePublishMutation.mutate({ id: item.id, data: { title: item.title, audience: item.audience, type: item.type, scheduledAt: null, active: true } }) }] : []}
+                    />
+                  </div>
+                </div>
+                <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-slate-500">
+                  <span>Audience: <span className="text-slate-300">{item.audience}</span></span>
+                  {item.scheduledAt && <span>Scheduled: <span className="text-blue-400">{new Date(item.scheduledAt).toLocaleDateString()}</span></span>}
                 </div>
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-3 text-[11px] text-slate-500">
-                <span>Audience: <span className="text-slate-300">{item.audience}</span></span>
-                {item.scheduledAt && <span>Scheduled: <span className="text-blue-400">{new Date(item.scheduledAt).toLocaleDateString()}</span></span>}
-              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="border-white/10 bg-[#0f0f0f] text-white sm:max-w-[460px]">
@@ -620,17 +1027,21 @@ function AnnouncementsTab() {
           {editing && (
             <div className="space-y-3 py-2">
               <FieldRow label="Title"><input className={inputCls} value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} placeholder="Scheduled maintenance…" /></FieldRow>
-              <FieldRow label="Audience"><input className={inputCls} value={editing.audience} onChange={(e) => setEditing({ ...editing, audience: e.target.value })} placeholder="All users" /></FieldRow>
-              <FieldRow label="Status">
-                <select className={inputCls} value={editing.status} onChange={(e) => setEditing({ ...editing, status: e.target.value as CmsAnnouncement["status"] })}>
-                  <option value="draft">Draft</option>
-                  <option value="published">Published</option>
-                  <option value="scheduled">Scheduled</option>
-                </select>
+              <FieldRow label="Audience"><input className={inputCls} value={editing.audience ?? "All users"} onChange={(e) => setEditing({ ...editing, audience: e.target.value })} placeholder="All users" /></FieldRow>
+              <FieldRow label="Type">
+                <Select value={editing.type ?? "INFO"} onValueChange={(v) => setEditing({ ...editing, type: v as "INFO" | "WARNING" | "CRITICAL" | "MAINTENANCE" })}>
+                  <SelectTrigger className={inputCls}>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/10 bg-[#1a1a1a]">
+                    <SelectItem value="INFO" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Info</SelectItem>
+                    <SelectItem value="WARNING" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Warning</SelectItem>
+                    <SelectItem value="CRITICAL" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Critical</SelectItem>
+                    <SelectItem value="MAINTENANCE" className="text-white hover:bg-white/10 focus:bg-white/10 focus:text-white">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
               </FieldRow>
-              {editing.status === "scheduled" && (
-                <FieldRow label="Scheduled At"><input type="datetime-local" className={inputCls} value={editing.scheduledAt ?? ""} onChange={(e) => setEditing({ ...editing, scheduledAt: e.target.value || null })} /></FieldRow>
-              )}
+              <FieldRow label="Schedule (optional)"><input type="datetime-local" className={inputCls} value={editing.scheduledAt ?? ""} onChange={(e) => setEditing({ ...editing, scheduledAt: e.target.value || null })} /></FieldRow>
             </div>
           )}
           <DialogFooter className="gap-2"><CancelBtn onClick={() => setEditing(null)} /><SaveBtn onClick={save} /></DialogFooter>
@@ -654,6 +1065,7 @@ const CMS_TABS: { id: CmsTab; label: string; icon: React.ElementType }[] = [
 
 export default function AdminCmsView({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<CmsTab>("features");
+  const queryClient = useQueryClient();
 
   const renderTab = () => {
     switch (tab) {
@@ -688,7 +1100,7 @@ export default function AdminCmsView({ onBack }: { onBack: () => void }) {
           Content <span className="text-gradient-fire">Management</span>
         </h1>
         <p className="mt-1 text-[13px] text-slate-500">
-          Changes go <span className="font-bold text-emerald-400">live immediately</span> on the home page — no refresh needed.
+          Saves update the database; the public home page refetches CMS on focus or when you use Refresh marketing below.
         </p>
       </div>
 
@@ -715,10 +1127,13 @@ export default function AdminCmsView({ onBack }: { onBack: () => void }) {
         })}
         <button
           type="button"
-          onClick={() => { cmsStore.reset(); toast.success("Reset to defaults"); }}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.06] px-3.5 py-2 text-[11px] font-bold text-red-400 transition hover:bg-red-500/10"
+          onClick={() => {
+            queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+            toast.success("Marketing home will refetch CMS");
+          }}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/[0.08] px-3.5 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/12"
         >
-          <X className="h-3.5 w-3.5" /> Reset All
+          <RefreshCcw className="h-3.5 w-3.5" /> Refresh marketing
         </button>
       </div>
 

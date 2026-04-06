@@ -80,8 +80,7 @@ export async function getMyRoutineSettingsApi(): Promise<UserRoutineSettingsResp
 
 export const routineQueryKeys = {
   all: ["routines"] as const,
-  lists: () => [...routineQueryKeys.all, "list"] as const,
-  list: () => [...routineQueryKeys.lists()] as const,
+  list: () => [...routineQueryKeys.all, "list"] as const,
   details: () => [...routineQueryKeys.all, "detail"] as const,
   detail: (routineId: string) => [...routineQueryKeys.details(), routineId] as const,
   settings: () => [...routineQueryKeys.all, "settings"] as const,

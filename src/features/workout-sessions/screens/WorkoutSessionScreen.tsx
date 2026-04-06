@@ -1069,7 +1069,7 @@ export default function WorkoutSessionScreen() {
 
         {/* ══ LEFT COLUMN — Scrollable Exercises ══ */}
         <div className="relative z-10 min-h-0 flex-1 overflow-y-auto">
-          <div className="space-y-4 px-4 py-4 pb-24 md:px-6 lg:px-8 lg:py-6 lg:pb-8">
+          <div className="space-y-4 px-4 py-4 pb-[calc(84px+env(safe-area-inset-bottom))] md:px-6 md:pb-8 lg:px-8 lg:py-6 lg:pb-8">
             {/* ── Mobile Stats Row ── */}
             <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 p-3 lg:hidden">
               <div className="flex items-center gap-2">

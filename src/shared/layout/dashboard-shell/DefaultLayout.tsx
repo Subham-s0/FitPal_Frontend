@@ -10,6 +10,7 @@ interface DefaultLayoutProps {
   contentClassName?: string;
   onPrimaryAction?: () => void;
   onProfileClick?: () => void;
+  onPendingGymsClick?: () => void;
 }
 
 const DefaultLayout = ({
@@ -20,12 +21,13 @@ const DefaultLayout = ({
   contentClassName = "p-6",
   onPrimaryAction,
   onProfileClick,
+  onPendingGymsClick,
 }: DefaultLayoutProps) => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-[#050505] font-sans text-white">
-      <DashboardNavbar role={role} onPrimaryAction={onPrimaryAction} onProfileClick={onProfileClick} />
+      <DashboardNavbar role={role} onPrimaryAction={onPrimaryAction} onProfileClick={onProfileClick} onPendingGymsClick={onPendingGymsClick} />
 
       <div
         className="grid flex-1 overflow-hidden transition-[grid-template-columns] duration-300"

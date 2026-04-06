@@ -1,50 +1,67 @@
-import { ArrowRight, ScanLine, Search, UserPlus } from "lucide-react";
-import { useCmsStore } from "@/features/marketing/cms-store";
+import {
+  ArrowRight,
+  BarChart3,
+  CreditCard,
+  Dumbbell,
+  ScanLine,
+  Search,
+  UserPlus,
+} from "lucide-react";
+import type { CmsHowToStep } from "@/features/marketing/cms-store";
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  UserPlus, Search, ScanLine,
+  UserPlus,
+  Search,
+  ScanLine,
+  CreditCard,
+  Dumbbell,
+  BarChart3,
 };
 
-const HowItWorks = () => {
-  const cms = useCmsStore();
-  const steps = cms.howToSteps.filter((s) => s.published);
+type HowItWorksProps = { howToSteps: CmsHowToStep[] };
+
+const HowItWorks = ({ howToSteps }: HowItWorksProps) => {
+  const steps = howToSteps.filter((s) => s.published);
 
   if (steps.length === 0) return null;
 
   return (
     <section id="about" className="relative py-24">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4">
+        <div className="mb-16 text-center">
+          <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
             How It Works
           </span>
-          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+          <h2 className="mb-4 text-3xl font-bold md:text-5xl">
             Start Training in <span className="text-gradient-fire">{steps.length} Easy Steps</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Getting access to hundreds of gyms has never been simpler. No contracts, no hassle.
+          <p className="mx-auto max-w-2xl text-muted-foreground">
+            From signup to logging your last set—create, subscribe, find a gym, scan in, train, and record progress.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        {/* auto-fill grid: any number of steps, no broken connector lines */}
+        <div
+          className="mx-auto grid w-full max-w-7xl gap-6 sm:gap-8"
+          style={{
+            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 240px), 1fr))",
+          }}
+        >
           {steps.map((step, index) => {
             const Icon = ICON_MAP[step.icon] ?? UserPlus;
             return (
-              <div key={step.id} className="relative group">
-                {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-20 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
-                )}
-                <div className="relative p-8 rounded-3xl bg-card border border-border/50 hover:border-primary/50 transition-all duration-500 group-hover:-translate-y-2">
-                  <span className="absolute -top-4 -right-4 text-7xl font-black text-primary/10 group-hover:text-primary/20 transition-colors p-5">
+              <div key={step.id} className="group relative">
+                <div className="relative rounded-3xl border border-border/50 bg-card p-8 transition-all duration-500 hover:-translate-y-2 hover:border-primary/50">
+                  <span className="absolute -right-4 -top-4 p-5 text-7xl font-black text-primary/10 transition-colors group-hover:text-primary/20">
                     {step.stepNumber}
                   </span>
-                  <div className="relative w-16 h-16 rounded-2xl bg-gradient-fire flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-fire transition-transform duration-300 group-hover:scale-110">
                     <Icon className="h-8 w-8 text-primary-foreground" />
                   </div>
-                  <h3 className="text-xl font-bold mb-3">{step.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{step.description}</p>
-                  <div className="mt-6 flex items-center gap-2 text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="text-sm">Learn more</span>
+                  <h3 className="mb-3 text-xl font-bold">{step.title}</h3>
+                  <p className="leading-relaxed text-muted-foreground">{step.description}</p>
+                  <div className="mt-6 flex items-center gap-2 font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                    <span className="text-sm">Step {index + 1}</span>
                     <ArrowRight className="h-4 w-4" />
                   </div>
                 </div>

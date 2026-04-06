@@ -1,6 +1,12 @@
 import { cn } from "@/shared/lib/utils";
 import type { UserProfileResponse } from "@/features/profile/model";
 
+const FITNESS_LEVEL_OPTIONS = [
+  { value: "BEGINNER", label: "Beginner" },
+  { value: "INTERMEDIATE", label: "Intermediate" },
+  { value: "ADVANCED", label: "Advanced" },
+];
+
 const FITNESS_FOCUS_OPTIONS = [
   { value: "HYPERTROPHY", label: "Hypertrophy" },
   { value: "STRENGTH_POWER", label: "Strength & Power" },
@@ -30,7 +36,7 @@ export function QuickStats({ profile, compact = false }: QuickStatsProps) {
       >
         Quick Stats
       </p>
-      <div className={cn("grid gap-2", compact ? "grid-cols-3" : "grid-cols-2 gap-3")}>
+      <div className={cn("grid gap-2", compact ? "grid-cols-2" : "grid-cols-2 gap-3")}>
         <div
           className={cn(
             "rounded-xl border border-white/5 bg-black/30 text-center transition-all duration-200 hover:border-orange-500/20",
@@ -79,17 +85,41 @@ export function QuickStats({ profile, compact = false }: QuickStatsProps) {
         </div>
         <div
           className={cn(
-            "rounded-xl border border-white/5 bg-black/30 transition-all duration-200 hover:border-orange-500/20",
-            compact ? "p-2 text-center sm:p-2.5" : "col-span-2 p-3 sm:p-4"
+            "rounded-xl border border-blue-500/20 bg-blue-500/5 text-center transition-all duration-200 hover:border-blue-500/30",
+            compact ? "p-2 sm:p-2.5" : "p-3 sm:p-4"
           )}
         >
           <p
             className={cn(
-              "font-bold uppercase tracking-widest text-slate-500",
+              "font-bold uppercase tracking-widest text-blue-400",
               compact ? "text-[7px]" : "text-[8px]"
             )}
           >
-            Focus
+            Level
+          </p>
+          <p
+            className={cn(
+              "truncate font-bold text-white",
+              compact ? "mt-0.5 text-[10px]" : "mt-1 text-sm"
+            )}
+          >
+            {FITNESS_LEVEL_OPTIONS.find((o) => o.value === profile.fitnessLevel)?.label ||
+              "—"}
+          </p>
+        </div>
+        <div
+          className={cn(
+            "rounded-xl border border-green-500/20 bg-green-500/5 text-center transition-all duration-200 hover:border-green-500/30",
+            compact ? "p-2 sm:p-2.5" : "p-3 sm:p-4"
+          )}
+        >
+          <p
+            className={cn(
+              "font-bold uppercase tracking-widest text-green-400",
+              compact ? "text-[7px]" : "text-[8px]"
+            )}
+          >
+            Goal
           </p>
           <p
             className={cn(

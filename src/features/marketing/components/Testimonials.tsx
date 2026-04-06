@@ -1,9 +1,10 @@
 import { Star, Quote } from "lucide-react";
-import { useCmsStore } from "@/features/marketing/cms-store";
+import type { CmsTestimonial } from "@/features/marketing/cms-store";
 
-const Testimonials = () => {
-  const cms = useCmsStore();
-  const approved = cms.testimonials.filter((t) => t.approved);
+type TestimonialsProps = { testimonials: CmsTestimonial[] };
+
+const Testimonials = ({ testimonials }: TestimonialsProps) => {
+  const approved = testimonials.filter((t) => t.approved);
 
   if (approved.length === 0) return null;
 
