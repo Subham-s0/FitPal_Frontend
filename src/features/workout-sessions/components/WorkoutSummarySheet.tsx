@@ -143,7 +143,7 @@ export default function WorkoutSummarySheet({
           <Button
             onClick={handleComplete}
             disabled={isCompleting}
-            className="bg-gradient-to-r from-orange-500 to-red-500"
+            className="btn-fire border-0 text-white"
           >
             {isCompleting ? (
               <>

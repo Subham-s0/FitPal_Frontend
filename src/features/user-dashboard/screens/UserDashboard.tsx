@@ -280,6 +280,14 @@ const getUpcomingSessionActionLabel = (card: DashboardUpcomingSessionResponse | 
   }
 };
 
+const getUpcomingTodayStatusLabel = (card: DashboardUpcomingSessionResponse | null) => {
+  if (!card?.todayStatus) {
+    return null;
+  }
+
+  return card.todayStatus === "COMPLETED" ? "Today: Completed" : "Today: Skipped";
+};
+
 const toHeatmapExercises = (card: DashboardRoutineHeatmapResponse | null) =>
   (card?.exercises ?? []).map((exercise) => ({
     primaryMuscles: exercise.primaryMuscles,
@@ -1303,6 +1311,11 @@ const UserDashboard = () => {
                     <h3 className="text-2xl font-black uppercase tracking-[-0.03em]">
                       Upcoming <span className="text-gradient-fire">Session</span>
                     </h3>
+                    {getUpcomingTodayStatusLabel(upcomingSessionCard) ? (
+                      <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-orange-300">
+                        {getUpcomingTodayStatusLabel(upcomingSessionCard)}
+                      </span>
+                    ) : null}
                     </div>
                     <h2 className="text-[clamp(24px,3vw,32px)] font-black uppercase italic leading-none tracking-[-0.04em]">
                       {upcomingSessionCard?.title ?? upcomingSessionCard?.emptyStateTitle ?? "No Active Routine"}

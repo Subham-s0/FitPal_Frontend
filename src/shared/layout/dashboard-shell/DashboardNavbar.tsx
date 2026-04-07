@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, Search } from "lucide-react";
+import { Bell, Building2, Search, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthState } from "@/features/auth/hooks";
 import { getMyProfileApi } from "@/features/profile/api";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { getAdminGymStatusCountsApi } from "@/features/admin/admin-gym.api";
+import { getGymPayoutBatchesApi } from "@/features/admin/admin-settlement.api";
 import {
   getDashboardPrimaryActionLabel,
   getDashboardRoleBadgeLabel,
@@ -34,6 +35,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
   const searchPlaceholder = getDashboardSearchPlaceholder(roleValue);
   const isUserDashboard = dashboardRole === "USER";
   const isAdminDashboard = dashboardRole === "ADMIN";
+  const isGymDashboard = dashboardRole === "GYM";
   const showRoleMeta = !isUserDashboard;
   const fallbackAvatarUrl = useMemo(
     () => `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`,
@@ -54,7 +56,21 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
     staleTime: 30_000,
   });
 
-  const pendingCount = pendingGymsQuery.data?.pendingReview ?? 0;
+  const pendingPayoutBatchesQuery = useQuery({
+    queryKey: ["gym-payout-batches", "pending-count"],
+    queryFn: () =>
+      getGymPayoutBatchesApi({
+        status: "GYM_REVIEW_PENDING",
+        page: 0,
+        size: 1,
+      }),
+    enabled: isGymDashboard && Boolean(auth.accessToken),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  const pendingGymsCount = pendingGymsQuery.data?.pendingReview ?? 0;
+  const pendingPayoutBatchesCount = pendingPayoutBatchesQuery.data?.totalItems ?? 0;
 
   const profilePhotoUrl = profileQuery.data?.profileImageUrl?.trim() || null;
   const [photoBroken, setPhotoBroken] = useState(false);
@@ -71,6 +87,10 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
       return;
     }
     navigate("/admin/dashboard", { state: { activeSection: "gyms", filterPending: true } });
+  };
+
+  const handlePendingPayoutBatchesClick = () => {
+    navigate("/dashboard", { state: { activeSection: "revenue" } });
   };
 
   const handlePrimaryAction = () => {
@@ -154,11 +174,21 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
           >
             <Building2 className="h-4 w-4" />
             <span>Pending Gyms</span>
-            {pendingCount > 0 && (
-              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-[10px] font-black text-white">
-                {pendingCount > 99 ? "99+" : pendingCount}
-              </span>
-            )}
+            <span className="text-[10px] font-black text-orange-500">
+              {pendingGymsCount > 99 ? "99+" : pendingGymsCount}
+            </span>
+          </button>
+        ) : isGymDashboard ? (
+          <button
+            type="button"
+            onClick={handlePendingPayoutBatchesClick}
+            className="flex items-center gap-2 rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500 backdrop-blur-xl transition-all hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+          >
+            <Wallet className="h-4 w-4" />
+            <span>Pending</span>
+            <span className="text-[10px] font-black text-orange-500">
+              {pendingPayoutBatchesCount > 99 ? "99+" : pendingPayoutBatchesCount}
+            </span>
           </button>
         ) : (
           <button

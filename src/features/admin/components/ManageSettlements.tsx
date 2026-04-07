@@ -946,14 +946,15 @@ export default function ManageSettlements() {
 
   const metrics = aggregateQ.data?.metrics;
 
-  const unpaidOrInPayoutNetTotal = useMemo(() => {
+  const { unpaidOrInPayoutNetTotal, pendingNetTotal, inPayoutNetTotal } = useMemo(() => {
     const items = aggregateQ.data?.items ?? [];
-    return items.reduce((sum, row) => {
-      if (row.payoutStatus === "PENDING" || row.payoutStatus === "IN_PAYOUT") {
-        return sum + (row.netAmount ?? 0);
-      }
-      return sum;
-    }, 0);
+    let pending = 0;
+    let inPayout = 0;
+    for (const row of items) {
+      if (row.payoutStatus === "PENDING") pending += row.netAmount ?? 0;
+      else if (row.payoutStatus === "IN_PAYOUT") inPayout += row.netAmount ?? 0;
+    }
+    return { unpaidOrInPayoutNetTotal: pending + inPayout, pendingNetTotal: pending, inPayoutNetTotal: inPayout };
   }, [aggregateQ.data?.items]);
 
   const paidAmountTotal = useMemo(() => {
@@ -1315,36 +1316,53 @@ export default function ManageSettlements() {
 
             <div className="flex flex-col rounded-xl border table-border table-bg p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Pending payout</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Processing</span>
                 <Clock3 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
               </div>
-              <p className="text-[20px] font-black leading-tight text-white">
+              <p className="text-[16px] font-black leading-tight text-white">
                 {aggregateQ.isLoading ? "—" : metrics ? formatMoney(unpaidOrInPayoutNetTotal, metrics.currency) : "—"}
               </p>
               {metrics ? (
-                <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                  {unpaidOrInPayoutCount} rows {metrics.capped ? "(capped sample)" : ""}
-                </p>
+                <div className="mt-1.5 flex flex-col gap-0.5">
+                  <p className="flex items-baseline justify-between text-[10px] font-bold text-slate-400">
+                    <span>Pending</span>
+                    <span className="tabular-nums text-slate-300">{formatMoney(pendingNetTotal, metrics.currency)}</span>
+                  </p>
+                  <p className="flex items-baseline justify-between text-[10px] font-bold text-orange-400/80">
+                    <span>In payout</span>
+                    <span className="tabular-nums">{formatMoney(inPayoutNetTotal, metrics.currency)}</span>
+                  </p>
+                </div>
               ) : null}
             </div>
 
             <div className="flex flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Gross Revenue</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Total Gross Amount</span>
                 <Wallet className="h-3.5 w-3.5 shrink-0 text-orange-400" />
               </div>
               <p className="text-[20px] font-black leading-tight text-white">
                 {aggregateQ.isLoading ? "—" : metrics ? formatMoney(metrics.grossSum, metrics.currency) : "—"}
               </p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                {aggregateQ.isLoading ? "" : `${metrics?.totalRowsInSample ?? 0} check-ins`}
+              </p>
             </div>
 
             <div className="flex flex-col rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400/90">Net Revenue</span>
+                <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400/90">Gross − Paid</span>
                 <Banknote className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
               </div>
               <p className="text-[20px] font-black leading-tight text-white">
-                {aggregateQ.isLoading ? "—" : metrics ? formatMoney(metrics.netSum, metrics.currency) : "—"}
+                {aggregateQ.isLoading
+                  ? "—"
+                  : metrics
+                  ? formatMoney(metrics.grossSum - paidAmountTotal, metrics.currency)
+                  : "—"}
+              </p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                outstanding
               </p>
             </div>
 
@@ -1494,8 +1512,8 @@ export default function ManageSettlements() {
                 <p className="text-[12px] table-text-muted">
                   {showRowCheckboxes && selectedSettlementIds.size > 0 ? (
                     <>
-                      <span className="font-semibold text-white">{selectedSettlementIds.size}</span> selected • Gross Revenue{" "}
-                      {formatMoney(selectedSummary.gross, selectedSummary.currency)} • Net Revenue{" "}
+                      <span className="font-semibold text-white">{selectedSettlementIds.size}</span> selected • Gross{" "}
+                      {formatMoney(selectedSummary.gross, selectedSummary.currency)} • Net{" "}
                       {formatMoney(selectedSummary.net, selectedSummary.currency)}
                     </>
                   ) : (

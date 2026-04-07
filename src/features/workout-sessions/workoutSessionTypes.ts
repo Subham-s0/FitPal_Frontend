@@ -113,6 +113,9 @@ export interface TodayWorkoutSessionResponse {
   activeRoutineName: string | null;
   session: WorkoutSessionResponse | null;
   plannedSession: PlannedWorkoutSessionResponse | null;
+  latestTodayStatus: RoutineLogStatus | null;
+  latestTodayMode: WorkoutSessionMode | null;
+  latestTodayTitle: string | null;
 }
 
 export interface StartWorkoutSessionRequest {

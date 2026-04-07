@@ -3,6 +3,7 @@ import { AxiosHeaders } from "axios";
 import apiClient from "@/shared/api/client";
 import type {
   CreatePayoutSettlementRequest,
+  GymPayoutSettlementSearchParams,
   PendingGymSettlementPage,
   PendingGymSettlementSearchParams,
   PayoutSettlementPage,
@@ -54,6 +55,16 @@ export async function getAdminPayoutBatchesApi(
   params?: PayoutSettlementSearchParams
 ): Promise<PayoutSettlementPage> {
   const response = await apiClient.get<PayoutSettlementPage>("/admin/payout-settlements/batches", {
+    params: buildBatchParams(params),
+  });
+  return response.data;
+}
+
+/** GET /api/gyms/me/payout-settlements/batches */
+export async function getGymPayoutBatchesApi(
+  params?: GymPayoutSettlementSearchParams
+): Promise<PayoutSettlementPage> {
+  const response = await apiClient.get<PayoutSettlementPage>("/gyms/me/payout-settlements/batches", {
     params: buildBatchParams(params),
   });
   return response.data;

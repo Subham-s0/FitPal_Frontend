@@ -393,7 +393,6 @@ export default function AdminSettings() {
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Administration</p>
         <h1 className="mt-1 text-[32px] font-black tracking-tight text-white">Admin <span style={fireStyle}>Settings</span></h1>
-        <p className="mt-1 text-[13px] table-text-muted">Application rules, CMS content, and global configuration.</p>
       </div>
 
       {/* Mobile top cards */}

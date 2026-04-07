@@ -1099,9 +1099,6 @@ export default function AdminCmsView({ onBack }: { onBack: () => void }) {
         <h1 className="mt-1 text-[28px] font-black tracking-tight text-white">
           Content <span className="text-gradient-fire">Management</span>
         </h1>
-        <p className="mt-1 text-[13px] text-slate-500">
-          Saves update the database; the public home page refetches CMS on focus or when you use Refresh marketing below.
-        </p>
       </div>
 
       {/* Sub-tab nav */}

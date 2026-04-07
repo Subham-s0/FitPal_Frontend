@@ -7,8 +7,6 @@ import type {
 
 /** Matches backend max page size for pending settlements search. */
 export const SETTLEMENT_AGGREGATE_PAGE_SIZE = 100;
-/** Cap pages fetched for charts/metrics to avoid excessive load. */
-export const SETTLEMENT_AGGREGATE_MAX_PAGES = 25;
 
 export type SettlementAggregateResult = {
   items: PendingGymSettlementResponse[];
@@ -29,9 +27,9 @@ export async function fetchSettlementsForAggregate(
   });
   const items = [...first.items];
   const totalPages = first.totalPages;
-  const maxPages = Math.min(totalPages, SETTLEMENT_AGGREGATE_MAX_PAGES);
 
-  for (let p = 1; p < maxPages; p++) {
+  // Cards/charts must reflect the full filtered dataset, not just paged table rows.
+  for (let p = 1; p < totalPages; p++) {
     const next = await getAdminPendingSettlementsApi({
       ...base,
       page: p,
@@ -43,7 +41,7 @@ export async function fetchSettlementsForAggregate(
   return {
     items,
     totalItems: first.totalItems,
-    capped: totalPages > maxPages,
+    capped: false,
   };
 }
 

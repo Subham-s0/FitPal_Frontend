@@ -1,5 +1,6 @@
 export type DashboardActivityDisplayState = "SUCCESS" | "MISSED" | "TODAY" | "FUTURE";
 export type DashboardUpcomingSessionState = "PLANNED" | "IN_PROGRESS" | "EMPTY";
+export type DashboardTodayWorkoutStatus = "COMPLETED" | "SKIPPED";
 export type DashboardRoutineHeatmapState = "READY" | "EMPTY";
 export type DashboardVisitRangeType = "WEEK" | "MONTH" | "YEAR";
 
@@ -67,6 +68,7 @@ export interface DashboardMemberStatsResponse {
 
 export interface DashboardUpcomingSessionResponse {
   state: DashboardUpcomingSessionState;
+  todayStatus: DashboardTodayWorkoutStatus | null;
   title: string | null;
   routineName: string | null;
   routineDayName: string | null;

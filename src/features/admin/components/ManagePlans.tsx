@@ -298,9 +298,6 @@ const ManagePlans = () => {
           <h1 className="text-[32px] font-black tracking-tight text-white">
             Manage <span style={fireStyle}>Plans</span>
           </h1>
-          <p className="mt-1 text-[13px] table-text-muted">
-            Create, edit, or remove plans. Currency: <span className="font-bold text-orange-400">{currency}</span>
-          </p>
         </div>
         <button
           type="button"

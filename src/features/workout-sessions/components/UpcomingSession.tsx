@@ -70,6 +70,7 @@ function PlannedSessionCard({
   routineName,
   dayName,
   exercises,
+  todayStatusLabel,
   onStart,
   onSkip,
   onFreestyle,
@@ -80,6 +81,7 @@ function PlannedSessionCard({
   routineName: string;
   dayName: string;
   exercises: PlannedWorkoutSessionResponse["exercises"];
+  todayStatusLabel?: string | null;
   onStart: () => void;
   onSkip: () => void;
   onFreestyle: () => void;
@@ -91,11 +93,18 @@ function PlannedSessionCard({
   const heatmapExercises = useMemo(() => toHeatmapExercises(exercises), [exercises]);
 
   return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 sm:p-5">
+    <div className="flow-panel rounded-[1.6rem] p-4 sm:rounded-[2rem] sm:p-6">
       <div className="mb-4">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-400">
-          Upcoming Session
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-400">
+            Upcoming Session
+          </p>
+          {todayStatusLabel ? (
+            <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-orange-300">
+              {todayStatusLabel}
+            </span>
+          ) : null}
+        </div>
         <h3 className="mt-1 text-xl font-black text-white sm:text-2xl">{dayName}</h3>
         <p className="mt-1 text-sm text-gray-400">
           {routineName} | {exercises.length} exercises
@@ -155,7 +164,7 @@ function PlannedSessionCard({
           type="button"
           onClick={onStart}
           disabled={isAnyPending}
-          className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white shadow-lg shadow-orange-500/25 transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-fire flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white shadow-lg transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isStarting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -512,12 +521,20 @@ export default function UpcomingSession({ onOpenRoutines }: UpcomingSessionProps
 
   // State: PLANNED - Show start button
   if (state === "PLANNED" && plannedSession) {
+    const todayStatusLabel =
+      todayData.latestTodayStatus === "COMPLETED"
+        ? "Today: Completed"
+        : todayData.latestTodayStatus === "SKIPPED"
+        ? "Today: Skipped"
+        : null;
+
     return (
       <div>
         <PlannedSessionCard
           routineName={plannedSession.routineName}
           dayName={plannedSession.routineDayName}
           exercises={plannedSession.exercises}
+          todayStatusLabel={todayStatusLabel}
           onStart={() => startSessionMutation.mutate()}
           onSkip={() => skipPlannedSessionMutation.mutate()}
           onFreestyle={() => setShowFreestyleDialog(true)}

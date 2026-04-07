@@ -160,7 +160,7 @@ const ProfileContainer = () => {
               className={cn(
                 "relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider transition-all duration-300 sm:rounded-full sm:py-2.5 sm:text-[10px]",
                 activeTab === tab.id
-                  ? "text-orange-500 sm:bg-orange-600 sm:text-white sm:shadow-lg sm:shadow-orange-500/30"
+                  ? "text-orange-500 sm:bg-orange-600 sm:text-white"
                   : "text-slate-400 hover:text-white sm:hover:bg-white/5"
               )}
             >

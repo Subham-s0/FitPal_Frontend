@@ -7,6 +7,8 @@ export type AdminPaymentMetricsResponse = {
   currency: string;
   /** All attempts — “All statuses / All methods” counts in filters */
   totalPaymentCount: number;
+  /** Month-to-date completed revenue (same period basis as Dashboard total collected) */
+  totalRevenueCompletedMonthToDate: number;
   totalRevenueCompleted: number;
   completedPaymentCount: number;
   cancelledPaymentCount: number;

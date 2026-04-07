@@ -44,6 +44,13 @@ const FITNESS_FOCUS_OPTIONS: Array<{ value: PrimaryFitnessFocus; label: string }
   { value: "WEIGHT_LOSS", label: "Weight Loss" },
 ];
 
+/**
+ * ProfileGoalsSection - Fitness goals and body metrics form
+ * Includes: height, weight, fitness level, primary focus
+ * NOTE: Height/weight are here (not in ProfileInfoSection) to keep body metrics
+ * with fitness goals where they logically belong.
+ */
+
 interface ProfileGoalsFormState {
   height: string;
   weight: string;

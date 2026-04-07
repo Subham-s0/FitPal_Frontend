@@ -66,7 +66,7 @@ export default function FreestyleSessionDialog({
           <Button
             onClick={handleStart}
             disabled={isStarting}
-            className="bg-gradient-to-r from-orange-500 to-red-500"
+            className="btn-fire border-0 text-white"
           >
             {isStarting ? (
               <>

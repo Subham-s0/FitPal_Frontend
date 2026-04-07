@@ -102,8 +102,8 @@
     --table-border: hsl(0 0% 18%);
     --table-border-row: hsl(0 0% 10%);
     --table-border-cell: hsl(0 0% 13%);
-    --table-text: hsl(0 0% 55%);
-    --table-text-muted: hsl(0 0% 35%);
+    --table-text: hsl(0 0% 65%);
+    --table-text-muted: hsl(0 0% 48%);
     --table-header-bg: hsl(0 0% 9%);
     --table-input-bg: hsl(0 0% 9%);
     --table-input-border: hsl(0 0% 18%);

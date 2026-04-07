@@ -57,6 +57,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import { getApiErrorMessage } from "@/shared/api/client";
 
 interface WorkoutsSectionProps {
   onOpenRoutines?: () => void;
@@ -250,7 +251,12 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
     queryFn: () => getWorkoutSessionHistoryPaginatedApi(page, pageSize),
   });
 
-  const { data: insightsData, isLoading: isInsightsLoading } = useQuery({
+  const {
+    data: insightsData,
+    isLoading: isInsightsLoading,
+    isError: isInsightsError,
+    error: insightsError,
+  } = useQuery({
     queryKey: workoutSessionQueryKeys.insights(insightRange),
     queryFn: () => getWorkoutInsightsApi(insightRange),
     enabled: activeTab === "insights",
@@ -345,29 +351,36 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       label: "Completed",
       value: stats.totalCompleted.toString().padStart(2, "0"),
       icon: Trophy,
-      accentClassName: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
     },
     {
       label: "This Week",
       value: stats.sessionsThisWeek.toString().padStart(2, "0"),
       icon: Activity,
-      accentClassName: "border-orange-500/20 bg-orange-500/10 text-orange-400",
+      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
     },
     {
       label: "Avg Duration",
       value: `${stats.avgDuration}m`,
       icon: Clock3,
-      accentClassName: "border-blue-500/20 bg-blue-500/10 text-blue-300",
+      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
     },
     {
       label: "Streak",
       value: `${stats.streak}d`,
       icon: Flame,
-      accentClassName: "border-red-500/20 bg-red-500/10 text-red-300",
+      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
     },
   ];
 
   const insightChartData = insightsData?.chartData ?? [];
+  const hasInsightValues = insightChartData.some(
+    (bucket) =>
+      bucket.completed > 0 ||
+      bucket.skipped > 0 ||
+      bucket.sets > 0 ||
+      Number(bucket.volume ?? 0) > 0
+  );
 
   // Group history by date
   const groupedHistory = historyPage?.items.reduce((acc, session) => {
@@ -386,6 +399,9 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
           </>
         }
         description="Review your workout performance and progress."
+        width="wide"
+        className="fade-up"
+        bodyClassName="space-y-5"
       >
         <SessionDetail
           sessionId={selectedSessionId}
@@ -403,24 +419,27 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
         </>
       }
       description="Track your workouts, view your history, and crush your fitness goals."
+      width="wide"
+      className="fade-up"
+      bodyClassName="space-y-5"
     >
       {/* Stats Row */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         {workoutStats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="flow-panel h-full rounded-[1.4rem] p-3 sm:rounded-[1.75rem] sm:p-5">
-              <div className="flex h-full items-start justify-between gap-3 sm:gap-4">
+            <div key={stat.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+              <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.14em] text-gray-500 sm:text-[10px] sm:tracking-[0.16em]">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-400 sm:text-[10px]">
                     {stat.label}
                   </p>
-                  <p className="mt-2 text-2xl font-black text-white sm:mt-3 sm:text-3xl">{stat.value}</p>
+                  <p className="mt-1 font-mono text-[17px] font-bold text-white sm:text-[19px]">{stat.value}</p>
                 </div>
                 <div
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl border sm:h-11 sm:w-11 sm:rounded-2xl ${stat.accentClassName}`}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${stat.accentClassName} sm:h-8 sm:w-8`}
                 >
-                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </div>
               </div>
             </div>
@@ -428,45 +447,34 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
         })}
       </div>
 
-      <div className="flow-panel rounded-[1.6rem] p-4 sm:rounded-[2rem] sm:p-6">
-        <div className="mb-5 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("upcoming")}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all sm:px-4 sm:py-2.5 ${
-              activeTab === "upcoming"
-                ? "bg-orange-500/20 text-orange-300"
-                : "text-gray-500 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <Dumbbell className="h-4 w-4" />
-            Upcoming Session
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all sm:px-4 sm:py-2.5 ${
-              activeTab === "history"
-                ? "bg-orange-500/20 text-orange-300"
-                : "text-gray-500 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            Workout Logs
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("insights")}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all sm:px-4 sm:py-2.5 ${
-              activeTab === "insights"
-                ? "bg-orange-500/20 text-orange-300"
-                : "text-gray-500 hover:bg-white/5 hover:text-white"
-            }`}
-          >
-            <BarChart3 className="h-4 w-4" />
-            Insights
-          </button>
-        </div>
+      <div>
+        <nav className="mb-5 flex border-b border-white/10 px-2 sm:mb-6 sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+          {(
+            [
+              { id: "upcoming", label: "Upcoming Session", mobileLabel: "Today", icon: Dumbbell },
+              { id: "history", label: "Workout Logs", mobileLabel: "History", icon: Calendar },
+              { id: "insights", label: "Insights", mobileLabel: "Insights", icon: BarChart3 },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id as Tab)}
+              className={`relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider transition-all duration-300 sm:rounded-full sm:py-2.5 sm:text-[10px] ${
+                activeTab === tab.id
+                  ? "text-orange-500 sm:bg-orange-600 sm:text-white"
+                  : "text-gray-400 hover:text-white sm:hover:bg-white/5"
+              }`}
+            >
+              <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="sm:hidden">{tab.mobileLabel}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
+              {activeTab === tab.id && (
+                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-orange-600 sm:hidden" />
+              )}
+            </button>
+          ))}
+        </nav>
 
         {activeTab === "upcoming" && <UpcomingSession onOpenRoutines={onOpenRoutines} />}
 
@@ -484,7 +492,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
               </p>
             </div>
           ) : (
-            <div className="space-y-5 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
+            <div className="flow-panel space-y-5 rounded-[1.6rem] p-4 sm:rounded-[2rem] sm:p-6">
               {Object.entries(groupedHistory ?? {}).map(([date, sessions]) => (
                 <div key={date}>
                   <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
@@ -641,8 +649,8 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
           ))}
 
         {activeTab === "insights" && (
-          <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 sm:p-5">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flow-panel space-y-4 rounded-[1.6rem] p-4 sm:rounded-[2rem] sm:p-6">
+            <div className="flex overflow-x-auto items-center gap-2 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {[
                 { key: "7d" as const, label: "Last 7 Days" },
                 { key: "30d" as const, label: "Last Month" },
@@ -652,7 +660,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
                   key={range.key}
                   type="button"
                   onClick={() => setInsightRange(range.key)}
-                  className={`rounded-xl px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${
+                  className={`flex-shrink-0 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-black uppercase tracking-[0.12em] transition-all ${
                     insightRange === range.key
                       ? "bg-orange-500/20 text-orange-300"
                       : "text-gray-500 hover:bg-white/5 hover:text-white"
@@ -666,6 +674,14 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
             {isInsightsLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
+              </div>
+            ) : isInsightsError ? (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                {getApiErrorMessage(insightsError, "Failed to load workout insights")}
+              </div>
+            ) : !hasInsightValues ? (
+              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center text-sm text-gray-400">
+                No workout insight data in this range yet. Complete a few sessions and refresh insights.
               </div>
             ) : (
               <>

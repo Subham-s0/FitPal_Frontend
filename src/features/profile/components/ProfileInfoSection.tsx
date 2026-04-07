@@ -32,6 +32,12 @@ const GENDER_OPTIONS: Array<{ value: Gender; label: string }> = [
   { value: "FEMALE", label: "Female" },
 ];
 
+/**
+ * ProfileInfoSection - Personal information form (username, name, phone, dob, gender)
+ * NOTE: Height/weight were moved to ProfileGoalsSection to avoid duplication
+ * and keep body metrics with fitness goals where they logically belong.
+ */
+
 interface ProfileInfoFormState {
   username: string;
   firstName: string;
@@ -39,8 +45,6 @@ interface ProfileInfoFormState {
   phone: string;
   dob: string;
   gender: string;
-  height: string;
-  weight: string;
 }
 
 interface ProfileInfoSectionProps {
@@ -55,8 +59,6 @@ const createInfoForm = (profile: UserProfileResponse): ProfileInfoFormState => (
   phone: profile.phoneNo ?? "",
   dob: profile.dob ?? "",
   gender: profile.gender ?? "",
-  height: profile.height != null ? String(profile.height) : "",
-  weight: profile.weight != null ? String(profile.weight) : "",
 });
 
 const validateInfoForm = (form: ProfileInfoFormState): Partial<Record<keyof ProfileInfoFormState, string>> => {
@@ -102,8 +104,8 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
         phoneNo: form.phone.trim() || null,
         dob: form.dob || null,
         gender: (form.gender || null) as Gender | null,
-        height: form.height ? Number(form.height) : null,
-        weight: form.weight ? Number(form.weight) : null,
+        height: profile.height ?? null,
+        weight: profile.weight ?? null,
       });
       toast.success("Profile information updated successfully");
       onUpdate();

@@ -53,6 +53,7 @@ export interface CreatePayoutSettlementRequest {
 export interface PayoutSettlementResponse {
   payoutSettlementId: number;
   gymId: number;
+  gymName: string | null;
   payoutAccountId: number;
   provider: string;
   walletIdentifierSnapshot: string;
@@ -80,6 +81,8 @@ export interface PayoutSettlementSearchParams {
   page?: number;
   size?: number;
 }
+
+export type GymPayoutSettlementSearchParams = Omit<PayoutSettlementSearchParams, "gymId">;
 
 export type PendingGymSettlementPage = PageResponse<PendingGymSettlementResponse>;
 export type PayoutSettlementPage = PageResponse<PayoutSettlementResponse>;

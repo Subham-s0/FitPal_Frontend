@@ -448,7 +448,6 @@ export default function ManageUsers() {
           <h1 className="text-[32px] font-black tracking-tight text-white">
             Manage <span style={fireStyle}>Users</span>
           </h1>
-          <p className="mt-1 text-[13px] table-text-muted">Members can be suspended here. Gyms are managed under Manage Gyms.</p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
           <button
