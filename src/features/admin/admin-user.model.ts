@@ -1,3 +1,5 @@
+import type { AccessTier } from "@/features/profile/model";
+
 export type AdminAccountRole = "USER" | "GYM" | "SUPERADMIN";
 
 export interface AdminUserSummaryResponse {
@@ -37,6 +39,8 @@ export interface AdminUserDetailResponse {
   gymName: string | null;
   gymApprovalStatus: string | null;
   gymLogoUrl: string | null;
+  eligibleTier: AccessTier | null;
+  eligible: boolean | null;
 }
 
 export interface AdminUserCountsResponse {

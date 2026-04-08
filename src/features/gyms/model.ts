@@ -1,9 +1,10 @@
 import type { PageResponse } from "@/features/check-in/model";
-import type { AccessTier } from "@/features/profile/model";
+import type { AccessTier, CheckInAccessMode } from "@/features/profile/model";
 
 export type UserGymDiscoverMode = "nearest" | "best-match" | "show-all";
 export type UserGymDiscoverStatusFilter = "all" | "open" | "closed";
 export type UserGymDiscoverSortMode = "recommended" | "alphabetical";
+export type ReviewSortDirection = "ASC" | "DESC";
 
 export interface UserGymDiscoverRequest {
   query?: string;
@@ -73,9 +74,12 @@ export interface PublicGymProfileResponse {
   addressLine: string | null;
   city: string | null;
   country: string | null;
+  postalCode: string | null;
   latitude: number | null;
   longitude: number | null;
+  establishedAt: number | null;
   description: string | null;
+  phoneNo: string | null;
   contactEmail: string | null;
   websiteUrl: string | null;
   logoUrl: string | null;
@@ -90,15 +94,28 @@ export interface PublicGymProfileResponse {
   reviewCount: number;
   minimumAccessTier: AccessTier | null;
   checkInEnabled: boolean;
+  checkInAccessMode: CheckInAccessMode | null;
+  allowedCheckInRadiusMeters: number | null;
   photos: PublicGymPhotoResponse[];
+}
+
+export interface UserGymProfileViewResponse {
+  profile: PublicGymProfileResponse;
+  isSaved: boolean;
+  accessibleByCurrentUser: boolean;
+  distanceMeters: number | null;
 }
 
 export interface PublicGymReviewResponse {
   reviewId: number;
   reviewerName: string | null;
+  reviewerAvatarUrl: string | null;
   rating: number | null;
   comments: string | null;
   createdAt: string;
+  gymReply: string | null;
+  gymReplyAt: string | null;
 }
 
 export type UserGymDiscoverPageResponse = PageResponse<UserGymDiscoverResponse>;
+export type PublicGymReviewPageResponse = PageResponse<PublicGymReviewResponse>;

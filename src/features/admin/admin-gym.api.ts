@@ -11,6 +11,7 @@ import type {
   AdminGymSummaryResponse,
   PageResponse,
   UpdateGymApprovalRequest,
+  UpdateGymCheckInAccessModeRequest,
 } from "@/features/admin/admin-gym.model";
 import type { GymApprovalStatus, GymPhotoResponse, GymProfileResponse } from "@/features/profile/model";
 
@@ -112,6 +113,18 @@ export async function patchAdminGymApprovalApi(
   payload: UpdateGymApprovalRequest
 ): Promise<GymProfileResponse> {
   const response = await apiClient.patch<GymProfileResponse>(`/admin/gyms/${gymId}/approval`, payload);
+  return response.data;
+}
+
+/** PATCH /api/admin/gyms/:gymId/check-in-access-mode */
+export async function patchAdminGymCheckInAccessModeApi(
+  gymId: number,
+  payload: UpdateGymCheckInAccessModeRequest
+): Promise<GymProfileResponse> {
+  const response = await apiClient.patch<GymProfileResponse>(
+    `/admin/gyms/${gymId}/check-in-access-mode`,
+    payload
+  );
   return response.data;
 }
 

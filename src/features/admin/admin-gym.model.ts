@@ -1,5 +1,6 @@
 import type {
   AccessTier,
+  CheckInAccessMode,
   GymApprovalStatus,
   GymDocumentResponse,
   GymDocumentStatus,
@@ -137,6 +138,10 @@ export interface AdminGymPhotosReviewRequest {
 
 export interface UpdateGymApprovalRequest {
   approved: boolean;
+}
+
+export interface UpdateGymCheckInAccessModeRequest {
+  checkInAccessMode: CheckInAccessMode;
 }
 
 export interface AdminGymStatusCounts {

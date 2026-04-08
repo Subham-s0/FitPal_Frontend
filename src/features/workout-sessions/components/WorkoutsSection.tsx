@@ -29,6 +29,8 @@ import {
 import { toast } from "sonner";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import UpcomingSession from "@/features/workout-sessions/components/UpcomingSession";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { cn } from "@/shared/lib/utils";
 import {
   getWorkoutInsightsApi,
   getWorkoutSessionHistoryApi,
@@ -448,33 +450,37 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       </div>
 
       <div>
-        <nav className="mb-5 flex border-b border-white/10 px-2 sm:mb-6 sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
-          {(
-            [
-              { id: "upcoming", label: "Upcoming Session", mobileLabel: "Today", icon: Dumbbell },
-              { id: "history", label: "Workout Logs", mobileLabel: "History", icon: Calendar },
-              { id: "insights", label: "Insights", mobileLabel: "Insights", icon: BarChart3 },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as Tab)}
-              className={`relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider transition-all duration-300 sm:rounded-full sm:py-2.5 sm:text-[10px] ${
-                activeTab === tab.id
-                  ? "text-orange-500 sm:bg-orange-600 sm:text-white"
-                  : "text-gray-400 hover:text-white sm:hover:bg-white/5"
-              }`}
-            >
-              <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="sm:hidden">{tab.mobileLabel}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-              {activeTab === tab.id && (
-                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-orange-600 sm:hidden" />
-              )}
-            </button>
-          ))}
-        </nav>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)} className="mb-5 sm:mb-6">
+          <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+            {(
+              [
+                { id: "upcoming", label: "Upcoming Session", mobileLabel: "Today", icon: Dumbbell },
+                { id: "history", label: "Workout Logs", mobileLabel: "History", icon: Calendar },
+                { id: "insights", label: "Insights", mobileLabel: "Insights", icon: BarChart3 },
+              ] as const
+            ).map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className={cn(
+                  "group relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider",
+                  "text-slate-400 hover:text-white sm:flex-initial sm:rounded-full sm:px-5 sm:py-2.5 sm:text-[10px]",
+                  "sm:hover:bg-white/5",
+                  "data-[state=active]:text-orange-500 data-[state=active]:sm:bg-orange-600 data-[state=active]:sm:text-white",
+                  "focus-visible:ring-0 focus-visible:ring-offset-0",
+                )}
+              >
+                <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="sm:hidden">{tab.mobileLabel}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span
+                  className="absolute inset-x-0 bottom-0 hidden h-[2px] bg-orange-500 group-data-[state=active]:block sm:!hidden"
+                  aria-hidden
+                />
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {activeTab === "upcoming" && <UpcomingSession onOpenRoutines={onOpenRoutines} />}
 

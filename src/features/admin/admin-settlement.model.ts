@@ -17,6 +17,7 @@ export interface PendingGymSettlementResponse {
   gymName: string | null;
   accountId: number | null;
   memberEmail: string | null;
+  memberProfileImageUrl: string | null;
   visitDate: string | null;
   checkedInAt: string | null;
   currency: string;
@@ -35,6 +36,7 @@ export interface PendingGymSettlementSearchParams {
   payoutStatus?: GymSettlementPayoutStatus;
   visitDateFrom?: string;
   visitDateTo?: string;
+  memberNamePrefix?: string;
   sortBy?: string;
   sortDirection?: "ASC" | "DESC";
   page?: number;
@@ -71,6 +73,21 @@ export interface PayoutSettlementResponse {
   note: string | null;
   createdAt: string;
   settlementIds: number[];
+  createdByName: string | null;
+  paidByName: string | null;
+  paidAt: string | null;
+  gymReviewedAt: string | null;
+}
+
+export interface GymCheckinSettlementSearchParams {
+  payoutStatus?: GymSettlementPayoutStatus;
+  visitDateFrom?: string;
+  visitDateTo?: string;
+  memberNamePrefix?: string;
+  sortBy?: string;
+  sortDirection?: "ASC" | "DESC";
+  page?: number;
+  size?: number;
 }
 
 export interface PayoutSettlementSearchParams {
@@ -86,3 +103,38 @@ export type GymPayoutSettlementSearchParams = Omit<PayoutSettlementSearchParams,
 
 export type PendingGymSettlementPage = PageResponse<PendingGymSettlementResponse>;
 export type PayoutSettlementPage = PageResponse<PayoutSettlementResponse>;
+
+export interface SettlementDueTimelinePointResponse {
+  date: string;
+  checkinAmount: number;
+  paidAmount: number;
+  dueAmount: number;
+}
+
+export interface SettlementDueTimelineResponse {
+  currency: string;
+  startDate: string | null;
+  endDate: string;
+  totalDue: number;
+  points: SettlementDueTimelinePointResponse[];
+}
+
+export interface GymSettlementAnalyticsResponse {
+  currency: string;
+  pendingBatchAmount: number;
+  pendingBatchCount: number;
+  gymReviewPendingAmount: number;
+  gymReviewPendingCount: number;
+  receivedAmount: number;
+  receivedCount: number;
+  receivableAmount: number;
+  receivableCount: number;
+  grossSum: number;
+  netSum: number;
+  totalCheckinSettlements: number;
+  checkinPendingCount: number;
+  checkinInPayoutCount: number;
+  checkinPaidCount: number;
+  weeklyCheckins: { date: string; count: number }[];
+  monthlyCheckins: { yearMonth: string; count: number }[];
+}

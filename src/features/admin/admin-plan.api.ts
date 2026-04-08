@@ -14,19 +14,19 @@ export async function getAdminApplicationRulesSummaryApi(): Promise<ApplicationR
   return response.data;
 }
 
-/** POST /api/plans */
+/** POST /api/admin/plans */
 export async function createPlanApi(payload: PlanUpsertPayload): Promise<PlanResponse> {
-  const response = await apiClient.post<PlanResponse>("/plans", payload);
+  const response = await apiClient.post<PlanResponse>("/admin/plans", payload);
   return response.data;
 }
 
-/** PATCH /api/plans/:planId */
+/** PATCH /api/admin/plans/:planId */
 export async function updatePlanApi(planId: number, payload: PlanUpsertPayload): Promise<PlanResponse> {
-  const response = await apiClient.patch<PlanResponse>(`/plans/${planId}`, payload);
+  const response = await apiClient.patch<PlanResponse>(`/admin/plans/${planId}`, payload);
   return response.data;
 }
 
-/** DELETE /api/plans/:planId */
+/** DELETE /api/admin/plans/:planId */
 export async function deletePlanApi(planId: number): Promise<void> {
-  await apiClient.delete(`/plans/${planId}`);
+  await apiClient.delete(`/admin/plans/${planId}`);
 }

@@ -15,6 +15,7 @@ export type GymType =
   | "Functional";
 export type AccessTier = "BASIC" | "PRO" | "ELITE";
 export type GymApprovalStatus = "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+export type CheckInAccessMode = "MANUAL" | "DOOR_ACK_REQUIRED";
 
 export type GymDocumentType =
   | "REGISTRATION_CERTIFICATE"
@@ -139,6 +140,7 @@ export interface GymProfileResponse {
   gymType: GymType | null;
   minimumAccessTier: AccessTier;
   checkInEnabled: boolean;
+  checkInAccessMode: CheckInAccessMode;
   allowedCheckInRadiusMeters: number | null;
   establishedAt: number | null;
   registrationNo: string | null;

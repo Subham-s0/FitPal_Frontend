@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowUpDown,
   Banknote,
   ClipboardList,
   Clock3,
   Filter,
+  Info,
   Layers,
-  LayoutList,
   Loader2,
   RefreshCcw,
   SlidersHorizontal,
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 import {
   createAdminPayoutSettlementApi,
+  getAdminDueTimelineApi,
   getAdminPendingSettlementsApi,
   getAdminPayoutBatchesApi,
 } from "@/features/admin/admin-settlement.api";
@@ -36,6 +37,7 @@ import {
   buildWeekCheckInBars,
   defaultMonthEndYm,
   defaultWeekEndYmd,
+  parseYmdLocal,
 } from "@/features/admin/settlement-chart-data";
 import { AdminGymCombobox } from "@/features/admin/components/AdminGymCombobox";
 import { getAdminGymReviewApi, getAdminGymsApi } from "@/features/admin/admin-gym.api";
@@ -157,6 +159,18 @@ function formatDate(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+}
+
+function formatYmdAxisLabel(ymd: string) {
+  const date = parseYmdLocal(ymd);
+  if (Number.isNaN(date.getTime())) return ymd;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatYmdLongLabel(ymd: string) {
+  const date = parseYmdLocal(ymd);
+  if (Number.isNaN(date.getTime())) return ymd;
+  return date.toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
 function formatDateTime(value?: string | null) {
@@ -486,6 +500,30 @@ export default function ManageSettlements() {
     staleTime: 30_000,
   });
 
+  const dueTimelineQ = useQuery({
+    queryKey: [
+      "admin-settlements",
+      "due-timeline",
+      appliedCheckinFilters.gymId,
+      appliedCheckinFilters.accountId,
+      appliedCheckinFilters.status,
+      appliedCheckinFilters.dateFrom,
+      appliedCheckinFilters.dateTo,
+    ],
+    queryFn: async () => {
+      const dateFromStr = appliedCheckinFilters.dateFrom.trim();
+      const dateToStr = appliedCheckinFilters.dateTo.trim();
+      return getAdminDueTimelineApi({
+        gymId: parseNumericId(appliedCheckinFilters.gymId),
+        accountId: parseNumericId(appliedCheckinFilters.accountId),
+        payoutStatus: appliedCheckinFilters.status === "ALL" ? undefined : appliedCheckinFilters.status,
+        visitDateFrom: dateFromStr || undefined,
+        visitDateTo: dateToStr || undefined,
+      });
+    },
+    staleTime: 30_000,
+  });
+
   const pendingQ = useQuery({
     queryKey: [
       "admin-settlements",
@@ -637,6 +675,7 @@ export default function ManageSettlements() {
       setSelectedSettlementIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["admin-settlements", "pending"] });
       queryClient.invalidateQueries({ queryKey: ["admin-settlements", "aggregate"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-settlements", "due-timeline"] });
       queryClient.invalidateQueries({ queryKey: ["admin-settlements", "batches"] });
     },
     onError: (error) => {
@@ -1000,25 +1039,36 @@ export default function ManageSettlements() {
     return metrics.statusSlices.filter((s) => s.value > 0);
   }, [metrics]);
 
+  const dueTimelineData = useMemo(() => dueTimelineQ.data?.points ?? [], [dueTimelineQ.data?.points]);
+  const dueTimelineCurrency = dueTimelineQ.data?.currency ?? metrics?.currency ?? "NPR";
+  const dueTimelineTotalDue = dueTimelineQ.data?.totalDue ?? 0;
+  const dueTimelineXAxisInterval = useMemo(() => {
+    if (dueTimelineData.length <= 10) return 0;
+    return Math.max(0, Math.floor(dueTimelineData.length / 8));
+  }, [dueTimelineData]);
+  const dueTimelineYMax = useMemo(() => {
+    if (!dueTimelineData.length) return 1;
+    const peak = Math.max(...dueTimelineData.map((d) => Math.max(d.checkinAmount, d.dueAmount)), 0);
+    return peak <= 0 ? 1 : Math.max(1, Math.ceil(peak * 1.1));
+  }, [dueTimelineData]);
+
   const gymOptions = useMemo(() => gymsQ.data ?? [], [gymsQ.data]);
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 font-['Outfit',system-ui,sans-serif]">
-      <div>
-        <h1 className="text-[32px] font-black tracking-tight text-white">
-          Settlement <span style={fireStyle}>Center</span>
-        </h1>
-      </div>
-
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AdminSettlementTab)}>
-        <TabsList className="mb-4 flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:mb-5 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-5 sm:items-center">
+          <h1 className="text-[32px] font-black tracking-tight text-white">
+            Settlement <span style={fireStyle}>Center</span>
+          </h1>
+          <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
           <TabsTrigger
             value="checkins"
             className={cn(
               "group relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider",
               "text-slate-400 hover:text-white sm:flex-initial sm:rounded-full sm:px-5 sm:py-2.5 sm:text-[10px]",
               "sm:hover:bg-white/5",
-              "data-[state=active]:text-orange-500 data-[state=active]:sm:bg-orange-600 data-[state=active]:sm:text-white data-[state=active]:sm:shadow-lg data-[state=active]:sm:shadow-orange-500/30",
+              "data-[state=active]:text-orange-500 data-[state=active]:sm:bg-orange-600 data-[state=active]:sm:text-white",
               "focus-visible:ring-0 focus-visible:ring-offset-0",
             )}
           >
@@ -1036,7 +1086,7 @@ export default function ManageSettlements() {
               "group relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider",
               "text-slate-400 hover:text-white sm:flex-initial sm:rounded-full sm:px-5 sm:py-2.5 sm:text-[10px]",
               "sm:hover:bg-white/5",
-              "data-[state=active]:text-orange-500 data-[state=active]:sm:bg-orange-600 data-[state=active]:sm:text-white data-[state=active]:sm:shadow-lg data-[state=active]:sm:shadow-orange-500/30",
+              "data-[state=active]:text-orange-500 data-[state=active]:sm:bg-orange-600 data-[state=active]:sm:text-white",
               "focus-visible:ring-0 focus-visible:ring-offset-0",
             )}
           >
@@ -1048,7 +1098,8 @@ export default function ManageSettlements() {
             <span className="sm:hidden">Batches</span>
             <span className="hidden sm:inline">Payout Batches</span>
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
         <TabsContent value="checkins" className="mt-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -1239,6 +1290,9 @@ export default function ManageSettlements() {
               )}
             </div>
 
+
+
+
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -1247,9 +1301,10 @@ export default function ManageSettlements() {
                   setCheckinPage(0);
                   pendingQ.refetch();
                   aggregateQ.refetch();
+                  dueTimelineQ.refetch();
                 }}
               >
-                {aggregateQ.isFetching || pendingQ.isFetching ? (
+                {aggregateQ.isFetching || pendingQ.isFetching || dueTimelineQ.isFetching ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCcw className="h-4 w-4" />
@@ -1300,18 +1355,21 @@ export default function ManageSettlements() {
             </p>
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {/* ── Cards with Pie Chart ──────────────────────────────────────── */}
+          <div className="grid grid-flow-col auto-cols-[minmax(180px,1fr)] gap-3 overflow-x-auto pb-1">
             <div className="flex flex-col rounded-xl border table-border table-bg p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Paid amount</span>
                 <Filter className="h-3.5 w-3.5 shrink-0 text-slate-500" />
               </div>
-              <p className="text-[20px] font-black leading-tight text-white">
-                {aggregateQ.isLoading ? "—" : metrics ? formatMoney(paidAmountTotal, metrics.currency) : "—"}
-              </p>
-              {metrics?.capped ? (
-                <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-amber-500/90">Capped</p>
-              ) : null}
+              <div className="flex flex-1 flex-col justify-center">
+                <p className="text-[20px] font-black leading-tight text-white">
+                  {aggregateQ.isLoading ? "—" : metrics ? formatMoney(paidAmountTotal, metrics.currency) : "—"}
+                </p>
+                {metrics?.capped ? (
+                  <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-amber-500/90">Capped</p>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex flex-col rounded-xl border table-border table-bg p-3.5">
@@ -1319,21 +1377,23 @@ export default function ManageSettlements() {
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Processing</span>
                 <Clock3 className="h-3.5 w-3.5 shrink-0 text-slate-500" />
               </div>
-              <p className="text-[16px] font-black leading-tight text-white">
-                {aggregateQ.isLoading ? "—" : metrics ? formatMoney(unpaidOrInPayoutNetTotal, metrics.currency) : "—"}
-              </p>
-              {metrics ? (
-                <div className="mt-1.5 flex flex-col gap-0.5">
-                  <p className="flex items-baseline justify-between text-[10px] font-bold text-slate-400">
-                    <span>Pending</span>
-                    <span className="tabular-nums text-slate-300">{formatMoney(pendingNetTotal, metrics.currency)}</span>
-                  </p>
-                  <p className="flex items-baseline justify-between text-[10px] font-bold text-orange-400/80">
-                    <span>In payout</span>
-                    <span className="tabular-nums">{formatMoney(inPayoutNetTotal, metrics.currency)}</span>
-                  </p>
-                </div>
-              ) : null}
+              <div className="flex flex-1 flex-col justify-center">
+                <p className="text-[16px] font-black leading-tight text-white">
+                  {aggregateQ.isLoading ? "—" : metrics ? formatMoney(unpaidOrInPayoutNetTotal, metrics.currency) : "—"}
+                </p>
+                {metrics ? (
+                  <div className="mt-1.5 flex flex-col gap-0.5">
+                    <p className="flex items-baseline justify-between text-[10px] font-bold text-slate-400">
+                      <span>Pending</span>
+                      <span className="tabular-nums text-slate-300">{formatMoney(pendingNetTotal, metrics.currency)}</span>
+                    </p>
+                    <p className="flex items-baseline justify-between text-[10px] font-bold text-orange-400/80">
+                      <span>In payout</span>
+                      <span className="tabular-nums">{formatMoney(inPayoutNetTotal, metrics.currency)}</span>
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="flex flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3.5">
@@ -1341,12 +1401,14 @@ export default function ManageSettlements() {
                 <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Total Gross Amount</span>
                 <Wallet className="h-3.5 w-3.5 shrink-0 text-orange-400" />
               </div>
-              <p className="text-[20px] font-black leading-tight text-white">
-                {aggregateQ.isLoading ? "—" : metrics ? formatMoney(metrics.grossSum, metrics.currency) : "—"}
-              </p>
-              <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                {aggregateQ.isLoading ? "" : `${metrics?.totalRowsInSample ?? 0} check-ins`}
-              </p>
+              <div className="flex flex-1 flex-col justify-center">
+                <p className="text-[20px] font-black leading-tight text-white">
+                  {aggregateQ.isLoading ? "—" : metrics ? formatMoney(metrics.grossSum, metrics.currency) : "—"}
+                </p>
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                  {aggregateQ.isLoading ? "" : `${metrics?.totalRowsInSample ?? 0} check-ins`}
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-col rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3.5">
@@ -1354,42 +1416,133 @@ export default function ManageSettlements() {
                 <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400/90">Gross − Paid</span>
                 <Banknote className="h-3.5 w-3.5 shrink-0 text-emerald-400/80" />
               </div>
-              <p className="text-[20px] font-black leading-tight text-white">
-                {aggregateQ.isLoading
-                  ? "—"
-                  : metrics
-                  ? formatMoney(metrics.grossSum - paidAmountTotal, metrics.currency)
-                  : "—"}
-              </p>
-              <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
-                outstanding
-              </p>
+              <div className="flex flex-1 flex-col justify-center">
+                <p className="text-[20px] font-black leading-tight text-white">
+                  {aggregateQ.isLoading
+                    ? "—"
+                    : metrics
+                    ? formatMoney(metrics.grossSum - paidAmountTotal, metrics.currency)
+                    : "—"}
+                </p>
+                <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
+                  outstanding
+                </p>
+              </div>
             </div>
 
+            {/* Pie chart card replacing Payout status card */}
             <div className="flex flex-col rounded-xl border border-slate-500/20 bg-slate-500/[0.06] p-3.5">
-              <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Payout status</span>
-                <LayoutList className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <div className="mb-1 flex items-center justify-between gap-1.5 opacity-90">
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Status mix</span>
               </div>
-              <div className="mt-1 flex flex-col gap-1.5">
-                <p className="flex items-baseline justify-between text-[13px] font-black leading-none text-slate-300">
-                  <span>Pending</span>
-                  <span className="tabular-nums text-white">{aggregateQ.isLoading ? "—" : (metrics?.pendingCount ?? "—")}</span>
-                </p>
-                <p className="flex items-baseline justify-between text-[13px] font-black leading-none text-orange-400">
-                  <span>In payout</span>
-                  <span className="tabular-nums">{aggregateQ.isLoading ? "—" : (metrics?.inPayoutCount ?? "—")}</span>
-                </p>
-                <p className="flex items-baseline justify-between text-[13px] font-black leading-none text-emerald-400">
-                  <span>Paid</span>
-                  <span className="tabular-nums">{aggregateQ.isLoading ? "—" : (metrics?.paidCount ?? "—")}</span>
-                </p>
-              </div>
+              {aggregateQ.isLoading ? (
+                <div className="flex flex-1 items-center justify-center text-sm table-text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : !metrics ? (
+                <p className="flex-1 text-center text-[10px] table-text-muted">No data</p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="h-[72px] w-[72px] shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statusPieChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={16}
+                          outerRadius={30}
+                          paddingAngle={2}
+                          isAnimationActive={false}
+                        >
+                          {statusPieChartData.map((entry, i) => (
+                            <Cell key={`s-${entry.name}-${i}`} fill={entry.fill} />
+                          ))}
+                        </Pie>
+                        <Tooltip {...CHART_TOOLTIP} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {metrics.statusSlices.map((slice) => (
+                      <div key={slice.name} className="flex items-center gap-1.5 text-[10px] font-bold text-white">
+                        <div className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: slice.fill }} />
+                        <span className="min-w-0 truncate">{slice.name}</span>
+                        <span className="ml-auto tabular-nums text-slate-400">{slice.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="grid gap-2 lg:grid-cols-5">
-            <div className="rounded-xl border table-border table-bg p-3 lg:col-span-3">
+          {/* ── Charts Row: Due Timeline & Check-ins 50/50 ─────────────────── */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            {/* Due Timeline */}
+            <div className="rounded-xl border table-border table-bg p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Due timeline</span>
+                <div className="text-right">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-orange-400">Total due</p>
+                  <p className="font-mono text-[12px] font-bold text-white">{formatMoney(dueTimelineTotalDue, dueTimelineCurrency)}</p>
+                </div>
+              </div>
+              {dueTimelineQ.isLoading ? (
+                <div className="flex h-[156px] items-center justify-center gap-2 text-sm table-text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading due timeline...
+                </div>
+              ) : dueTimelineQ.isError ? (
+                <p className="py-4 text-sm text-red-300">{getApiErrorMessage(dueTimelineQ.error, "Due timeline failed to load")}</p>
+              ) : dueTimelineData.length === 0 ? (
+                <div className="flex h-[156px] items-center justify-center text-sm table-text-muted">
+                  No pending settlements.
+                </div>
+              ) : (
+                <div className="h-[156px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={dueTimelineData} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,16%)" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "#737373", fontSize: 8 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={dueTimelineXAxisInterval}
+                        tickFormatter={(value: string) => formatYmdAxisLabel(value)}
+                        minTickGap={18}
+                      />
+                      <YAxis
+                        domain={[0, dueTimelineYMax]}
+                        tick={{ fill: "#737373", fontSize: 9 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={52}
+                        tickFormatter={(value: number) => formatMoney(value, dueTimelineCurrency)}
+                      />
+                      <Tooltip
+                        {...CHART_TOOLTIP}
+                        labelFormatter={(label: string) => formatYmdLongLabel(label)}
+                        formatter={(value: number, name: string) => [formatMoney(value, dueTimelineCurrency), name]}
+                      />
+                      <Bar dataKey="checkinAmount" name="Check-in settlements" fill="#f97316" isAnimationActive={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="dueAmount"
+                        name="Total due"
+                        stroke="#f43f5e"
+                        strokeWidth={2}
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            {/* Check-ins Chart */}
+            <div className="rounded-xl border table-border table-bg p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Check-ins</span>
                 <Select
@@ -1400,23 +1553,19 @@ export default function ManageSettlements() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="border table-border table-bg-alt text-white">
-                    <SelectItem value="week" className="text-[11px]">
-                      Last 7 days
-                    </SelectItem>
-                    <SelectItem value="year" className="text-[11px]">
-                      Last 12 months
-                    </SelectItem>
+                    <SelectItem value="week" className="text-[11px]">Last 7 days</SelectItem>
+                    <SelectItem value="year" className="text-[11px]">Last 12 months</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               {aggregateQ.isLoading ? (
-                <div className="flex h-[112px] items-center justify-center gap-2 text-sm table-text-muted">
+                <div className="flex h-[156px] items-center justify-center gap-2 text-sm table-text-muted">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading…
                 </div>
               ) : aggregateQ.isError ? (
                 <p className="py-4 text-sm text-red-300">{getApiErrorMessage(aggregateQ.error, "Chart failed to load")}</p>
               ) : (
-                <div className="h-[112px] w-full">
+                <div className="h-[156px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartBarData} margin={{ top: 2, right: 4, left: -8, bottom: 2 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,16%)" vertical={false} />
@@ -1455,52 +1604,6 @@ export default function ManageSettlements() {
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-            <div className="rounded-xl border table-border table-bg p-3 lg:col-span-2">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Status mix</span>
-              </div>
-              {aggregateQ.isLoading ? (
-                <div className="flex h-[112px] items-center justify-center gap-2 text-sm table-text-muted">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-                </div>
-              ) : aggregateQ.isError ? (
-                <p className="py-4 text-sm text-red-300">{getApiErrorMessage(aggregateQ.error, "Chart failed to load")}</p>
-              ) : !metrics ? (
-                <p className="py-6 text-sm table-text-muted">No data.</p>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="h-[112px] w-[112px] shrink-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusPieChartData}
-                          dataKey="value"
-                          nameKey="name"
-                          innerRadius={32}
-                          outerRadius={48}
-                          paddingAngle={2}
-                          isAnimationActive={false}
-                        >
-                          {statusPieChartData.map((entry, i) => (
-                            <Cell key={`s-${entry.name}-${i}`} fill={entry.fill} />
-                          ))}
-                        </Pie>
-                        <Tooltip {...CHART_TOOLTIP} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                    {metrics.statusSlices.map((slice) => (
-                      <div key={slice.name} className="flex items-center gap-2 text-[11px] font-bold text-white">
-                        <div className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: slice.fill }} />
-                        <span className="min-w-0 truncate">{slice.name}</span>
-                        <span className="ml-auto tabular-nums text-slate-400">{slice.value}</span>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>

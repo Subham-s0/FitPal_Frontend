@@ -83,13 +83,13 @@ const fireStyle = {
 };
 
 const fmtDate = (v?: string | null) => {
-  if (!v) return "—";
+  if (!v) return "-";
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 };
 
 const fmtDateTime = (v?: string | null) => {
-  if (!v) return "—";
+  if (!v) return "-";
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? v : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 };
@@ -113,6 +113,12 @@ const gymInitials = (name: string) => {
     .join("")
     .toUpperCase();
   return raw || "GY";
+};
+
+const formatEnumLabel = (value?: string | null) => {
+  if (!value) return "-";
+  const normalized = value.replaceAll("_", " ").toLowerCase();
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 
 function AccountRowAvatar({ row }: { row: AdminUserSummaryResponse }) {
@@ -164,8 +170,8 @@ const SORTS: SortChoice[] = [
   { label: "Sort", Icon: ArrowUpDown, sortBy: "createdAt", sortDirection: "DESC" },
   { label: "Oldest", Icon: ArrowUp, sortBy: "createdAt", sortDirection: "ASC" },
   { label: "Newest", Icon: ArrowDown, sortBy: "createdAt", sortDirection: "DESC" },
-  { label: "Email A→Z", Icon: ArrowUp, sortBy: "email", sortDirection: "ASC" },
-  { label: "Email Z→A", Icon: ArrowDown, sortBy: "email", sortDirection: "DESC" },
+  { label: "Email A-Z", Icon: ArrowUp, sortBy: "email", sortDirection: "ASC" },
+  { label: "Email Z-A", Icon: ArrowDown, sortBy: "email", sortDirection: "DESC" },
 ];
 
 function RolePill({ role }: { role: AdminAccountRole }) {
@@ -462,48 +468,67 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Stat cards — role filters */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Stat cards - role filters */}
+      <div className="grid grid-cols-2 items-stretch gap-3 lg:grid-cols-4">
         {TABS.map(({ key, label, count }) => {
           const active = roleTab === key;
           const styles =
             key === "ALL"
-              ? { border: "border-white/15", bg: "bg-white/[0.03]", accent: "text-white" }
+              ? {
+                  border: "border-white/15",
+                  bg: "bg-white/[0.03]",
+                  accent: "text-white",
+                }
               : key === "USER"
-                ? { border: "border-green-500/25", bg: "bg-green-500/[0.06]", accent: "text-green-400" }
+                ? {
+                    border: "border-green-500/25",
+                    bg: "bg-green-500/[0.06]",
+                    accent: "text-green-400",
+                  }
                 : key === "GYM"
-                  ? { border: "border-orange-500/25", bg: "bg-orange-500/[0.06]", accent: "text-orange-400" }
-                  : { border: "border-violet-500/25", bg: "bg-violet-500/[0.06]", accent: "text-violet-300" };
+                  ? {
+                      border: "border-orange-500/25",
+                      bg: "bg-orange-500/[0.06]",
+                      accent: "text-orange-400",
+                    }
+                  : {
+                      border: "border-violet-500/25",
+                      bg: "bg-violet-500/[0.06]",
+                      accent: "text-violet-300",
+                    };
           const Icon = key === "ALL" ? Users : key === "USER" ? User : key === "GYM" ? Dumbbell : Shield;
           return (
             <button
               key={key}
               type="button"
               onClick={() => switchRoleTab(key)}
-              className={`rounded-2xl border p-4 text-left transition-all ${styles.border} ${styles.bg} ${
+              className={`flex h-full min-h-[102px] flex-col rounded-2xl border p-3.5 text-left transition-all ${styles.border} ${styles.bg} ${
                 active ? "ring-2 ring-orange-500/40" : "hover:border-white/20"
               }`}
             >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <Icon className={`h-5 w-5 ${styles.accent}`} />
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Icon className={`h-4 w-4 flex-shrink-0 ${styles.accent}`} />
+                  <p className="truncate text-[10px] font-black uppercase tracking-wider table-text-muted">{label}</p>
+                </div>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? "bg-white/10 text-white" : "bg-black/20 table-text-muted"}`}>
                   {count}
                 </span>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-wider table-text-muted">{label}</p>
-              <p className={`mt-0.5 text-2xl font-black ${active ? "text-white" : "table-text"}`}>{count}</p>
+              <div className="mt-2.5 flex min-h-[28px] items-center">
+                <p className={`text-2xl font-black leading-none ${active ? "text-white" : "table-text"}`}>{count}</p>
+              </div>
             </button>
           );
         })}
       </div>
-
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="relative max-w-[300px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 table-text-muted" />
           <input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search name, email, username, gym…"
+            placeholder="Search name, email, username, gym..."
             className="w-full rounded-full border table-border table-bg py-2 pl-9 pr-4 text-[13px] font-medium text-white placeholder:table-text-muted outline-none transition-all focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)]"
           />
         </div>
@@ -621,7 +646,7 @@ export default function ManageUsers() {
               <tr>
                 <td colSpan={8} className="py-16 text-center">
                   <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-orange-500" />
-                  <div className="text-[13px] table-text-muted">Loading users…</div>
+                  <div className="text-[13px] table-text-muted">Loading users...</div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
@@ -664,7 +689,7 @@ export default function ManageUsers() {
                   <td className="px-3.5 py-3.5 text-[11px] table-text-muted" style={colStyle(6)}>
                     {u.userId != null && <div>User #{u.userId}</div>}
                     {u.gymId != null && <div>Gym #{u.gymId}</div>}
-                    {u.userId == null && u.gymId == null && "—"}
+                    {u.userId == null && u.gymId == null && "-"}
                   </td>
                   <td className="px-2 py-3.5 text-right" style={colStyle(7)}>
                     <DropdownMenu>
@@ -742,16 +767,16 @@ export default function ManageUsers() {
           <DialogHeader>
             <DialogTitle className="text-lg font-black">Account details</DialogTitle>
             <DialogDescription className="text-[13px] text-[hsl(0,0%,50%)]">
-              {dialogRole === "USER" && "Member profile — suspend or reactivate from here."}
-              {dialogRole === "GYM" && "Gym owner account — full gym onboarding lives under Manage Gyms."}
-              {dialogRole === "SUPERADMIN" && "Administrator account — read only."}
+              {dialogRole === "USER" && "Member profile - suspend or reactivate from here."}
+              {dialogRole === "GYM" && "Gym owner account - full gym onboarding lives under Manage Gyms."}
+              {dialogRole === "SUPERADMIN" && "Administrator account - read only."}
             </DialogDescription>
           </DialogHeader>
 
           {detailQ.isLoading && (
             <div className="flex items-center justify-center gap-2 py-12">
               <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
-              <span className="text-sm table-text-muted">Loading…</span>
+              <span className="text-sm table-text-muted">Loading...</span>
             </div>
           )}
 
@@ -807,6 +832,27 @@ export default function ManageUsers() {
                   Documents, location, payouts, and approval workflow are handled on the{" "}
                   <span className="font-semibold text-white">Manage Gyms</span> page.
                 </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3 text-[12px]">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Access tier</p>
+                  <p className="mt-1 font-semibold text-white">{formatEnumLabel(detail.eligibleTier)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[hsl(0,0%,40%)]">Eligibility</p>
+                  <span
+                    className={cn(
+                      "mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider",
+                      detail.eligible === true
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                        : detail.eligible === false
+                          ? "border-red-500/30 bg-red-500/10 text-red-400"
+                          : "border-zinc-500/30 bg-zinc-500/10 text-zinc-300"
+                    )}
+                  >
+                    {detail.eligible === true ? "Eligible" : detail.eligible === false ? "Not eligible" : "Unknown"}
+                  </span>
+                </div>
               </div>
               <Button
                 type="button"

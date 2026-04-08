@@ -593,10 +593,12 @@ function MembershipPlanSelector({
         className={cn(
           "group relative flex h-full min-h-[230px] cursor-pointer flex-col rounded-[1.5rem] border text-left transition-all duration-300",
           isSelected
-            ? "border-orange-500/60 table-bg shadow-[0_0_0_1px_rgba(234,88,12,0.15),0_16px_48px_-12px_rgba(234,88,12,0.25)]"
+            ? "border-orange-500/60 table-bg"
             : plan.mostPopular
-              ? "border-orange-500/30 table-bg-alt shadow-[0_8px_32px_-8px_rgba(234,88,12,0.15)] hover:border-orange-500/50 hover:shadow-[0_12px_40px_-8px_rgba(234,88,12,0.22)]"
-              : "border table-border table-bg-alt hover:border-orange-500/25 hover:shadow-[0_8px_32px_-8px_rgba(234,88,12,0.1)]"
+              ? "border-orange-500/30 table-bg-alt hover:border-orange-500/50"
+              : "border table-border table-bg-alt hover:border-orange-500/25 hover:shadow-[0_8px_32px_-8px_rgba(234,88,12,0.1)]",
+          isSelected && !plan.mostPopular && "shadow-[0_0_0_1px_rgba(234,88,12,0.15),0_16px_48px_-12px_rgba(234,88,12,0.25)]",
+          plan.mostPopular && "plan-popular-inner-glow"
         )}
       >
         {/* Top glow strip for selected */}
@@ -606,7 +608,7 @@ function MembershipPlanSelector({
 
         {/* Most popular badge */}
         {plan.mostPopular ? (
-          <div className="absolute right-3 top-3 z-10 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-2.5 py-0.5 text-[8px] font-black uppercase tracking-[0.18em] text-white shadow-[0_4px_14px_-2px_rgba(234,88,12,0.5)]">
+          <div className="absolute right-3 top-3 z-10 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-2.5 py-0.5 text-[8px] font-black uppercase tracking-[0.18em] text-white">
             Most Popular
           </div>
         ) : null}

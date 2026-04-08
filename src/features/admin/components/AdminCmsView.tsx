@@ -1112,10 +1112,11 @@ export default function AdminCmsView({ onBack }: { onBack: () => void }) {
               type="button"
               onClick={() => setTab(t.id)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.1em] transition-all",
+                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.1em]",
+                "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform",
                 isActive
-                  ? "border-orange-500/40 bg-orange-500/15 text-orange-300"
-                  : "table-border table-bg text-slate-400 hover:border-orange-500/20 hover:text-orange-300"
+                  ? "border-orange-500/40 bg-orange-500/15 text-orange-300 scale-100"
+                  : "table-border table-bg text-slate-400 hover:border-orange-500/20 hover:text-orange-300 hover:scale-[1.02] active:scale-[0.98]"
               )}
             >
               <Icon className="h-3.5 w-3.5" /> {t.label}

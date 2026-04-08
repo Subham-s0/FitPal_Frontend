@@ -1,7 +1,7 @@
 export type GymPageId =
   | "home" | "gymProfile" | "qr"
   | "members" | "revenue" | "insights"
-  | "equipment" | "reviews" | "notices" | "settings";
+  | "reviews" | "notices" | "settings";
 
 export interface ScanRow {
   time: string;
@@ -38,14 +38,4 @@ export interface NoticeRow {
   audience: string;
   date: string;
   status: "sent" | "scheduled";
-}
-
-export interface EquipItem {
-  id: number;
-  name: string;
-  category: string;
-  count: number;
-  condition: "excellent" | "good" | "needs-repair";
-  photo: string;
-  desc: string;
 }

@@ -1834,9 +1834,24 @@ const FitPalGymSetup: FC = () => {
 
         {/* Left: Map */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12, height: "100%" }}>
-          <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px", background: "var(--muted)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "1.45rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "20px", background: "#0a0a0a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "1.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".14em", color: "var(--orange)", display: "flex", alignItems: "center", gap: 8 }}>
+                Map <span style={{ flex: 1, height: 1, background: "rgba(234,88,12,.2)" }} />
+              </div>
+              {(typeof gymLatitude === "number" && typeof gymLongitude === "number") ? (
+                <span style={{ fontSize: 10, fontWeight: 800, color: "#a3a3a3" }}>
+                  {gymLatitude.toFixed(5)}, {gymLongitude.toFixed(5)}
+                </span>
+              ) : (
+                <span style={{ fontSize: 10, fontWeight: 800, color: "#525252" }}>Pick a pin</span>
+              )}
+            </div>
             <MapSection initialLatitude={gymLatitude} initialLongitude={gymLongitude} onLocationPicked={onLocationPicked} />
             <FieldError message={fieldErrors.gymCoordinates} />
+            <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(255,255,255,.06)", background: "rgba(255,255,255,.02)", fontSize: 12, color: "var(--text-m)", lineHeight: 1.6 }}>
+              Drag the marker to your entrance. We only allow locations inside Kathmandu valley to prevent access issues.
+            </div>
           </div>
         </div>
 
@@ -2091,6 +2106,14 @@ const FitPalGymSetup: FC = () => {
           </button>
           {khaltiEnabled && (
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", padding: "16px 18px 18px", background: "rgba(0,0,0,.15)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: "#c4b5fd" }}>Khalti billing details</div>
+                {gymRegNo.trim() ? (
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-d)" }}>
+                    Gym reg no: <span style={{ color: "#fff" }}>{gymRegNo.trim()}</span>
+                  </span>
+                ) : null}
+              </div>
               <div className="field" style={{ marginBottom: 12 }}>
                 <label>Khalti ID / Phone <span style={{ color: "#ef4444" }}>*</span></label>
                 <input type="text" maxLength={10} placeholder="98XXXXXXXX" value={khaltiWalletId}
@@ -2106,10 +2129,10 @@ const FitPalGymSetup: FC = () => {
                 {!fieldErrors.khaltiWalletId && khaltiWalletId && !khaltiWalletValid && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 5 }}>Must start with 98 or 97 followed by 8 digits.</div>}
               </div>
               <div className="field" style={{ marginBottom: 0 }}>
-                <label>Registered Name <span style={{ color: "#ef4444" }}>*</span></label>
+                <label>Billing name (Khalti) <span style={{ color: "#ef4444" }}>*</span></label>
                 <input
                   type="text"
-                  placeholder="Full name on Khalti account"
+                  placeholder="Must match the name on your Khalti wallet"
                   value={khaltiAccountName}
                   onChange={e => {
                     setKhaltiAccountName(e.target.value);
@@ -2120,6 +2143,7 @@ const FitPalGymSetup: FC = () => {
                     : { background: "rgba(255,255,255,.04)" }}
                 />
                 <FieldError message={fieldErrors.khaltiAccountName} />
+                <div className="field-hint">This name is used for payout verification and settlement traceability.</div>
               </div>
             </div>
           )}
@@ -2150,6 +2174,21 @@ const FitPalGymSetup: FC = () => {
       <div className="sec-label">Verification Documents</div>
       <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>All documents are reviewed by our team and never shared publicly. Uploads are encrypted.</p>
       <FieldError message={fieldErrors.documents} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10, marginBottom: 14 }}>
+        <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,.07)", background: "#0a0a0a", padding: "12px 14px" }}>
+          <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--text-d)" }}>Documents uploaded</div>
+          <div style={{ marginTop: 4, fontSize: 18, fontWeight: 900, color: "#fff" }}>
+            {docs.filter(d => d.uploaded).length} <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-d)" }}>/ {docs.length}</span>
+          </div>
+        </div>
+        <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,.07)", background: "#0a0a0a", padding: "12px 14px" }}>
+          <div style={{ fontSize: 9, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".12em", color: "var(--text-d)" }}>Photos uploaded</div>
+          <div style={{ marginTop: 4, fontSize: 18, fontWeight: 900, color: "#fff" }}>
+            {photos.length} <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-d)" }}>/ {MAX_GYM_PHOTOS}</span>
+          </div>
+        </div>
+      </div>
 
       {docs.map((doc, idx) => {
         const isRequired = isRequiredDocType(doc.type);

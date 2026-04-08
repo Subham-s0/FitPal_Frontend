@@ -142,6 +142,11 @@
     font-family: var(--font-display);
   }
 
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
   /* Hide default number input spinners - use custom NumberInput component instead */
   input[type="number"]::-webkit-outer-spin-button,
   input[type="number"]::-webkit-inner-spin-button {
@@ -218,6 +223,10 @@
 
   .glow-accent {
     box-shadow: var(--glow-accent);
+  }
+
+  .plan-popular-inner-glow {
+    box-shadow: inset 0 0 28px rgba(249, 115, 22, 0.2);
   }
 
   .animate-float {
@@ -471,7 +480,7 @@
 
   /* ── Button Variants ── */
   .btn-fire {
-    @apply bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 text-white font-black uppercase tracking-wider shadow-[0_4px_20px_rgba(249,115,22,0.35)] transition-all hover:shadow-[0_6px_28px_rgba(249,115,22,0.5)] active:scale-[0.98];
+    @apply bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 text-white font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] active:scale-[0.98];
   }
 
   .btn-ghost {
@@ -532,8 +541,7 @@
   }
 
   .flow-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white transition-all hover:border-orange-400/40 hover:bg-orange-700 disabled:opacity-50;
-    box-shadow: 0 10px 24px -14px rgba(249, 115, 22, 0.7);
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] hover:-translate-y-0.5 border-none disabled:opacity-50;
   }
 
   .flow-button-secondary {

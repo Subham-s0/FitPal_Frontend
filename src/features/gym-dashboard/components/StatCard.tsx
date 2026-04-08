@@ -1,15 +1,16 @@
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 
 interface StatCardProps {
   label: string;
   value: string;
   sub?: string;
+  icon?: ReactNode;
   accent?: boolean;
   up?: boolean;
   down?: boolean;
 }
 
-const StatCard: FC<StatCardProps> = ({ label, value, sub, accent, up, down }) => (
+const StatCard: FC<StatCardProps> = ({ label, value, sub, icon, accent, up, down }) => (
   <div
     className={`rounded-xl border p-4 transition-colors hover:border-orange-500/20 ${
       accent
@@ -17,8 +18,11 @@ const StatCard: FC<StatCardProps> = ({ label, value, sub, accent, up, down }) =>
         : "border-white/[0.07] bg-[#0a0a0a]"
     }`}
   >
-    <div className="mb-2 text-[9px] font-black uppercase tracking-[0.11em] text-zinc-600">
-      {label}
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="text-[9px] font-black uppercase tracking-[0.11em] text-zinc-600">
+        {label}
+      </div>
+      {icon ? <div className="text-zinc-500">{icon}</div> : null}
     </div>
     <div className={`text-2xl font-black leading-none tracking-tight ${accent ? "text-orange-500" : "text-white"}`}>
       {value}

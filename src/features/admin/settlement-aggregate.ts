@@ -1,8 +1,13 @@
-import { getAdminPendingSettlementsApi } from "@/features/admin/admin-settlement.api";
+import {
+  getAdminPendingSettlementsApi,
+  getAdminPayoutBatchesApi,
+} from "@/features/admin/admin-settlement.api";
 import type {
   GymSettlementPayoutStatus,
   PendingGymSettlementResponse,
   PendingGymSettlementSearchParams,
+  PayoutSettlementResponse,
+  PayoutSettlementSearchParams,
 } from "@/features/admin/admin-settlement.model";
 
 /** Matches backend max page size for pending settlements search. */
@@ -43,6 +48,53 @@ export async function fetchSettlementsForAggregate(
     totalItems: first.totalItems,
     capped: false,
   };
+}
+
+/**
+ * Loads unresolved rows used by the due timeline (pending + in payout).
+ * This intentionally ignores check-in payout status filters from table/chart controls.
+ */
+export async function fetchAdminDueTimelineSettlements(
+  base: Omit<PendingGymSettlementSearchParams, "page" | "size" | "payoutStatus">
+): Promise<PendingGymSettlementResponse[]> {
+  const [pending, inPayout] = await Promise.all([
+    fetchSettlementsForAggregate({
+      ...base,
+      payoutStatus: "PENDING",
+      sortBy: "visitDate",
+      sortDirection: "ASC",
+    }),
+    fetchSettlementsForAggregate({
+      ...base,
+      payoutStatus: "IN_PAYOUT",
+      sortBy: "visitDate",
+      sortDirection: "ASC",
+    }),
+  ]);
+
+  return [...pending.items, ...inPayout.items];
+}
+
+export async function fetchAdminPayoutBatchesForAggregate(
+  base: Omit<PayoutSettlementSearchParams, "page" | "size">
+): Promise<PayoutSettlementResponse[]> {
+  const first = await getAdminPayoutBatchesApi({
+    ...base,
+    page: 0,
+    size: SETTLEMENT_AGGREGATE_PAGE_SIZE,
+  });
+  const items = [...first.items];
+
+  for (let p = 1; p < first.totalPages; p++) {
+    const next = await getAdminPayoutBatchesApi({
+      ...base,
+      page: p,
+      size: SETTLEMENT_AGGREGATE_PAGE_SIZE,
+    });
+    items.push(...next.items);
+  }
+
+  return items;
 }
 
 export type SettlementMetrics = {

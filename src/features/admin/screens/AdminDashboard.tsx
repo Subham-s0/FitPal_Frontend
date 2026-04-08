@@ -35,6 +35,7 @@ import {
 
 import { DefaultLayout } from "@/shared/layout/dashboard-shell";
 import ManageGyms from "@/features/admin/components/ManageGyms";
+import ManageNotices from "@/features/admin/components/ManageNotices";
 import ManagePayments from "@/features/admin/components/ManagePayments";
 import ManagePlans from "@/features/admin/components/ManagePlans";
 import ManageSettlements from "@/features/admin/components/ManageSettlements";
@@ -150,10 +151,12 @@ const FilterTabs = ({
         type="button"
         onClick={() => onChange(o.value)}
         className={cn(
-          "rounded-full px-3.5 py-1 text-[11px] font-bold transition-all",
+          "relative rounded-full px-3.5 py-1 text-[11px] font-bold",
+          "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+          "transform-gpu will-change-transform",
           value === o.value
-            ? "bg-orange-500 text-white shadow-[0_2px_8px_rgba(234,88,12,0.35)]"
-            : "table-text hover:text-white"
+            ? "bg-orange-500 text-white"
+            : "table-text hover:text-white hover:bg-white/[0.03] hover:border-white/10 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
         )}
       >
         {o.label}
@@ -608,7 +611,7 @@ function DashboardHome() {
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                         <Badge c={isGym ? "orange" : "green"}>{formatEnumLabel(s.role)}</Badge>
                         {isGym ? (
-                          <Badge c={gymStatusColor as any}>{formatEnumLabel(s.gymApprovalStatus)}</Badge>
+                          <Badge c={gymStatusColor}>{formatEnumLabel(s.gymApprovalStatus)}</Badge>
                         ) : s.planName ? (
                           <Badge c="orange">{s.planName} {s.billingCycle}</Badge>
                         ) : (
@@ -658,7 +661,16 @@ function DashboardHome() {
                 })}
               </div>
               {members.mostPopularPlan && (
-                <div className="flex shrink-0 items-center justify-between rounded-lg border border-orange-500/50 bg-[linear-gradient(160deg,rgba(249,115,22,0.14),rgba(17,17,17,0.98))] px-3 py-2.5 shadow-[inset_0_0_20px_rgba(249,115,22,0.15)]">
+                <div className="relative overflow-hidden flex shrink-0 items-center justify-between rounded-lg border border-orange-500/50 bg-[linear-gradient(160deg,rgba(249,115,22,0.14),rgba(17,17,17,0.98))] px-3 py-2.5 shadow-[inset_0_0_20px_rgba(249,115,22,0.15)]">
+                  {/* Grid-line overlay */}
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-lg opacity-[0.07]"
+                    style={{
+                      backgroundImage:
+                        'linear-gradient(rgba(249,115,22,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(249,115,22,0.5) 1px, transparent 1px)',
+                      backgroundSize: '18px 18px',
+                    }}
+                  />
                   <span className="text-[12px] font-black uppercase tracking-[0.1em] text-orange-400">Most popular</span>
                   <span className="flex items-center gap-2.5">
                     <span className="text-[11.5px] font-bold uppercase tracking-wider text-slate-300">{members.mostPopularPlan}</span>
@@ -1122,18 +1134,7 @@ const AdminDashboard = () => {
       case "settlements":
         return <ManageSettlements />;
       case "notices":
-        return (
-          <div className="mx-auto max-w-[1200px] space-y-6">
-            <div>
-              <h1 className="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
-                Admin <span className="text-gradient-fire">Notices</span>
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                Publish platform-wide announcements, finance updates, and operational notices.
-              </p>
-            </div>
-          </div>
-        );
+        return <ManageNotices />;
       case "settings":
         return (
           <div className="mx-auto max-w-[1400px]">

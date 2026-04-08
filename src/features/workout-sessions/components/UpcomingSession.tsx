@@ -164,7 +164,7 @@ function PlannedSessionCard({
           type="button"
           onClick={onStart}
           disabled={isAnyPending}
-          className="btn-fire flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-white shadow-lg transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-fire flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-black uppercase tracking-[0.14em] shadow-lg transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isStarting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

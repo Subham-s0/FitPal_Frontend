@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import {
   getAdminGymReviewApi,
+  patchAdminGymCheckInAccessModeApi,
   getAdminGymStatusCountsApi,
   getAdminGymsApi,
   patchAdminGymAccessApi,
@@ -50,6 +51,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/dialog";
 import type {
   AdminGymReviewResponse,
   AdminGymSummaryResponse,
@@ -57,6 +65,7 @@ import type {
 } from "@/features/admin/admin-gym.model";
 import type {
   AccessTier,
+  CheckInAccessMode,
   GymApprovalStatus,
   GymDocumentResponse,
   GymDocumentStatus,
@@ -106,6 +115,12 @@ const parseNum = (v: string): number | null => {
 
 const parseOptionalNum = (v: string): number | null =>
     v.trim() === "" ? null : parseNum(v);
+
+const normalizeCheckInAccessMode = (mode?: CheckInAccessMode | null): CheckInAccessMode =>
+  mode === "DOOR_ACK_REQUIRED" ? "DOOR_ACK_REQUIRED" : "MANUAL";
+
+const formatCheckInAccessModeLabel = (mode?: CheckInAccessMode | null): string =>
+  normalizeCheckInAccessMode(mode) === "DOOR_ACK_REQUIRED" ? "Wait for door ACK" : "Direct check-in";
 
 const hasCoordinates = (lat?: number | null, lng?: number | null): lat is number =>
     typeof lat === "number" && Number.isFinite(lat) && typeof lng === "number" && Number.isFinite(lng);
@@ -189,6 +204,20 @@ const TIERS: Record<string, { label: string; desc: string; color: string; bg: st
   BASIC: { label: "Basic", desc: "All members",      color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/25",  Icon: Check  },
   PRO:   { label: "Pro",   desc: "Pro & Elite only", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/25", Icon: Zap    },
   ELITE: { label: "Elite", desc: "Elite only",       color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/25",   Icon: Shield },
+};
+
+const CHECK_IN_ACCESS_MODES: Record<
+  CheckInAccessMode,
+  { label: string; desc: string }
+> = {
+  MANUAL: {
+    label: "Direct",
+    desc: "Marks check-in complete instantly. Unlock may still be queued based on global door rules.",
+  },
+  DOOR_ACK_REQUIRED: {
+    label: "Door ACK",
+    desc: "Sets check-in to pending until door hardware acknowledgement is received.",
+  },
 };
 
 // ─── Tiny atoms ───────────────────────────────────────────────────────────────
@@ -465,6 +494,8 @@ function DetailPanel({
 
   const tierKey = p.minimumAccessTier ?? "BASIC";
   const tier    = TIERS[tierKey] ?? TIERS.BASIC;
+  const checkInAccessMode = normalizeCheckInAccessMode(p.checkInAccessMode);
+  const checkInAccessMeta = CHECK_IN_ACCESS_MODES[checkInAccessMode];
 
   const readOnlyApproved = isApproved && !editMode;
 
@@ -591,6 +622,37 @@ function DetailPanel({
                   {["10m","250m","500m","750m","1km+"].map(l => <span key={l}>{l}</span>)}
                 </div>
               </div>
+
+              <p className="text-[8.5px] font-black uppercase tracking-[0.15em] text-orange-500 mt-3 mb-[7px]">Check-in completion mode</p>
+              <div className="grid grid-cols-2 gap-[7px]">
+                {(["MANUAL", "DOOR_ACK_REQUIRED"] as CheckInAccessMode[]).map(mode => {
+                  const active = checkInAccessMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      disabled={readOnlyApproved}
+                      onClick={() => onUpdateProfile("checkInAccessMode", mode)}
+                      className={`px-3 py-[10px] rounded-[10px] border text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                        active
+                          ? "bg-orange-500/10 border-orange-500/30 text-orange-400"
+                          : "bg-[hsl(0,0%,9%)] border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:border-white/20 hover:text-white"
+                      }`}
+                    >
+                      <div className="text-[10px] font-black uppercase tracking-[0.08em]">
+                        {CHECK_IN_ACCESS_MODES[mode].label}
+                      </div>
+                      <div className="text-[9px] mt-1 leading-tight opacity-85">
+                        {mode === "MANUAL" ? "Directly CHECKED_IN" : "ACCESS_PENDING first"}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-2 px-3 py-[8px] rounded-[10px] bg-[hsl(0,0%,9%)] border border-[hsl(0,0%,18%)] text-[10px] text-[hsl(0,0%,55%)] leading-relaxed">
+                {checkInAccessMeta.desc}
+              </div>
+
               {!readOnlyApproved && <SaveBtn onClick={onSaveAccess} label="Save Access Settings" />}
             </div>
 
@@ -1056,6 +1118,9 @@ export default function ManageGyms() {
   const [filterOpen, setFilterOpen]       = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
+  const [viewProfile, setViewProfile] = useState<{ gymId: number; gymName: string } | null>(null);
+  const [viewTab, setViewTab] = useState<"profile" | "documents" | "photos" | "checkinLocations">("profile");
+
   useEffect(() => {
     const id = window.setTimeout(() => setDebounced(searchInput.trim()), 300);
     return () => window.clearTimeout(id);
@@ -1091,6 +1156,12 @@ export default function ManageGyms() {
     if (reviewQ.data) setDraftReview(cloneReview(reviewQ.data));
   }, [reviewQ.data]);
 
+  const viewQ = useQuery({
+    queryKey: ["admin-gym-review-view", viewProfile?.gymId],
+    queryFn: () => getAdminGymReviewApi(viewProfile?.gymId as number),
+    enabled: viewProfile !== null,
+  });
+
   const syncMutation = (r: AdminGymReviewResponse, msg: string) => {
     qc.setQueryData(["admin-gym-review", r.profile.gymId], r);
     setDraftReview(cloneReview(r));
@@ -1111,12 +1182,25 @@ export default function ManageGyms() {
   });
 
   const accMut = useMutation({
-    mutationFn: ({ gymId, profile }: { gymId: number; profile: GymProfileResponse }) =>
-        patchAdminGymAccessApi(gymId, {
-          minimumAccessTier: profile.minimumAccessTier,
-          checkInEnabled: profile.checkInEnabled,
-          allowedCheckInRadiusMeters: profile.allowedCheckInRadiusMeters,
-        }),
+    mutationFn: async ({ gymId, profile }: { gymId: number; profile: GymProfileResponse }) => {
+      const updatedReview = await patchAdminGymAccessApi(gymId, {
+        minimumAccessTier: profile.minimumAccessTier,
+        checkInEnabled: profile.checkInEnabled,
+        allowedCheckInRadiusMeters: profile.allowedCheckInRadiusMeters,
+      });
+
+      const requestedMode = normalizeCheckInAccessMode(profile.checkInAccessMode);
+      const persistedMode = normalizeCheckInAccessMode(updatedReview.profile.checkInAccessMode);
+
+      if (requestedMode === persistedMode) {
+        return updatedReview;
+      }
+
+      await patchAdminGymCheckInAccessModeApi(gymId, {
+        checkInAccessMode: requestedMode,
+      });
+      return getAdminGymReviewApi(gymId);
+    },
     onSuccess: r => syncMutation(r, "Access settings updated"),
     onError:   e => toast.error(getApiErrorMessage(e, "Failed to update access settings")),
   });
@@ -1243,8 +1327,8 @@ export default function ManageGyms() {
   };
 
   const handleQuickViewProfile = (gymId: number, gymName: string) => {
-    setExpandedId(gymId);
-    toast.info(`Opened ${gymName} profile`);
+    setViewProfile({ gymId, gymName });
+    setViewTab("profile");
   };
 
   const handleQuickDeleteRejected = (gymId: number, gymName: string) => {
@@ -1516,6 +1600,254 @@ export default function ManageGyms() {
             </button>
           </div>
         </div>
+
+        <Dialog
+          open={viewProfile !== null}
+          onOpenChange={(open) => {
+            if (!open) setViewProfile(null);
+          }}
+        >
+          <DialogContent className="max-w-[1100px] bg-[hsl(0,0%,7%)] border-[hsl(0,0%,18%)] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {viewProfile?.gymName ?? "Gym"} <span style={fireStyle}>Profile</span>
+              </DialogTitle>
+              <DialogDescription className="text-[12px] text-[hsl(0,0%,55%)]">
+                View-only snapshot (admin). Use the review panel to make changes.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-3">
+              <div className="mb-4 flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1">
+                {(
+                  [
+                    { id: "profile", label: "Profile" },
+                    { id: "documents", label: "Documents" },
+                    { id: "photos", label: "Photos" },
+                    { id: "checkinLocations", label: "Check-in / Locations" },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setViewTab(t.id)}
+                    className={`flex-1 rounded-lg px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform ${
+                      viewTab === t.id
+                        ? "bg-orange-500/[0.12] text-orange-500 scale-100"
+                        : "text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-400 hover:scale-[1.02] active:scale-[0.98]"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {viewQ.isLoading && (
+                <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-[#0a0a0a] p-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+                  <span className="text-xs text-zinc-600">Loading…</span>
+                </div>
+              )}
+
+              {viewQ.isError && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-[12px] text-red-200">
+                  {getApiErrorMessage(viewQ.error)}
+                </div>
+              )}
+
+              {viewQ.data && (
+                <div className="max-h-[70vh] overflow-y-auto pr-1">
+                  {viewTab === "profile" && (
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5">
+                        <p className="mb-3 text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Identity</p>
+                        <div className="flex items-center gap-3.5">
+                          {viewQ.data.profile.logoUrl ? (
+                            <img
+                              src={viewQ.data.profile.logoUrl}
+                              alt={viewQ.data.profile.gymName ?? ""}
+                              className="h-[72px] w-[72px] flex-shrink-0 rounded-2xl border-[1.5px] border-orange-500/25 object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-[72px] w-[72px] flex-shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-orange-500/25 bg-orange-500/[0.08] text-xl font-black">
+                              <span className="text-gradient-fire">{initials(viewQ.data.profile.gymName)}</span>
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-bold">{viewQ.data.profile.gymName ?? "—"}</div>
+                            <div className="text-[10px] text-zinc-600">
+                              {(viewQ.data.profile.gymType ?? "—") +
+                                (viewQ.data.profile.establishedAt ? ` · Est. ${viewQ.data.profile.establishedAt}` : "")}
+                            </div>
+                            <div className="mt-2">
+                              <ApprovalPill status={viewQ.data.profile.approvalStatus} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {[
+                            ["Registered email", viewQ.data.profile.registeredEmail],
+                            ["Contact email", viewQ.data.profile.contactEmail],
+                            ["Phone", viewQ.data.profile.phoneNo],
+                            ["Website", viewQ.data.profile.websiteUrl],
+                          ].map(([k, v]) => (
+                            <div key={k} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                              <div className="text-[9px] font-black uppercase tracking-wider text-zinc-600">{k}</div>
+                              <div className="mt-1 truncate text-[12px] font-semibold text-white">{v || "—"}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                          <div className="text-[9px] font-black uppercase tracking-wider text-zinc-600">Description</div>
+                          <div className="mt-1 whitespace-pre-wrap text-[12px] text-zinc-300">
+                            {viewQ.data.profile.description || "—"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5">
+                        <p className="mb-3 text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Payout wallets</p>
+                        <div className="space-y-2">
+                          {resolveWallets(viewQ.data).map((w) => (
+                            <div
+                              key={w.provider}
+                              className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.03] p-3"
+                            >
+                              <div className="min-w-0">
+                                <div className="text-[10px] font-black uppercase tracking-wider text-zinc-600">{w.provider}</div>
+                                <div className="mt-1 truncate text-[12px] font-semibold">
+                                  {w.walletId} · {w.accountName}
+                                </div>
+                              </div>
+                              <span
+                                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${
+                                  w.verified
+                                    ? "border-green-400/20 bg-green-400/10 text-green-400"
+                                    : "border-yellow-400/20 bg-yellow-400/10 text-yellow-400"
+                                }`}
+                              >
+                                {w.verified ? "Verified" : "Unverified"}
+                              </span>
+                            </div>
+                          ))}
+                          {resolveWallets(viewQ.data).length === 0 && (
+                            <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-[12px] text-zinc-600">
+                              No payout wallets added.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {viewTab === "documents" && (
+                    <div className="rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5">
+                      <p className="mb-3 text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Documents</p>
+                      {viewQ.data.documents.length === 0 ? (
+                        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-[12px] text-zinc-600">
+                          No documents uploaded.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {viewQ.data.documents.map((d) => (
+                            <div
+                              key={d.documentId}
+                              className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3"
+                            >
+                              <DocDot status={d.status} />
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-[12px] font-semibold">{d.documentType.replace(/_/g, " ")}</div>
+                                <div className="text-[10px] text-zinc-600">Uploaded {fmtDate(d.createdAt)}</div>
+                              </div>
+                              <a
+                                href={d.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-lg border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-orange-400 hover:bg-orange-500/15"
+                              >
+                                View
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {viewTab === "photos" && (
+                    <div className="rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5">
+                      <p className="mb-3 text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Photos</p>
+                      {viewQ.data.photos.length === 0 ? (
+                        <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 text-[12px] text-zinc-600">
+                          No photos uploaded.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {viewQ.data.photos.map((p) => (
+                            <div key={p.photoId} className="overflow-hidden rounded-2xl border border-white/[0.06] bg-[#070707]">
+                              <div className="relative">
+                                <img src={p.photoUrl} alt={p.caption ?? "Gym photo"} className="h-[160px] w-full object-cover" />
+                                {p.cover && (
+                                  <span className="absolute left-2 top-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-orange-400">
+                                    Cover
+                                  </span>
+                                )}
+                              </div>
+                              <div className="p-3">
+                                <div className="text-[10px] text-zinc-600">{p.caption || "—"}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {viewTab === "checkinLocations" && (
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5">
+                        <p className="mb-3 text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Location</p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {[
+                            ["Address", viewQ.data.profile.addressLine],
+                            ["City", viewQ.data.profile.city],
+                            ["Country", viewQ.data.profile.country],
+                            ["Postal code", viewQ.data.profile.postalCode],
+                            ["Latitude", viewQ.data.profile.latitude?.toString()],
+                            ["Longitude", viewQ.data.profile.longitude?.toString()],
+                            ["Opens", viewQ.data.profile.opensAt],
+                            ["Closes", viewQ.data.profile.closesAt],
+                          ].map(([k, v]) => (
+                            <div key={k} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                              <div className="text-[9px] font-black uppercase tracking-wider text-zinc-600">{k}</div>
+                              <div className="mt-1 truncate text-[12px] font-semibold">{v || "—"}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5">
+                        <p className="mb-3 text-[9px] font-black uppercase tracking-[0.13em] text-orange-500">Check-in settings</p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {[
+                            ["Enabled", viewQ.data.profile.checkInEnabled ? "Yes" : "No"],
+                            ["Access mode", formatCheckInAccessModeLabel(viewQ.data.profile.checkInAccessMode)],
+                            ["Minimum tier", viewQ.data.profile.minimumAccessTier],
+                            ["Radius (m)", viewQ.data.profile.allowedCheckInRadiusMeters?.toString()],
+                          ].map(([k, v]) => (
+                            <div key={k} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                              <div className="text-[9px] font-black uppercase tracking-wider text-zinc-600">{k}</div>
+                              <div className="mt-1 truncate text-[12px] font-semibold">{v || "—"}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <AlertDialog open={pendingDecision !== null} onOpenChange={open => !open && setPending(null)}>
           <AlertDialogContent className="border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white rounded-[20px] shadow-[0_28px_90px_rgba(0,0,0,0.7)]">

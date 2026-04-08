@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { getApplicationRulesApi, updateApplicationRulesApi } from "@/features/admin/admin-settings.api";
-import type { ApplicationRuleSummaryResponse, ApplicationRuleUpdateRequest, DoorAccessMode, DoorFailsafeMode } from "@/features/admin/admin-settings.model";
+import type { ApplicationRuleSummaryResponse, ApplicationRuleUpdateRequest, DoorAccessMode, CheckInAccessMode, DoorFailsafeMode } from "@/features/admin/admin-settings.model";
 import AdminCmsView from "@/features/admin/components/AdminCmsView";
 import { cn } from "@/shared/lib/utils";
 import {
@@ -150,7 +150,8 @@ function AppRulesContent() {
     {
       label: "Door Access Mode",
       items: [
-        { key: "doorAccessMode",           label: "Access Mode",          value: d?.doorAccessMode ?? "AUTOMATIC",              icon: d?.doorAccessMode === "MANUAL" ? Unlock : Lock, desc: "AUTOMATIC: member check-in queues unlock. MANUAL: no auto unlock; staff handles entry." },
+        { key: "doorAccessMode",           label: "Door Mode",            value: d?.doorAccessMode ?? "AUTOMATIC",              icon: d?.doorAccessMode === "MANUAL" ? Unlock : Lock, desc: "AUTOMATIC: member check-in queues unlock. MANUAL: no auto unlock; staff handles entry." },
+        { key: "checkInAccessMode",        label: "Check-in Mode",        value: d?.checkInAccessMode ?? "MANUAL",              icon: d?.checkInAccessMode === "DOOR_ACK_REQUIRED" ? Lock : Unlock, desc: "MANUAL: staff marks complete. DOOR_ACK_REQUIRED: requires door acknowledgement." },
         { key: "doorAutoLockEnabled",      label: "Auto Lock",            value: d?.doorAutoLockEnabled ? "Enabled" : "Disabled", icon: Lock, desc: "On: unlock pulse uses Unlock Duration. Off: pulse lasts until Command Expiry." },
         { key: "doorManualOverrideAllowed", label: "Manual Override",     value: d?.doorManualOverrideAllowed ? "Allowed" : "Blocked", icon: Unlock, desc: "Allow gym test unlock from the dashboard." },
         { key: "doorFailsafeMode",         label: "Failsafe Mode",        value: d?.doorFailsafeMode ?? "LOCKED",               icon: Shield, desc: "LOCKED: offline device blocks auto queue. UNLOCKED: stale device still accepts commands." },
@@ -259,7 +260,7 @@ function AppRulesContent() {
               <p className="mb-3 text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Door Access Mode</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Access Mode</label>
+                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Door Mode</label>
                   <Select
                     value={formData.doorAccessMode ?? "AUTOMATIC"}
                     onValueChange={(value) => setFormData((p) => ({ ...p, doorAccessMode: value as DoorAccessMode }))}
@@ -277,6 +278,27 @@ function AppRulesContent() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Check-in Mode</label>
+                  <Select
+                    value={formData.checkInAccessMode ?? "MANUAL"}
+                    onValueChange={(value) => setFormData((p) => ({ ...p, checkInAccessMode: value as CheckInAccessMode }))}
+                  >
+                    <SelectTrigger className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white focus:border-orange-500/50 focus:ring-0 focus:ring-offset-0">
+                      <SelectValue placeholder="Select check-in mode" />
+                    </SelectTrigger>
+                    <SelectContent className="border-white/10 bg-[#111] text-white">
+                      <SelectItem value="MANUAL" className="text-[12px] focus:bg-white/10 focus:text-white">
+                        Manual (staff marks complete)
+                      </SelectItem>
+                      <SelectItem value="DOOR_ACK_REQUIRED" className="text-[12px] focus:bg-white/10 focus:text-white">
+                        Door ACK Required (door confirmation)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Failsafe Mode</label>
                   <Select

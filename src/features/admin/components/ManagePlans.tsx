@@ -303,7 +303,7 @@ const ManagePlans = () => {
           type="button"
           disabled={availablePlanTypesForCreate.length === 0 || isBusy || plansQuery.isError}
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-[0.9rem] bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-5 py-2.5 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_6px_20px_-4px_rgba(249,115,22,0.4)] transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_26px_-4px_rgba(249,115,22,0.5)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-[0.9rem] bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 px-5 py-2.5 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
           Add Plan
@@ -336,7 +336,7 @@ const ManagePlans = () => {
               className={cn(
                 "group relative flex flex-col rounded-[1.75rem] border transition-all duration-300 hover:-translate-y-1",
                 plan.mostPopular
-                  ? "border-orange-500/50 bg-[linear-gradient(160deg,rgba(249,115,22,0.14),rgba(17,17,17,0.98))] shadow-[0_8px_40px_-10px_rgba(249,115,22,0.3)]"
+                  ? "border-orange-500/50 bg-[linear-gradient(160deg,rgba(249,115,22,0.14),rgba(17,17,17,0.98))] plan-popular-inner-glow"
                   : "border-white/[0.08] bg-[#111] hover:border-orange-500/20 hover:shadow-[0_8px_32px_-8px_rgba(249,115,22,0.12)]",
                 !plan.active && "opacity-70 ring-1 ring-dashed ring-white/15"
               )}
@@ -348,7 +348,7 @@ const ManagePlans = () => {
 
               {/* Popular badge */}
               {plan.mostPopular ? (
-                <div className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-3.5 py-1 shadow-[0_4px_14px_-2px_rgba(234,88,12,0.5)]">
+                <div className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-3.5 py-1">
                   <Sparkles className="h-3 w-3 text-white" />
                   <span className="text-[10px] font-black uppercase tracking-[0.14em] text-white">Most Popular</span>
                 </div>

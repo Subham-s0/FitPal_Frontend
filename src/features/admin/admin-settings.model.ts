@@ -1,6 +1,7 @@
 // Admin Settings & CMS Types
 
 export type DoorAccessMode = "AUTOMATIC" | "MANUAL";
+export type CheckInAccessMode = "MANUAL" | "DOOR_ACK_REQUIRED";
 export type DoorFailsafeMode = "LOCKED" | "UNLOCKED";
 export type AnnouncementType = "INFO" | "WARNING" | "CRITICAL" | "MAINTENANCE";
 
@@ -19,6 +20,7 @@ export interface ApplicationRuleSummaryResponse {
   doorAckTimeoutSeconds: number;
   doorDeviceOnlineWindowSeconds: number;
   doorAccessMode: DoorAccessMode;
+  checkInAccessMode: CheckInAccessMode;
   doorAutoLockEnabled: boolean;
   doorManualOverrideAllowed: boolean;
   doorFailsafeMode: DoorFailsafeMode;
@@ -38,6 +40,7 @@ export interface ApplicationRuleUpdateRequest {
   doorAckTimeoutSeconds?: number;
   doorDeviceOnlineWindowSeconds?: number;
   doorAccessMode?: DoorAccessMode;
+  checkInAccessMode?: CheckInAccessMode;
   doorAutoLockEnabled?: boolean;
   doorManualOverrideAllowed?: boolean;
   doorFailsafeMode?: DoorFailsafeMode;

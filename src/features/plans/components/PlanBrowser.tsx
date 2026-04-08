@@ -218,15 +218,17 @@ export default function PlanBrowser({
             : "",
           cardInteractive && "cursor-pointer hover:-translate-y-1",
           isSelected
-            ? "border-2 border-orange-500 bg-[#16110d] shadow-[0_10px_40px_-10px_rgba(234,88,12,0.18)]"
+            ? "border-2 border-orange-500 bg-[#16110d]"
             : plan.mostPopular
-              ? "border-2 border-orange-500 bg-[#0f0f0f] shadow-[0_10px_40px_-10px_rgba(234,88,12,0.2)]"
-              : "border border-white/10 bg-[#0f0f0f] hover:border-orange-500/40"
+              ? "border-2 border-orange-500 bg-[#0f0f0f]"
+              : "border border-white/10 bg-[#0f0f0f] hover:border-orange-500/40",
+          isSelected && !plan.mostPopular && "shadow-[0_10px_40px_-10px_rgba(234,88,12,0.18)]",
+          plan.mostPopular && "plan-popular-inner-glow"
         )}
         style={{ animationDelay: `${index * 0.1}s` }}
       >
         {plan.mostPopular ? (
-          <div className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-3.5 py-1 shadow-[0_4px_14px_-2px_rgba(234,88,12,0.5)]">
+          <div className="absolute -top-3.5 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-3.5 py-1">
             <Sparkles className="h-3 w-3 shrink-0 text-white" />
             <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white">
               Most Popular
@@ -309,8 +311,10 @@ export default function PlanBrowser({
               "mt-auto w-full rounded-xl px-4 py-3 text-[13px] font-black uppercase tracking-widest transition-all",
               !cardInteractive
                 ? "cursor-not-allowed border border-white/10 bg-white/[0.03] text-slate-500"
-                : isSelected || plan.mostPopular
+                : isSelected
                   ? "bg-orange-600 text-white shadow-[0_4px_16px_rgba(234,88,12,0.3)] hover:bg-[#dc4e05]"
+                  : plan.mostPopular
+                    ? "bg-orange-600 text-white hover:bg-[#dc4e05]"
                   : "border border-orange-600/30 bg-orange-600/10 text-orange-500 hover:bg-orange-600/20"
             )}
           >

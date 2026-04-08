@@ -132,13 +132,20 @@ const AppRouter = () => (
       <Route path="/payments/esewa/failure/:paymentAttemptId" element={<EsewaPaymentCallback />} />
       <Route path="/payments/khalti/return" element={<KhaltiPaymentCallback />} />
       <Route path="/payments/khalti/return/:paymentAttemptId" element={<KhaltiPaymentCallback />} />
-      <Route path="/gym/:id" element={<GymProfile />} />
 
       <Route
         path="/payments"
         element={
           <ProtectedRoute>
             <Payments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/gym/:id"
+        element={
+          <ProtectedRoute>
+            <GymProfile />
           </ProtectedRoute>
         }
       />

@@ -16,7 +16,6 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Banknote,
   Check,
   CreditCard,
   Eye,
@@ -38,6 +37,7 @@ import {
 import { getAdminPayoutBatchesApi } from "@/features/admin/admin-settlement.api";
 import type { AdminPaymentHistoryItemResponse } from "@/features/admin/admin-payment.model";
 import type {
+  PayoutSettlementResponse,
   PayoutSettlementStatus,
 } from "@/features/admin/admin-settlement.model";
 import {
@@ -75,7 +75,7 @@ import {
 import { Tabs, TabsContent } from "@/shared/ui/tabs";
 import { cn } from "@/shared/lib/utils";
 
-/* ── Shared constants (mirrors ManageSettlements) ──────────────────── */
+/*  Shared constants (mirrors ManageSettlements)  */
 const FIRE = "var(--gradient-fire)";
 const fireStyle = {
   background: FIRE,
@@ -85,14 +85,14 @@ const fireStyle = {
 };
 
 const MG_TOOLBAR_BASE =
-  "flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all";
+  "flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform";
 const MG_FILTER_IDLE =
-  "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400";
-const MG_FILTER_ACTIVE = "bg-orange-500/10 border-orange-500/30 text-orange-400";
+  "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/20 hover:text-white hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)] hover:scale-[1.02] active:scale-[0.98]";
+const MG_FILTER_ACTIVE = "border-orange-500/50 bg-orange-500 text-white";
 const MG_REFRESH =
-  "flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all table-bg table-border table-text hover:text-white hover:border-white/20 disabled:opacity-50";
+  "flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white hover:border-white/20 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)] disabled:opacity-50";
 const MG_DIALOG_OUTLINE = `${MG_TOOLBAR_BASE} ${MG_FILTER_IDLE}`;
-const MG_DIALOG_CLEAR = `${MG_TOOLBAR_BASE} table-border table-bg table-text hover:border-orange-500/30 hover:text-orange-400`;
+const MG_DIALOG_CLEAR = `${MG_TOOLBAR_BASE} border-white/10 bg-white/[0.03] text-zinc-400 hover:border-orange-500/30 hover:text-orange-400`;
 
 const CHART_TOOLTIP = {
   contentStyle: {
@@ -121,7 +121,7 @@ const BATCH_SORTS: { key: BatchSortKey; label: string }[] = [
 
 type BatchStatusFilter = "ALL" | PayoutSettlementStatus;
 
-/* ── Helpers ────────────────────────────────────────────────────────── */
+/*  Helpers  */
 const formatMoney = (amount: number, currency?: string | null) => {
   const c = (currency?.trim() || "NPR");
   try {
@@ -132,9 +132,9 @@ const formatMoney = (amount: number, currency?: string | null) => {
 };
 
 const formatDateTime = (iso: string | null | undefined) => {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "-";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(d);
 };
 
@@ -150,6 +150,8 @@ function batchStatusClassName(status: PayoutSettlementStatus) {
   switch (status) {
     case "PAID":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+    case "APPROVED":
+      return "border-blue-500/30 bg-blue-500/10 text-blue-200";
     case "REJECTED":
     case "FAILED":
       return "border-red-500/30 bg-red-500/10 text-red-200";
@@ -171,7 +173,7 @@ function isInsideRadixPortalSurface(target: EventTarget | null): boolean {
   );
 }
 
-/* ── PaginationControls (mirrors ManageSettlements) ─────────────────── */
+/*  PaginationControls (mirrors ManageSettlements)  */
 function PaginationControls({
   page,
   totalPages,
@@ -200,7 +202,7 @@ function PaginationControls({
   return (
     <div className="flex items-center justify-between border-t table-border px-4 py-3">
       <p className="text-[12px] table-text-muted">
-        Page {page + 1} of {Math.max(totalPages, 1)} • {totalItems} total
+        Page {page + 1} of {Math.max(totalPages, 1)} - {totalItems} total
       </p>
       <div className="flex items-center gap-1.5">
         <Button
@@ -248,14 +250,14 @@ function PaginationControls({
   );
 }
 
-/* ── Types ──────────────────────────────────────────────────────────── */
+/*  Types  */
 type StatusFilter = "ALL" | PaymentStatus;
 type MethodFilter = "ALL" | PaymentMethod;
 type RevenueWindow = "ALL_TIME" | "THIS_MONTH";
 const DEFAULT_BATCH_FILTERS = { status: "ALL" as BatchStatusFilter };
 
 export default function ManagePayments() {
-  /* ── Subscription tab state ─────────────────────────────────────── */
+  /*  Subscription tab state  */
   const [searchInput, setSearchInput] = useState("");
   const [debounced, setDebounced] = useState("");
   const [page, setPage] = useState(0);
@@ -269,12 +271,13 @@ export default function ManagePayments() {
   const [revenueWindow, setRevenueWindow] = useState<RevenueWindow>("ALL_TIME");
   const [detail, setDetail] = useState<AdminPaymentHistoryItemResponse | null>(null);
 
-  /* ── Payouts tab state ───────────────────────────────────────────── */
+  /*  Payouts tab state  */
   const [batchPage, setBatchPage] = useState(0);
   const [batchStatus, setBatchStatus] = useState<BatchStatusFilter>(DEFAULT_BATCH_FILTERS.status);
   const [draftBatchStatus, setDraftBatchStatus] = useState<BatchStatusFilter>(DEFAULT_BATCH_FILTERS.status);
   const [batchFilterDialogOpen, setBatchFilterDialogOpen] = useState(false);
   const [batchSortIdx, setBatchSortIdx] = useState(0);
+  const [batchDetail, setBatchDetail] = useState<PayoutSettlementResponse | null>(null);
 
   const syncBatchDraftFromApplied = useCallback(() => {
     setDraftBatchStatus(batchStatus);
@@ -309,7 +312,7 @@ export default function ManagePayments() {
     if (key === "status") { setBatchStatus("ALL"); setBatchPage(0); }
   };
 
-  /* ── Subscription debounce + page reset ─────────────────────────── */
+  /*  Subscription debounce + page reset  */
   useEffect(() => {
     const id = window.setTimeout(() => setDebounced(searchInput.trim()), 300);
     return () => window.clearTimeout(id);
@@ -326,7 +329,7 @@ export default function ManagePayments() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  /* ── Queries ─────────────────────────────────────────────────────── */
+  /*  Queries  */
   const metricsQ = useQuery({
     queryKey: ["admin-payments", "metrics"],
     queryFn: getAdminPaymentMetricsApi,
@@ -373,7 +376,7 @@ export default function ManagePayments() {
 
   function batchGymIdKey() { return "all"; }
 
-  /* ── Derived ─────────────────────────────────────────────────────── */
+  /*  Derived  */
   const metrics = metricsQ.data;
   const currency = metrics?.currency ?? "NPR";
   const revenueMonthToDate = metrics?.totalRevenueCompletedMonthToDate ?? 0;
@@ -402,7 +405,7 @@ export default function ManagePayments() {
   const trendChartDisplay = useMemo(() => {
     if (trendQ.isLoading) return [];
     if (trendChartData.length > 0) return trendChartData;
-    return [{ label: "—", totalAmount: 0, isPlaceholder: true as const }];
+    return [{ label: "-", totalAmount: 0, isPlaceholder: true as const }];
   }, [trendChartData, trendQ.isLoading]);
 
   const items = historyQ.data?.items ?? [];
@@ -446,9 +449,9 @@ export default function ManagePayments() {
 
       <Tabs defaultValue="subscriptions">
 
-        {/* ══════════════════════════════════════════════════
-            TAB 1 — MEMBER PAYMENTS (subscription attempts)
-        ══════════════════════════════════════════════════ */}
+        {/* 
+            TAB 1  MEMBER PAYMENTS (subscription attempts)
+         */}
         <TabsContent value="subscriptions" className="mt-0 space-y-5">
           <p className="text-[13px] table-text-muted">
             Filters and search query the backend; the table is server-paged and server-filtered.
@@ -457,35 +460,41 @@ export default function ManagePayments() {
           {/* Charts strip */}
           <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-3 overflow-x-auto pb-1">
             {/* Revenue */}
-            <div className="flex flex-1 min-w-[140px] flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3.5">
+            <div className="flex flex-1 min-w-[130px] flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3">
               <div className="mb-2 flex w-full items-center justify-between gap-2 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-orange-400">Revenue</span>
-                <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+                <div className="inline-flex gap-[3px] rounded-full border border-white/10 bg-white/[0.02] p-[3px]">
                   <button type="button" onClick={() => setRevenueWindow("ALL_TIME")}
-                    className={cn("rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-colors",
-                      revenueWindow === "ALL_TIME" ? "bg-orange-500/25 text-orange-300" : "text-slate-400 hover:text-slate-200")}>
+                    className={cn("rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider",
+                      "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform",
+                      revenueWindow === "ALL_TIME" 
+                        ? "bg-orange-500 text-white" 
+                        : "text-zinc-400 hover:text-white hover:bg-white/[0.03] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]")}>
                     All time
                   </button>
                   <button type="button" onClick={() => setRevenueWindow("THIS_MONTH")}
-                    className={cn("rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wider transition-colors",
-                      revenueWindow === "THIS_MONTH" ? "bg-orange-500/25 text-orange-300" : "text-slate-400 hover:text-slate-200")}>
+                    className={cn("rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider",
+                      "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform",
+                      revenueWindow === "THIS_MONTH" 
+                        ? "bg-orange-500 text-white" 
+                        : "text-zinc-400 hover:text-white hover:bg-white/[0.03] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]")}>
                     This month
                   </button>
                 </div>
               </div>
               <div className="flex flex-1 flex-col items-center justify-center text-center">
-                <p className="mb-0.5 truncate text-[22px] font-black leading-tight text-white">
-                  {metricsQ.isLoading ? "—" : formatMoney(displayedRevenue, currency)}
+                <p className="mb-0.5 truncate text-[18px] font-black leading-tight text-white">
+                  {metricsQ.isLoading ? "-" : formatMoney(displayedRevenue, currency)}
                 </p>
                 <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                  {revenueWindow === "THIS_MONTH" ? "Month to date" : "All time"} · completed only
+                  {revenueWindow === "THIS_MONTH" ? "Month to date" : "All time"} - completed only
                 </p>
-                <p className="mt-1 text-[10px] text-slate-600">{metricsQ.isLoading ? "—" : secondaryRevenueLabel}</p>
+                <p className="mt-1 text-[10px] text-slate-600">{metricsQ.isLoading ? "-" : secondaryRevenueLabel}</p>
               </div>
             </div>
 
             {/* Gateways */}
-            <div className="flex flex-1 min-w-[170px] flex-col rounded-xl border table-border table-bg p-3.5">
+            <div className="flex flex-1 min-w-[160px] flex-col rounded-xl border table-border table-bg p-3">
               <div className="mb-2 flex w-full items-center justify-between gap-1.5 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Gateways</span>
                 <CreditCard className="h-3.5 w-3.5 text-orange-400/80" />
@@ -524,42 +533,43 @@ export default function ManagePayments() {
             </div>
 
             {/* Outcomes */}
-            <div className="flex flex-1 min-w-[140px] flex-col rounded-xl border border-slate-500/20 bg-slate-500/[0.06] p-3.5">
+            <div className="flex flex-1 min-w-[130px] flex-col rounded-xl border border-slate-500/20 bg-slate-500/[0.06] p-3">
               <div className="mb-2 flex w-full items-center justify-between gap-1.5 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Outcomes</span>
                 <Check className="h-3.5 w-3.5 text-emerald-400/80" />
               </div>
               <div className="flex flex-1 flex-col items-center justify-center gap-1.5 text-center">
-                <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[20px] font-black leading-none text-emerald-400">
-                  {metricsQ.isLoading ? "—" : (metrics?.completedPaymentCount ?? 0)}
+                <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[18px] font-black leading-none text-emerald-400">
+                  {metricsQ.isLoading ? "" : (metrics?.completedPaymentCount ?? 0)}
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">done</span>
                 </p>
                 <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[14px] font-black leading-none text-red-400/80">
-                  {metricsQ.isLoading ? "—" : (metrics?.failedPaymentCount ?? 0)}
+                  {metricsQ.isLoading ? "" : (metrics?.failedPaymentCount ?? 0)}
                   <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">failed</span>
                 </p>
                 <p className="flex flex-wrap items-baseline justify-center gap-1.5 text-[14px] font-black leading-none text-slate-400">
-                  {metricsQ.isLoading ? "—" : (metrics?.cancelledPaymentCount ?? 0)}
+                  {metricsQ.isLoading ? "" : (metrics?.cancelledPaymentCount ?? 0)}
                   <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">cancelled</span>
                 </p>
               </div>
             </div>
 
             {/* Revenue trend */}
-            <div className="flex min-w-[260px] flex-[0_0_35%] flex-col rounded-xl border table-border table-bg p-3.5">
+            <div className="flex min-w-[260px] flex-[0_0_35%] flex-col rounded-xl border table-border table-bg p-3">
               <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-2 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Trend</span>
-                <div className="inline-flex rounded-full border border-white/10 bg-white/[0.04] p-0.5">
+                <div className="inline-flex gap-[3px] rounded-full border border-white/10 bg-white/[0.02] p-[3px]">
                   {REVENUE_TREND_GRANULARITIES.map((granularity) => (
                     <button
                       key={granularity}
                       type="button"
                       onClick={() => setTrendGranularity(granularity)}
                       className={cn(
-                        "rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider transition-colors",
+                        "rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider",
+                        "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform",
                         trendGranularity === granularity
-                          ? "bg-orange-500/25 text-orange-300"
-                          : "text-slate-400 hover:text-slate-200"
+                          ? "bg-orange-500 text-white"
+                          : "text-zinc-400 hover:text-white hover:bg-white/[0.03] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
                       )}
                     >
                       {granularity === "WEEKLY" ? "Week" : granularity === "MONTHLY" ? "Month" : "Year"}
@@ -588,7 +598,7 @@ export default function ManagePayments() {
                       <YAxis tick={{ fill: "#737373", fontSize: 9 }} width={32}
                         tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))} domain={[0, "auto"]} />
                       <Tooltip formatter={(v: number) => formatMoney(v, currency)}
-                        labelFormatter={(label) => (String(label) === "—" ? "No data in range" : label)} {...CHART_TOOLTIP} />
+                        labelFormatter={(label) => (String(label) === "" ? "No data in range" : label)} {...CHART_TOOLTIP} />
                       <Area type="monotone" dataKey="totalAmount" stroke="#ea580c" strokeWidth={1.5}
                         fill="url(#adminPayRevenueFill)" isAnimationActive={false}
                         dot={trendGranularity === "WEEKLY" ? { r: 2.5, fill: "#ea580c", strokeWidth: 0 } : false} />
@@ -613,7 +623,7 @@ export default function ManagePayments() {
             <div className="relative max-w-[320px] flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 table-text-muted" />
               <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search email, invoice, gateway id…"
+                placeholder="Search email, invoice, gateway id"
                 className="w-full rounded-full border table-border table-bg py-2 pl-9 pr-4 text-[13px] font-medium text-white placeholder:table-text-muted outline-none transition-all focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)]" />
             </div>
             <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
@@ -644,7 +654,7 @@ export default function ManagePayments() {
                         <span className="min-w-0 truncate text-left text-[12px] font-semibold table-text">{label}</span>
                         <span className="flex shrink-0 items-center gap-1.5 tabular-nums">
                           <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-black text-slate-400">
-                            {metricsQ.isLoading ? "…" : (countFn(metrics) ?? "—")}
+                            {metricsQ.isLoading ? "..." : (countFn(metrics) ?? "-")}
                           </span>
                           {statusFilter === key && <Check className="h-3.5 w-3.5 text-orange-400" />}
                         </span>
@@ -661,7 +671,7 @@ export default function ManagePayments() {
                         <span className="text-[12px] font-semibold table-text">{label}</span>
                         <span className="flex shrink-0 items-center gap-1.5 tabular-nums">
                           <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-black text-slate-400">
-                            {metricsQ.isLoading ? "…" : (countFn(metrics) ?? "—")}
+                            {metricsQ.isLoading ? "..." : (countFn(metrics) ?? "-")}
                           </span>
                           {methodFilter === key && <Check className="h-3.5 w-3.5 text-orange-400" />}
                         </span>
@@ -708,7 +718,7 @@ export default function ManagePayments() {
                 {historyQ.isLoading ? (
                   <tr><td colSpan={9} className="py-16 text-center">
                     <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-orange-500" />
-                    <div className="text-[13px] table-text-muted">Loading payments…</div>
+                    <div className="text-[13px] table-text-muted">Loading payments</div>
                   </td></tr>
                 ) : items.length === 0 ? (
                   <tr><td colSpan={9} className="py-16 text-center">
@@ -723,17 +733,17 @@ export default function ManagePayments() {
                     <tr key={row.paymentAttemptId} className="table-border-row border-b transition-colors last:border-0 hover:bg-white/[0.025]">
                       <td className="px-3.5 py-3.5 pl-5" style={colStyle(0)}>
                         <div className="min-w-0">
-                          <div className="truncate text-[13px] font-bold text-white">{row.accountUserName?.trim() || "—"}</div>
+                          <div className="truncate text-[13px] font-bold text-white">{row.accountUserName?.trim() || "-"}</div>
                           <div className="mt-0.5 truncate text-[12px] font-medium text-slate-400">{row.accountEmail}</div>
                           <div className="truncate font-mono text-[10px] table-text-muted">#{row.accountId}</div>
                         </div>
                       </td>
-                      <td className="table-text-muted truncate px-3.5 py-3.5 font-mono text-[11px]" style={colStyle(1)}>{row.invoiceNumber ?? "—"}</td>
-                      <td className="truncate px-3.5 py-3.5 text-[12px] table-text" style={colStyle(2)}>{row.planName ?? "—"}</td>
+                      <td className="table-text-muted truncate px-3.5 py-3.5 font-mono text-[11px]" style={colStyle(1)}>{row.invoiceNumber ?? "-"}</td>
+                      <td className="truncate px-3.5 py-3.5 text-[12px] table-text" style={colStyle(2)}>{row.planName ?? "-"}</td>
                       <td className="px-3.5 py-3.5 align-top text-[11px] text-slate-300" style={colStyle(3)}>
-                        <p className="line-clamp-2 font-semibold text-white">{row.billingName?.trim() || "—"}</p>
-                        <p className="mt-0.5 line-clamp-2 text-[10px] text-slate-500">{[row.billingAddress, row.billingCity].filter(Boolean).join(", ") || "—"}</p>
-                        <p className="mt-0.5 text-[10px] text-slate-500">{row.billingPhoneNumber || ""}</p>
+                        <p className="line-clamp-2 font-semibold text-white">{row.billingName?.trim() || "-"}</p>
+                        <p className="mt-0.5 line-clamp-2 text-[10px] text-slate-500">{[row.billingAddress, row.billingCity].filter(Boolean).join(", ") || "-"}</p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">{row.billingPhoneNumber || "-"}</p>
                       </td>
                       <td className="px-3.5 py-3.5 text-[13px] font-bold text-white" style={colStyle(4)}>{formatMoney(row.totalAmount, row.currency)}</td>
                       <td className="px-3.5 py-3.5 text-[11px] font-semibold" style={colStyle(5)}>{getPaymentMethodLabel(row.paymentMethod)}</td>
@@ -766,7 +776,7 @@ export default function ManagePayments() {
           <div className="space-y-3 md:hidden">
             {historyQ.isLoading ? (
               <div className="flex items-center justify-center gap-2 py-12 text-[13px] table-text-muted">
-                <Loader2 className="h-5 w-5 animate-spin text-orange-500" /> Loading…
+                <Loader2 className="h-5 w-5 animate-spin text-orange-500" /> Loading...
               </div>
             ) : items.length === 0 ? (
               <div className="rounded-2xl border table-border table-bg px-4 py-10 text-center text-[13px] table-text-muted">No payments</div>
@@ -776,7 +786,7 @@ export default function ManagePayments() {
                   className="w-full rounded-2xl border table-border table-bg p-4 text-left transition-colors hover:table-bg-hover">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-[13px] font-bold text-white">{row.accountUserName?.trim() || "—"}</p>
+                      <p className="truncate text-[13px] font-bold text-white">{row.accountUserName?.trim() || "-"}</p>
                       <p className="mt-0.5 truncate text-[12px] font-medium text-slate-400">{row.accountEmail}</p>
                       <p className="mt-1 font-mono text-[11px] table-text-muted">{row.invoiceNumber ?? `#${row.paymentAttemptId}`}</p>
                       <p className="mt-2 text-[15px] font-black text-white">{formatMoney(row.totalAmount, row.currency)}</p>
@@ -785,7 +795,7 @@ export default function ManagePayments() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                     <span>{getPaymentMethodLabel(row.paymentMethod)}</span>
-                    <span>·</span>
+                    <span>-</span>
                     <span>{formatDateTime(row.paymentTime)}</span>
                   </div>
                 </button>
@@ -837,11 +847,11 @@ export default function ManagePayments() {
           </Dialog>
         </TabsContent>
 
-        {/* ══════════════════════════════════════════════════
-            TAB 2 — GYM PAYOUTS (payout settlement batches)
-        ══════════════════════════════════════════════════ */}
+        {/* 
+            TAB 2  GYM PAYOUTS (payout settlement batches)
+         */}
         <TabsContent value="payouts" className="mt-0 space-y-4">
-          {/* Toolbar — mirrors ManageSettlements batches toolbar */}
+          {/* Toolbar  mirrors ManageSettlements batches toolbar */}
           <div className="flex flex-wrap items-center gap-2">
             <button type="button"
               className={cn(MG_TOOLBAR_BASE, batchFilterDialogOpen ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}
@@ -873,7 +883,6 @@ export default function ManagePayments() {
                       <SelectTrigger className="h-9 border table-border table-bg text-white"><SelectValue /></SelectTrigger>
                       <SelectContent className="border table-border table-bg-alt text-white">
                         <SelectItem value="ALL">All</SelectItem>
-                        <SelectItem value="CREATED">Created</SelectItem>
                         <SelectItem value="GYM_REVIEW_PENDING">GYM_REVIEW_PENDING</SelectItem>
                         <SelectItem value="APPROVED">Approved</SelectItem>
                         <SelectItem value="PAID">Paid</SelectItem>
@@ -941,18 +950,18 @@ export default function ManagePayments() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
+                  <table className="w-full min-w-[1020px] table-fixed border-collapse text-left">
                     <thead>
                       <tr className="table-header-bg border-b table-border">
-                        <th scope="col" className="w-[7%] whitespace-nowrap px-3 py-3 pl-4 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Batch</th>
-                        <th scope="col" className="w-[18%] px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Gym</th>
-                        <th scope="col" className="w-[15%] whitespace-nowrap px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Created</th>
-                        <th scope="col" className="w-[8%] whitespace-nowrap px-3 py-3 text-right align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Settlements</th>
-                        <th scope="col" className="w-[12%] whitespace-nowrap px-3 py-3 text-right align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Gross Amount</th>
-                        <th scope="col" className="w-[12%] whitespace-nowrap px-3 py-3 text-right align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Net Amount</th>
-                        <th scope="col" className="w-[14%] px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Reference</th>
-                        <th scope="col" className="w-[10%] whitespace-nowrap px-3 py-3 text-center align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Proof</th>
-                        <th scope="col" className="w-[14%] whitespace-nowrap px-3 py-3 pr-4 text-right align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Status</th>
+                        <th scope="col" className="w-[5%] whitespace-nowrap px-3 py-3 pl-4 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Batch</th>
+                        <th scope="col" className="w-[14%] px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Gym</th>
+                        <th scope="col" className="w-[10%] whitespace-nowrap px-3 py-3 text-right align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Net Amount</th>
+                        <th scope="col" className="w-[11%] whitespace-nowrap px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Created</th>
+                        <th scope="col" className="w-[11%] whitespace-nowrap px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Paid by</th>
+                        <th scope="col" className="w-[11%] whitespace-nowrap px-3 py-3 text-left align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Paid at</th>
+                        <th scope="col" className="w-[7%] whitespace-nowrap px-3 py-3 text-center align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Proof</th>
+                        <th scope="col" className="w-[13%] whitespace-nowrap px-3 py-3 text-center align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Status</th>
+                        <th scope="col" className="w-[10%] whitespace-nowrap px-3 py-3 pr-4 text-center align-middle text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="text-[12px] font-semibold text-zinc-200">
@@ -973,37 +982,46 @@ export default function ManagePayments() {
                                 {batch.gymName ?? `Gym #${batch.gymId}`}
                               </span>
                             </td>
-                            <td className="whitespace-nowrap px-3 py-3 align-middle text-[12px] table-text-muted">
-                              {formatDateTime(batch.createdAt)}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-3 text-right align-middle tabular-nums">
-                              {batch.settlementCount}
-                            </td>
-                            <td className="whitespace-nowrap px-3 py-3 text-right align-middle text-[13px] font-bold tabular-nums text-white">
-                              {formatMoney(batch.grossAmount, batch.currency)}
-                            </td>
                             <td className="whitespace-nowrap px-3 py-3 text-right align-middle text-[13px] font-bold tabular-nums text-emerald-300">
                               {formatMoney(batch.netAmount, batch.currency)}
                             </td>
-                            <td className="max-w-0 px-3 py-3 align-middle font-mono text-[11px] text-slate-300">
-                              <span className="block truncate" title={batch.transactionReference ?? undefined}>
-                                {batch.transactionReference || "—"}
-                              </span>
+                            <td className="whitespace-nowrap px-3 py-3 align-middle text-[11px] table-text-muted">
+                              {formatDateTime(batch.createdAt)}
+                            </td>
+                            <td className="max-w-0 px-3 py-3 align-middle text-[11px] text-zinc-400">
+                              <span className="block truncate">{batch.paidByName || "-"}</span>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 align-middle text-[11px] table-text-muted">
+                              {formatDateTime(batch.paidAt)}
                             </td>
                             <td className="whitespace-nowrap px-3 py-3 text-center align-middle">
                               {batch.proofUrl ? (
                                 <a href={batch.proofUrl} target="_blank" rel="noopener noreferrer"
                                   className="inline-block text-orange-300 underline decoration-orange-500/40 underline-offset-2 hover:text-orange-200">
-                                  View receipt
+                                  View
                                 </a>
                               ) : (
-                                <span className="text-[11px] font-medium text-amber-500/90">Missing</span>
+                                <span className="text-[10px] font-medium text-zinc-600">-</span>
                               )}
                             </td>
-                            <td className="px-3 py-3 pr-4 text-right align-middle">
-                              <span className={`inline-flex max-w-full justify-end whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${batchStatusClassName(batch.status)}`}>
-                                {batch.status}
+                            <td className="px-3 py-3 text-center align-middle">
+                              <span className={`inline-flex max-w-full whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${batchStatusClassName(batch.status)}`}>
+                                {batch.status.replace(/_/g, " ")}
                               </span>
+                            </td>
+                            <td className="px-3 py-3 pr-4 text-center align-middle">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button type="button" className="rounded p-1 transition-colors hover:bg-white/10">
+                                    <MoreVertical className="h-4 w-4 text-zinc-400" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="border table-border table-bg-alt text-white">
+                                  <DropdownMenuItem onClick={() => setBatchDetail(batch)}>
+                                    <Eye className="mr-2 h-3.5 w-3.5" /> View details
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         ))
@@ -1025,6 +1043,53 @@ export default function ManagePayments() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/*  Batch Detail Dialog  */}
+      <Dialog open={!!batchDetail} onOpenChange={(o) => { if (!o) setBatchDetail(null); }}>
+        <DialogContent className="max-w-lg border-zinc-700/50 bg-zinc-900 text-white sm:rounded-2xl"
+          onPointerDownOutside={(e) => { if (isInsideRadixPortalSurface(e.target)) e.preventDefault(); }}>
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold">Payout Batch #{batchDetail?.payoutSettlementId}</DialogTitle>
+          </DialogHeader>
+          {batchDetail && (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <DetailRow label="Gym" value={batchDetail.gymName ?? `#${batchDetail.gymId}`} />
+              <DetailRow label="Status" value={batchDetail.status.replace(/_/g, " ")} />
+              <DetailRow label="Net Amount" value={formatMoney(batchDetail.netAmount, batchDetail.currency)} />
+              <DetailRow label="Gross Amount" value={formatMoney(batchDetail.grossAmount, batchDetail.currency)} />
+              <DetailRow label="Commission" value={formatMoney(batchDetail.commissionAmount, batchDetail.currency)} />
+              <DetailRow label="Settlements" value={String(batchDetail.settlementCount)} />
+              <DetailRow label="Created" value={formatDateTime(batchDetail.createdAt)} />
+              <DetailRow label="Created by" value={batchDetail.createdByName ?? "-"} />
+              <DetailRow label="Paid at" value={formatDateTime(batchDetail.paidAt)} />
+              <DetailRow label="Paid by" value={batchDetail.paidByName ?? "-"} />
+              <DetailRow label="Gym reviewed" value={formatDateTime(batchDetail.gymReviewedAt)} />
+              <DetailRow label="Reference" value={batchDetail.transactionReference ?? "-"} />
+              <DetailRow label="Wallet" value={batchDetail.walletIdentifierSnapshot || "-"} />
+              <DetailRow label="Provider" value={batchDetail.provider || "-"} />
+              {batchDetail.note && <div className="col-span-2"><DetailRow label="Note" value={batchDetail.note} /></div>}
+              {batchDetail.proofUrl && (
+                <div className="col-span-2 pt-1">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Proof</p>
+                  <a href={batchDetail.proofUrl} target="_blank" rel="noopener noreferrer">
+                    <img src={batchDetail.proofUrl} alt="proof" className="max-h-48 rounded-lg border border-zinc-700/50 object-contain" />
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="mt-0.5 text-sm text-zinc-200">{value}</p>
+    </div>
+  );
+}
+

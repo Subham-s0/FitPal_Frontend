@@ -20,6 +20,7 @@ import { ProfileMembershipTab } from "@/features/profile/components/ProfileMembe
 import { QuickStats } from "@/features/profile/components/QuickStats";
 import type { UserProfileResponse } from "@/features/profile/model";
 import "@/shared/lib/animations.css";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 
 type ProfileTab = "profile" | "membership" | "goals";
 
@@ -145,35 +146,38 @@ const ProfileContainer = () => {
         headerClassName="max-sm:hidden"
       >
         {/* Tab Navigation */}
-        <nav className="mb-5 flex border-b border-white/10 px-2 max-sm:-mx-4 max-sm:-mt-5 sm:mb-6 sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
-          {(
-            [
-              { id: "profile", label: "Profile", mobileLabel: "Profile", icon: User },
-              { id: "membership", label: "Membership", mobileLabel: "Plan", icon: Gem },
-              { id: "goals", label: "Fitness Goals", mobileLabel: "Goals", icon: Target },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setTab(tab.id)}
-              className={cn(
-                "relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider transition-all duration-300 sm:rounded-full sm:py-2.5 sm:text-[10px]",
-                activeTab === tab.id
-                  ? "text-orange-500 sm:bg-orange-600 sm:text-white"
-                  : "text-slate-400 hover:text-white sm:hover:bg-white/5"
-              )}
-            >
-              <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="sm:hidden">{tab.mobileLabel}</span>
-              <span className="hidden sm:inline">{tab.label}</span>
-              {/* Mobile Active Indicator Line */}
-              {activeTab === tab.id && (
-                <div className="absolute inset-x-0 bottom-0 h-[2px] bg-orange-500 sm:hidden" />
-              )}
-            </button>
-          ))}
-        </nav>
+        <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="mb-5 sm:mb-6">
+          <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 max-sm:-mx-4 max-sm:-mt-5 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+            {(
+              [
+                { id: "profile", label: "Profile", mobileLabel: "Profile", icon: User },
+                { id: "membership", label: "Membership", mobileLabel: "Plan", icon: Gem },
+                { id: "goals", label: "Fitness Goals", mobileLabel: "Goals", icon: Target },
+              ] as const
+            ).map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className={cn(
+                  "group relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider",
+                  "text-slate-400 hover:text-white sm:flex-initial sm:rounded-full sm:px-5 sm:py-2.5 sm:text-[10px]",
+                  "sm:hover:bg-white/5",
+                  "data-[state=active]:text-orange-500 data-[state=active]:sm:bg-orange-600 data-[state=active]:sm:text-white",
+                  "focus-visible:ring-0 focus-visible:ring-offset-0",
+                )}
+              >
+                <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="sm:hidden">{tab.mobileLabel}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+                {/* Mobile Active Indicator Line */}
+                <span
+                  className="absolute inset-x-0 bottom-0 hidden h-[2px] bg-orange-500 group-data-[state=active]:block sm:!hidden"
+                  aria-hidden
+                />
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {/* Mobile Profile Header - Shows on mobile/tablet */}
         {activeTab === "profile" && (

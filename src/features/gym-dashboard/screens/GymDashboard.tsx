@@ -9,7 +9,6 @@ import GymQRPage from "@/features/gym-dashboard/screens/GymQRPage";
 import GymMembersPage from "@/features/gym-dashboard/screens/GymMembersPage";
 import GymRevenuePage from "@/features/gym-dashboard/screens/GymRevenuePage";
 import GymInsightsPage from "@/features/gym-dashboard/screens/GymInsightsPage";
-import GymEquipmentPage from "@/features/gym-dashboard/screens/GymEquipmentPage";
 import GymReviewsPage from "@/features/gym-dashboard/screens/GymReviewsPage";
 import GymNoticesPage from "@/features/gym-dashboard/screens/GymNoticesPage";
 import GymSettingsPage from "@/features/gym-dashboard/screens/GymSettingsPage";
@@ -21,7 +20,6 @@ const PAGE_MAP: Record<GymPageId, FC> = {
   members: GymMembersPage,
   revenue: GymRevenuePage,
   insights: GymInsightsPage,
-  equipment: GymEquipmentPage,
   reviews: GymReviewsPage,
   notices: GymNoticesPage,
   settings: GymSettingsPage,

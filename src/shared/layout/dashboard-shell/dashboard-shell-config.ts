@@ -38,7 +38,6 @@ const GYM_NAV_ITEMS: DashboardNavItem[] = [
   { id: "members",   label: "Members",        icon: Users },
   { id: "revenue",   label: "Revenue",        icon: DollarSign },
   { id: "insights",  label: "Insights",       icon: ChartColumnBig },
-  { id: "equipment", label: "Equipment",      icon: Dumbbell },
   { id: "reviews",   label: "Reviews",        icon: MessageSquare },
 ];
 
@@ -49,7 +48,8 @@ const ADMIN_NAV_ITEMS: DashboardNavItem[] = [
   { id: "plans", label: "Plans", icon: ClipboardList },
   { id: "payments", label: "Payments", icon: ChartColumnBig },
   { id: "settlements", label: "Settlements", icon: CalendarRange },
-  { id: "notices", label: "Notices", icon: Bell },
+  { id: "notices", label: "Notices", icon: Bell }
+  
 ];
 
 export const getDashboardRole = (role: string | null | undefined): DashboardShellRole => {

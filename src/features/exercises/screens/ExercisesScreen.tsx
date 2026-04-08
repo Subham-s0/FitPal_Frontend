@@ -1427,7 +1427,7 @@ const ExercisesScreen = () => {
                       <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4">
                         <div>
                           <p className="text-[10px] font-black uppercase text-white">Dec 15, 2023</p>
-                          <p className="mt-1 text-[9px] font-bold uppercase text-gray-600">4 Sets â€¢ 12 Reps</p>
+                          <p className="mt-1 text-[9px] font-bold uppercase text-gray-600">4 Sets - 12 Reps</p>
                         </div>
                         <p className="text-lg font-black text-orange-600">
                           80.0<span className="ml-1 text-[10px]">KG</span>
@@ -1436,7 +1436,7 @@ const ExercisesScreen = () => {
                       <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4 opacity-60">
                         <div>
                           <p className="text-[10px] font-black uppercase text-white">Dec 08, 2023</p>
-                          <p className="mt-1 text-[9px] font-bold uppercase text-gray-600">4 Sets â€¢ 10 Reps</p>
+                          <p className="mt-1 text-[9px] font-bold uppercase text-gray-600">4 Sets - 10 Reps</p>
                         </div>
                         <p className="text-lg font-black text-orange-600">
                           77.5<span className="ml-1 text-[10px]">KG</span>
