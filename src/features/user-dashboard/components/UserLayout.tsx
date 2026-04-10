@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuthState } from "@/features/auth/hooks";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { getDisplayNameFromEmail } from "@/shared/layout/dashboard-shell";
 import { ActiveSessionBar } from "@/features/workout-sessions/components/ActiveSessionBar";
 
@@ -34,6 +35,7 @@ const DESKTOP_NAV_ITEMS: UserLayoutSection[] = [
   { id: "routines", label: "Routines", icon: ClipboardList },
   { id: "exercises", label: "Exercises", icon: Dumbbell },
   { id: "workouts", label: "Workouts", icon: Activity },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "membership", label: "Membership", icon: Gem },
 ];
 
@@ -45,6 +47,7 @@ const MOBILE_DRAWER_ITEMS: UserLayoutSection[] = [
   { id: "routines", label: "Routines", icon: ClipboardList },
   { id: "exercises", label: "Exercises", icon: Dumbbell },
   { id: "workouts", label: "Workouts", icon: Activity },
+  { id: "notifications", label: "Notifications", icon: Bell },
   { id: "membership", label: "Membership", icon: Gem },
   { id: "profile", label: "Profile", icon: User },
 ];
@@ -70,6 +73,7 @@ const COMPACT_MOBILE_BOTTOM_DOCK_SECTIONS = new Set([
   "profile",
   "settings",
   "membership",
+  "notifications",
   "workouts",
 ]);
 
@@ -184,13 +188,11 @@ const UserLayout = ({
 
         <div className="flex items-center gap-3 md:gap-4">
           {/* Notifications */}
-          <button
-            type="button"
-            className="relative rounded-full border-none bg-transparent p-2"
-          >
-            <Bell size={20} className="text-gray-400 md:h-6 md:w-6" />
-            <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-orange-600" />
-          </button>
+          <NotificationBell
+            buttonClassName="rounded-full border-none bg-transparent p-2 hover:bg-transparent"
+            iconClassName="h-5 w-5 text-gray-400 md:h-6 md:w-6"
+            badgeClassName="right-0 top-0"
+          />
 
           {/* Desktop Check In button */}
           <button

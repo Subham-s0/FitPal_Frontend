@@ -35,12 +35,12 @@ import {
 
 import { DefaultLayout } from "@/shared/layout/dashboard-shell";
 import ManageGyms from "@/features/admin/components/ManageGyms";
-import ManageNotices from "@/features/admin/components/ManageNotices";
 import ManagePayments from "@/features/admin/components/ManagePayments";
 import ManagePlans from "@/features/admin/components/ManagePlans";
 import ManageSettlements from "@/features/admin/components/ManageSettlements";
 import ManageUsers from "@/features/admin/components/ManageUsers";
 import AdminSettings from "@/features/admin/components/AdminSettings";
+import AdminAnnouncementsPage from "@/features/announcements/components/AdminAnnouncementsPage";
 import {
   getDashboardSnapshotApi,
   getDashboardRevenueApi,
@@ -69,7 +69,7 @@ type AdminSection =
   | "plans"
   | "payments"
   | "settlements"
-  | "notices"
+  | "announcements"
   | "settings";
 
 type RevenueWindow = "THIS_MONTH" | "ALL_TIME";
@@ -1107,7 +1107,7 @@ const AdminDashboard = () => {
     value === "plans" ||
     value === "payments" ||
     value === "settlements" ||
-    value === "notices" ||
+    value === "announcements" ||
     value === "settings"
       ? value
       : "home";
@@ -1133,8 +1133,8 @@ const AdminDashboard = () => {
         return <ManagePayments />;
       case "settlements":
         return <ManageSettlements />;
-      case "notices":
-        return <ManageNotices />;
+      case "announcements":
+        return <AdminAnnouncementsPage />;
       case "settings":
         return (
           <div className="mx-auto max-w-[1400px]">

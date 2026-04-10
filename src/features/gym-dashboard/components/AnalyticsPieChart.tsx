@@ -103,28 +103,28 @@ const AnalyticsPieChart: FC<AnalyticsPieChartProps> = ({
           </PieChart>
         </ResponsiveContainer>
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-          <p className="text-[21px] font-black leading-none text-white">{centerLabel}</p>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+          <p className="text-[18px] font-black leading-none text-white">{centerLabel}</p>
           {centerSubLabel ? (
-            <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400">
+            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-zinc-400">
               {centerSubLabel}
             </p>
           ) : null}
         </div>
       </div>
 
-      <div className="grid w-full max-w-[240px] gap-2">
+      <div className="grid w-full max-w-[240px] gap-1.5">
         {data.map((item) => (
           <div
             key={item.label}
-            className="flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"
+            className="flex items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.02] px-2.5 py-1.5"
           >
             <span
-              className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+              className="h-2 w-2 flex-shrink-0 rounded-full"
               style={{ backgroundColor: item.color }}
             />
             <div className="min-w-0">
-              <p className="truncate text-[12px] font-semibold text-white">{item.label}</p>
+              <p className="truncate text-[11px] font-semibold text-white">{item.label}</p>
               {item.meta ? <p className="text-[10px] text-zinc-400">{item.meta}</p> : null}
             </div>
             <p className="ml-auto text-[11px] font-black text-white">{item.value}</p>

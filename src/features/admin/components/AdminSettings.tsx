@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   AlertCircle, ArrowUpRight, Cog, ChevronDown, ChevronRight,
   DollarSign, Edit2, FileText, Info, LayoutGrid, Loader2,
-  Megaphone, RefreshCcw, Save, Shield, Zap, Lock, Unlock,
+  RefreshCcw, Save, Shield, Zap, Lock, Unlock,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -42,8 +42,7 @@ function OverviewContent({ onOpenTab, onOpenCms }: {
 }) {
   const links: { label: string; desc: string; icon: React.ElementType; accent: string; action: () => void }[] = [
     { label: "App Rules", desc: "Billing, timezone, and door access settings", icon: Cog, accent: "border-orange-500/25 bg-orange-500/[0.07] text-orange-400", action: () => onOpenTab("app-rules") },
-    { label: "CMS Management", desc: "Guides, testimonials, FAQs, features", icon: FileText, accent: "border-blue-500/25 bg-blue-500/[0.07] text-blue-400", action: onOpenCms },
-    { label: "Announcements", desc: "Publish platform-wide notices", icon: Megaphone, accent: "border-red-500/25 bg-red-500/[0.07] text-red-400", action: onOpenCms },
+    { label: "CMS Management", desc: "Guides, testimonials, FAQs, features, and stats", icon: FileText, accent: "border-blue-500/25 bg-blue-500/[0.07] text-blue-400", action: onOpenCms },
   ];
   return (
     <div className="space-y-5 animate-fade-in">
@@ -384,7 +383,7 @@ type SettingsItem = {
 const SETTINGS_ITEMS: SettingsItem[] = [
   { id: "overview", label: "Overview", description: "Quick-access to all settings modules.", icon: LayoutGrid },
   { id: "app-rules", label: "Application Rules", description: "Currency, commission, timezone, and door access timing.", icon: Cog },
-  { id: "cms", label: "CMS Management", description: "How-to guides, testimonials, features, FAQs, and announcements.", icon: FileText },
+  { id: "cms", label: "CMS Management", description: "How-to guides, testimonials, features, FAQs, and stats.", icon: FileText },
 ];
 
 /* ─── Admin Settings shell ───────────────────────────────────────────── */

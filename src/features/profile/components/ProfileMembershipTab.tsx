@@ -46,7 +46,7 @@ export function ProfileMembershipTab({
 
   return (
     <div className="animate-fade-in space-y-5 sm:space-y-6">
-      <div className="rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-7">
+      <div className="rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-7">
         <SectionLabel>Membership</SectionLabel>
         {subscription ? (
           <>
@@ -96,7 +96,7 @@ function MembershipCard({ subscription, onViewDetails, onViewPlans }: Membership
             {subscription.planType} · {subscription.billingCycle}
           </p>
         </div>
-        <span className="self-start rounded-full border table-border table-bg-alt px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-white sm:text-[10px]">
+        <span className="self-start rounded-full border table-border user-surface-soft px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-white sm:text-[10px]">
           {subscription.subscriptionStatus}
         </span>
       </div>
@@ -110,7 +110,7 @@ function MembershipCard({ subscription, onViewDetails, onViewPlans }: Membership
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-[14px] border table-border table-bg-alt p-3.5 text-center transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] shadow-sm"
+            className="rounded-[14px] border table-border user-surface-soft p-3.5 text-center transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] shadow-sm"
           >
             <p className="text-[9px] font-black uppercase tracking-[0.14em] table-text-muted">
               {item.label}
@@ -134,7 +134,7 @@ function MembershipCard({ subscription, onViewDetails, onViewPlans }: Membership
           type="button"
           onClick={onViewPlans}
           aria-label="View all available plans"
-          className="rounded-full border table-border table-bg-alt px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+          className="rounded-full border table-border user-surface-soft px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
         >
           View Plans
         </button>
@@ -150,19 +150,19 @@ interface MembershipStatsProps {
 function MembershipStats({ subscription }: MembershipStatsProps) {
   return (
     <div className="mt-5 grid gap-3 sm:grid-cols-3">
-      <div className="rounded-[18px] border table-border table-bg-alt px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+      <div className="rounded-[18px] border table-border user-surface-soft px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Status</p>
         <p className="mt-1 text-[15px] font-black text-white">
           {subscription.hasActiveSubscription ? "Active" : "Pending"}
         </p>
       </div>
-      <div className="rounded-[18px] border table-border table-bg-alt px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+      <div className="rounded-[18px] border table-border user-surface-soft px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Auto Renew</p>
         <p className="mt-1 text-[15px] font-black text-white">
           {subscription.autoRenew ? "Enabled" : "Disabled"}
         </p>
       </div>
-      <div className="rounded-[18px] border table-border table-bg-alt px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+      <div className="rounded-[18px] border table-border user-surface-soft px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
         <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Discount</p>
         <p className="mt-1 text-[15px] font-black text-white">
           {subscription.discountAmount > 0
@@ -188,7 +188,7 @@ function MembershipFeatures({ features }: MembershipFeaturesProps) {
         {features.map((feature, i) => (
           <li
             key={i}
-            className="flex items-center gap-3.5 rounded-[14px] border table-border table-bg p-3.5 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+            className="flex items-center gap-3.5 rounded-[14px] border table-border user-surface p-3.5 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
           >
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-orange-500/20 bg-orange-500/10 shadow-[0_0_10px_rgba(249,115,22,0.2)]">
               <Check className="h-3.5 w-3.5 text-orange-400 stroke-[3px]" />
@@ -207,7 +207,7 @@ interface NoSubscriptionCardProps {
 
 function NoSubscriptionCard({ onViewPlans }: NoSubscriptionCardProps) {
   return (
-    <div className="flex flex-col items-center rounded-[18px] border table-border table-bg-alt p-10 text-center shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+    <div className="flex flex-col items-center rounded-[18px] border table-border user-surface-soft p-10 text-center shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-orange-500/20 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
         <Gem className="h-8 w-8 text-orange-500" />
       </div>

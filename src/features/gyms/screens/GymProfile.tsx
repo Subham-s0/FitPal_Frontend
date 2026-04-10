@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { ArrowUpDown, Bookmark, ChevronLeft, ChevronRight, Loader2, MapPin, MoreVertical, Pencil, RefreshCw, Search, Send, ShieldCheck, SlidersHorizontal, Star, Trash2 } from "lucide-react";
+import { ArrowUpDown, Bookmark, ChevronDown, ChevronLeft, ChevronRight, Loader2, MapPin, MessageSquareReply, MoreVertical, Pencil, RefreshCw, Search, Send, ShieldCheck, SlidersHorizontal, Star, Trash2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -247,6 +247,14 @@ const GymProfile = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isDeletingReview, setIsDeletingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [expandedReplyIds, setExpandedReplyIds] = useState<Set<number>>(new Set());
+  const toggleReply = useCallback((id: number) => {
+    setExpandedReplyIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
   const [isDesktopGallery, setIsDesktopGallery] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return window.matchMedia("(min-width: 768px)").matches;
@@ -681,15 +689,29 @@ const GymProfile = () => {
     navigate("/dashboard", { state: { activeSection: section } });
   };
 
+  const handleBackToList = () => {
+    if (dashboardRole === "ADMIN") {
+      navigate("/admin/dashboard", { state: { activeSection: "gyms" } });
+      return;
+    }
+
+    if (dashboardRole === "USER") {
+      navigate("/dashboard", { state: { activeSection: "gyms" } });
+      return;
+    }
+
+    navigate("/dashboard", { state: { activeSection: activeSection } });
+  };
+
   const renderEmptyState = (title: string, description: string, retry = false) => (
-    <div className="mx-auto mt-12 max-w-xl rounded-3xl border border-white/10 bg-[#101010]/80 p-8 text-center">
+    <div className="mx-auto mt-12 max-w-xl rounded-3xl border border-white/10 user-surface-overlay p-8 text-center">
       <h2 className="text-xl font-black uppercase tracking-tight text-white">{title}</h2>
       <p className="mt-2 text-sm text-gray-400">{description}</p>
       <div className="mt-6 flex justify-center gap-3">
         <button
           type="button"
-          onClick={() => navigate(-1)}
-          className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white/[0.08]"
+          onClick={handleBackToList}
+          className="rounded-xl border border-white/10 user-surface-muted px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white hover:bg-white/[0.08]"
         >
           Go Back
         </button>
@@ -711,7 +733,7 @@ const GymProfile = () => {
     <div className="flex flex-col text-[13px]">
       <button
         type="button"
-        onClick={() => navigate(-1)}
+        onClick={handleBackToList}
         className="mb-6 flex w-fit items-center gap-2 text-gray-500 transition-colors hover:text-orange-600"
       >
         <ChevronLeft className="h-5 w-5" strokeWidth={3} />
@@ -719,7 +741,7 @@ const GymProfile = () => {
       </button>
 
       {isLoading ? (
-        <div className="flex min-h-[320px] items-center justify-center rounded-3xl border border-white/10 bg-[#101010]/80">
+        <div className="flex min-h-[320px] items-center justify-center rounded-3xl border border-white/10 user-surface-overlay">
           <div className="inline-flex items-center gap-2 text-sm font-bold text-gray-300">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading gym profile...
@@ -824,7 +846,7 @@ const GymProfile = () => {
                   )}
                 </div>
               ) : (
-                <div className="flex h-[280px] md:h-[320px] w-full items-center justify-center rounded-[1.5rem] border border-white/10 bg-[#0f0f0f] text-sm font-bold text-gray-500">
+                <div className="flex h-[280px] md:h-[320px] w-full items-center justify-center rounded-[1.5rem] border border-white/10 user-surface-strong text-sm font-bold text-gray-500">
                   No gallery photos uploaded yet.
                 </div>
               )}
@@ -832,7 +854,7 @@ const GymProfile = () => {
 
             <div className="grid grid-cols-12 gap-8">
               <div className="col-span-12 flex flex-col gap-6 lg:col-span-8">
-                <div className="rounded-[2rem] border border-white/10 bg-[#111]/85 p-6">
+                <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">
@@ -888,15 +910,15 @@ const GymProfile = () => {
                   </div>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
+                    <div className="rounded-xl border border-white/8 user-surface-soft px-4 py-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.16em] text-gray-500">Hours</p>
                       <p className="mt-1 text-xs font-bold text-white">{formatOperatingWindow(profile.opensAt, profile.closesAt)}</p>
                     </div>
-                    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
+                    <div className="rounded-xl border border-white/8 user-surface-soft px-4 py-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.16em] text-gray-500">Access Tier</p>
                       <p className="mt-1 text-xs font-bold text-white">{profile.minimumAccessTier ?? "-"}</p>
                     </div>
-                    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
+                    <div className="rounded-xl border border-white/8 user-surface-soft px-4 py-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.16em] text-gray-500">Distance</p>
                       <p className={cn("mt-1 text-xs font-bold", getDistanceToneClass(profileView.distanceMeters))}>
                         {formatDistance(profileView.distanceMeters)}
@@ -905,7 +927,7 @@ const GymProfile = () => {
                   </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/10 bg-[#111]/85 p-6">
+                <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Live Occupancy</h3>
                   <div className="mt-4 flex items-end gap-3">
                     <div>
@@ -930,24 +952,24 @@ const GymProfile = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/10 bg-[#111]/85 p-6">
+                <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">About Facility</h3>
                   <p className="mt-3 text-[13px] leading-relaxed text-gray-300">
                     {profile.description?.trim() || "No description available."}
                   </p>
                   <div className="mt-5 grid gap-3 md:grid-cols-2">
-                    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-[13px] text-gray-300">
+                    <div className="rounded-xl border border-white/8 user-surface-soft px-4 py-3 text-[13px] text-gray-300">
                       <p><span className="text-gray-500">Established:</span> {profile.establishedAt ?? "-"}</p>
                       <p><span className="text-gray-500">Phone:</span> {profile.phoneNo ?? "-"}</p>
                     </div>
-                    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-[13px] text-gray-300">
+                    <div className="rounded-xl border border-white/8 user-surface-soft px-4 py-3 text-[13px] text-gray-300">
                       <p><span className="text-gray-500">Email:</span> {profile.contactEmail ?? "-"}</p>
                       <p><span className="text-gray-500">Website:</span> {profile.websiteUrl ?? "-"}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/10 bg-[#111]/85 p-6">
+                <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Gym Reviews</h3>
                     <div className="flex items-center gap-4">
@@ -960,7 +982,7 @@ const GymProfile = () => {
                         <button
                           type="button"
                           onClick={openCreateReviewForm}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-orange-300 transition-colors hover:bg-orange-500/20"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-orange-300/40 bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-[0_12px_28px_rgba(249,115,22,0.24)] transition-all hover:scale-[1.01] hover:brightness-110"
                         >
                           <Star className="h-3 w-3" />
                           Write Review
@@ -1010,7 +1032,7 @@ const GymProfile = () => {
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
                         placeholder="Tell others about your experience (optional)..."
-                        className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-orange-500/50 focus:outline-none focus:ring-0 resize-none"
+                        className="w-full rounded-lg border border-white/10 user-surface-muted px-3 py-2.5 text-sm text-white placeholder:text-gray-500 focus:border-orange-500/50 focus:outline-none focus:ring-0 resize-none"
                         rows={3}
                       />
                       
@@ -1046,16 +1068,16 @@ const GymProfile = () => {
                             value={reviewsQuery}
                             onChange={(e) => setReviewsQuery(e.target.value)}
                             placeholder="Search reviews..."
-                            className="h-[34px] w-full rounded-full border border-white/10 bg-white/[0.03] pl-9 pr-3 text-[12px] text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-orange-500/40"
+                            className="h-[34px] w-full rounded-full border border-white/10 user-surface-muted pl-9 pr-3 text-[12px] text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-orange-500/40"
                           />
                         </div>
                         <div ref={sortRef} className="relative">
                           <button type="button" onClick={() => setSortOpen(v => !v)}
-                                  className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${sortOpen ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"}`}>
+                                  className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${sortOpen ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "user-surface table-border table-text hover:border-orange-500/30 hover:text-orange-400"}`}>
                             <ArrowUpDown className="w-3.5 h-3.5" />Sort
                           </button>
                           {sortOpen && (
-                            <div className="absolute top-[calc(100%+8px)] right-0 table-bg table-border border rounded-2xl p-1.5 min-w-[160px] z-50 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
+                            <div className="absolute top-[calc(100%+8px)] right-0 user-surface table-border border rounded-2xl p-1.5 min-w-[160px] z-50 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
                               <div className="text-[8px] font-black uppercase tracking-widest table-text-muted px-2.5 py-2">Sort by date</div>
                               <button type="button" onClick={() => { void handleReviewSortChange("DESC"); setSortOpen(false); }} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-colors ${reviewsSortDirection === "DESC" ? "bg-white/[0.06] text-white" : "hover:bg-white/[0.04] text-[hsl(0,0%,55%)]"}`}>
                                 <span className="text-[12px] font-semibold">Newest First</span>
@@ -1069,11 +1091,11 @@ const GymProfile = () => {
 
                         <div ref={filterRef} className="relative">
                           <button type="button" onClick={() => setFilterOpen(v => !v)}
-                                  className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${filterOpen ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"}`}>
+                                  className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${filterOpen ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "user-surface table-border table-text hover:border-orange-500/30 hover:text-orange-400"}`}>
                             <SlidersHorizontal className="w-3.5 h-3.5" />Filter
                           </button>
                           {filterOpen && (
-                            <div className="absolute top-[calc(100%+8px)] right-0 table-bg table-border border rounded-2xl p-1.5 min-w-[160px] z-50 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
+                            <div className="absolute top-[calc(100%+8px)] right-0 user-surface table-border border rounded-2xl p-1.5 min-w-[160px] z-50 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
                               <div className="text-[8px] font-black uppercase tracking-widest table-text-muted px-2.5 py-2">Filter reviews</div>
                               <button type="button" onClick={() => { setReviewsFilter("ALL"); setFilterOpen(false); }} className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-colors ${reviewsFilter === "ALL" ? "bg-white/[0.06] text-white" : "hover:bg-white/[0.04] text-[hsl(0,0%,55%)]"}`}>
                                 <span className="text-[12px] font-semibold">All Reviews</span>
@@ -1096,7 +1118,7 @@ const GymProfile = () => {
                     </div>
 
                     {isReviewsLoading ? (
-                      <div className="flex min-h-[90px] items-center justify-center rounded-xl border border-white/8 bg-white/[0.02]">
+                      <div className="flex min-h-[90px] items-center justify-center rounded-xl border border-white/8 user-surface-soft">
                         <div className="inline-flex items-center gap-2 text-xs text-gray-400">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           Loading reviews...
@@ -1109,7 +1131,7 @@ const GymProfile = () => {
                         return (
                           <div
                             key={review.reviewId}
-                            className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4 transition-colors hover:border-white/[0.08] hover:bg-white/[0.035]"
+                            className="rounded-2xl border border-white/[0.07] bg-[#111111] p-4 transition-colors hover:border-white/[0.1] hover:bg-[#0f0f0f]"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 items-center gap-3">
@@ -1182,29 +1204,54 @@ const GymProfile = () => {
                                 ) : null}
                               </div>
                             </div>
-                            <div className="mt-3 rounded-xl border border-white/[0.05] bg-white/[0.015] px-4 py-3">
+                            <div className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
                               <p className="text-[13px] leading-relaxed text-zinc-300">
                                 {review.comments ?? "No comment"}
                               </p>
                             </div>
                             {review.gymReply ? (
-                              <div className="mt-3 rounded-xl border border-orange-500/20 bg-orange-500/[0.03] p-3 transition-colors hover:bg-orange-500/[0.05]">
-                                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-orange-300">
-                                  Gym reply
-                                </p>
-                                <p className="mt-1 text-[12px] text-orange-100">{review.gymReply}</p>
-                                {review.gymReplyAt ? (
-                                  <p className="mt-1 text-[10px] text-orange-200/70">
-                                    {formatReviewDate(review.gymReplyAt)}
-                                  </p>
-                                ) : null}
+                              <div className="mt-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleReply(review.reviewId)}
+                                  className={cn(
+                                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all duration-200",
+                                    expandedReplyIds.has(review.reviewId)
+                                      ? "border-orange-500/30 bg-orange-500/[0.1] text-orange-300"
+                                      : "border-white/[0.08] bg-white/[0.03] text-zinc-500 hover:border-orange-500/20 hover:text-orange-300"
+                                  )}
+                                >
+                                  <MessageSquareReply className="h-3.5 w-3.5" />
+                                  {expandedReplyIds.has(review.reviewId) ? "Hide reply" : "Gym replied · View"}
+                                  <ChevronDown
+                                    className={cn(
+                                      "h-3 w-3 transition-transform duration-200",
+                                      expandedReplyIds.has(review.reviewId) && "rotate-180"
+                                    )}
+                                  />
+                                </button>
+                                {expandedReplyIds.has(review.reviewId) && (
+                                  <div className="mt-2 rounded-xl border border-white/[0.07] bg-[#111111] p-3.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-[9px] font-black uppercase tracking-[0.12em] text-orange-300">
+                                        Gym reply
+                                      </p>
+                                      {review.gymReplyAt ? (
+                                        <p className="text-[10px] text-zinc-500">
+                                          {formatReviewDate(review.gymReplyAt)}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-300">{review.gymReply}</p>
+                                  </div>
+                                )}
                               </div>
                             ) : null}
                           </div>
                         );
                       })
                     ) : (
-                      <p className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-gray-400">
+                      <p className="rounded-xl border border-white/8 user-surface-soft px-4 py-3 text-sm text-gray-400">
                         No community reviews on this page.
                       </p>
                     )}
@@ -1217,7 +1264,7 @@ const GymProfile = () => {
                         type="button"
                         disabled={isReviewsLoading || reviewsPage <= 0 || reviewsTotalPages === 0}
                         onClick={() => void handleReviewPageChange(reviewsPage - 1)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 user-surface-soft px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <ChevronLeft className="h-3 w-3" />
                         Prev
@@ -1226,25 +1273,12 @@ const GymProfile = () => {
                         type="button"
                         disabled={isReviewsLoading || reviewsTotalPages === 0 || reviewsPage >= reviewsTotalPages - 1}
                         onClick={() => void handleReviewPageChange(reviewsPage + 1)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.02] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center gap-1 rounded-lg border border-white/10 user-surface-soft px-2 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Next
                         <ChevronRight className="h-3 w-3" />
                       </button>
                     </div>
-
-                    {!showReviewForm && !myReview && (
-                      <div className="mt-2 flex justify-center pt-3 border-t border-white/10">
-                        <button
-                          type="button"
-                          onClick={openCreateReviewForm}
-                          className="inline-flex w-full justify-center items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-orange-300 transition-colors hover:bg-orange-500/20"
-                        >
-                          <Star className="h-4 w-4" />
-                          Write a Review
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   <AlertDialog open={isDeleteReviewDialogOpen} onOpenChange={setDeleteReviewDialogOpen}>
@@ -1256,7 +1290,7 @@ const GymProfile = () => {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08]">
+                        <AlertDialogCancel className="border-white/10 user-surface-muted text-white hover:bg-white/[0.08]">
                           Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction
@@ -1283,7 +1317,7 @@ const GymProfile = () => {
               </div>
 
               <div className="col-span-12 lg:col-span-4">
-                <div className="sticky top-6 overflow-hidden rounded-[2rem] border border-orange-500/20 bg-[#111]/85 shadow-2xl">
+                <div className="sticky top-6 overflow-hidden rounded-[2rem] border border-orange-500/20 user-surface-overlay shadow-2xl">
                   {profile.latitude != null && profile.longitude != null ? (
                     <div ref={mapRef} className="h-[220px] w-full border-b border-white/10 bg-[#0a0a0a]" />
                   ) : (
@@ -1321,7 +1355,7 @@ const GymProfile = () => {
                         href={profile.websiteUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/[0.08]"
+                        className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 user-surface-muted px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/[0.08]"
                       >
                         Open Website
                       </a>

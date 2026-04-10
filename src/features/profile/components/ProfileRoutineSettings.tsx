@@ -84,7 +84,7 @@ export default function ProfileRoutineSettings() {
               type="button"
               variant="outline"
               onClick={() => void routineSettingsQuery.refetch()}
-              className="border-white/10 bg-[#111] text-slate-200 hover:bg-white/5 hover:text-white"
+              className="border-white/10 user-surface text-slate-200 hover:bg-white/5 hover:text-white"
             >
               <RotateCw className="mr-2 h-4 w-4" />
               Refresh
@@ -93,7 +93,7 @@ export default function ProfileRoutineSettings() {
               type="button"
               variant="outline"
               onClick={() => navigate("/dashboard", { state: { activeSection: "routines" } })}
-              className="border-white/10 bg-[#111] text-slate-200 hover:bg-white/5 hover:text-white"
+              className="border-white/10 user-surface text-slate-200 hover:bg-white/5 hover:text-white"
             >
               Open Routines
               <ChevronRight className="ml-2 h-4 w-4" />
@@ -116,7 +116,7 @@ export default function ProfileRoutineSettings() {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="rounded-xl border border-white/5 bg-white/[0.03] p-4">
+                <div key={i} className="rounded-xl border border-white/5 user-surface-muted p-4">
                   <div className="h-2 w-16 animate-pulse rounded bg-white/10" />
                   <div className="mt-3 h-4 w-24 animate-pulse rounded bg-white/10" />
                 </div>

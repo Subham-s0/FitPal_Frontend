@@ -8,10 +8,9 @@ import GymProfilePage from "@/features/gym-dashboard/screens/GymProfilePage";
 import GymQRPage from "@/features/gym-dashboard/screens/GymQRPage";
 import GymMembersPage from "@/features/gym-dashboard/screens/GymMembersPage";
 import GymRevenuePage from "@/features/gym-dashboard/screens/GymRevenuePage";
-import GymInsightsPage from "@/features/gym-dashboard/screens/GymInsightsPage";
 import GymReviewsPage from "@/features/gym-dashboard/screens/GymReviewsPage";
-import GymNoticesPage from "@/features/gym-dashboard/screens/GymNoticesPage";
 import GymSettingsPage from "@/features/gym-dashboard/screens/GymSettingsPage";
+import GymAnnouncementsPage from "@/features/announcements/components/GymAnnouncementsPage";
 
 const PAGE_MAP: Record<GymPageId, FC> = {
   home: GymDashboardHome,
@@ -19,9 +18,8 @@ const PAGE_MAP: Record<GymPageId, FC> = {
   qr: GymQRPage,
   members: GymMembersPage,
   revenue: GymRevenuePage,
-  insights: GymInsightsPage,
   reviews: GymReviewsPage,
-  notices: GymNoticesPage,
+  announcements: GymAnnouncementsPage,
   settings: GymSettingsPage,
 };
 

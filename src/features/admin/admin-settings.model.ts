@@ -1,11 +1,6 @@
-// Admin Settings & CMS Types
-
 export type DoorAccessMode = "AUTOMATIC" | "MANUAL";
 export type CheckInAccessMode = "MANUAL" | "DOOR_ACK_REQUIRED";
 export type DoorFailsafeMode = "LOCKED" | "UNLOCKED";
-export type AnnouncementType = "INFO" | "WARNING" | "CRITICAL" | "MAINTENANCE";
-
-// ─── Application Rules ───────────────────────────────────────────────────────
 
 export interface ApplicationRuleSummaryResponse {
   currency: string;
@@ -48,8 +43,6 @@ export interface ApplicationRuleUpdateRequest {
   esewaEnabled?: boolean;
 }
 
-// ─── CMS Features ────────────────────────────────────────────────────────────
-
 export interface CmsFeatureResponse {
   id: string;
   icon: string;
@@ -69,8 +62,6 @@ export interface CmsFeatureUpsertRequest {
   order?: number;
 }
 
-// ─── CMS Testimonials ────────────────────────────────────────────────────────
-
 export interface CmsTestimonialResponse {
   id: string;
   name: string;
@@ -78,7 +69,7 @@ export interface CmsTestimonialResponse {
   avatar: string | null;
   content: string;
   rating: number;
-  approved: boolean;  // maps to backend 'featured'
+  approved: boolean;
   active: boolean;
   order: number;
 }
@@ -89,20 +80,18 @@ export interface CmsTestimonialUpsertRequest {
   avatar?: string;
   content?: string;
   rating?: number;
-  approved?: boolean;  // maps to backend 'featured'
+  approved?: boolean;
   active?: boolean;
   order?: number;
 }
 
-// ─── CMS How-To Steps ────────────────────────────────────────────────────────
-
 export interface CmsHowToStepResponse {
   id: string;
-  stepNumber: string;  // formatted step like "01"
+  stepNumber: string;
   title: string;
   description: string;
   icon: string;
-  published: boolean;  // maps to backend 'active'
+  published: boolean;
   order: number;
 }
 
@@ -115,14 +104,12 @@ export interface CmsHowToStepUpsertRequest {
   order?: number;
 }
 
-// ─── CMS FAQs ────────────────────────────────────────────────────────────────
-
 export interface CmsFaqResponse {
   id: string;
   question: string;
   answer: string;
   category: string;
-  published: boolean;  // maps to backend 'active'
+  published: boolean;
   order: number;
 }
 
@@ -133,28 +120,6 @@ export interface CmsFaqUpsertRequest {
   published?: boolean;
   order?: number;
 }
-
-// ─── CMS Announcements ───────────────────────────────────────────────────────
-
-export interface CmsAnnouncementResponse {
-  id: string;
-  title: string;
-  audience: string;  // maps to backend 'content' (we'll use it for audience)
-  type: AnnouncementType;
-  active: boolean;
-  scheduledAt: string | null;  // maps to startsAt
-  createdAt: string;
-}
-
-export interface CmsAnnouncementUpsertRequest {
-  title: string;
-  audience?: string;
-  type?: AnnouncementType;
-  active?: boolean;
-  scheduledAt?: string | null;
-}
-
-// ─── CMS Stats ───────────────────────────────────────────────────────────────
 
 export interface CmsStatResponse {
   id: string;

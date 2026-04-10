@@ -283,7 +283,7 @@ const SettingsScreen = () => {
           {overviewStats.map((item) => (
             <div
               key={item.label}
-              className="rounded-[18px] border table-border table-bg-alt px-4 py-4 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] shadow-sm"
+              className="rounded-[18px] border table-border user-surface-soft px-4 py-4 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] shadow-sm"
             >
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{item.label}</p>
               <p className="mt-1.5 text-[15px] font-black text-white leading-snug">{item.value}</p>
@@ -297,7 +297,7 @@ const SettingsScreen = () => {
         <button
           type="button"
           onClick={() => setOpenTab("security")}
-          className="group rounded-2xl border table-border table-bg p-5 text-left transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:-translate-y-0.5 shadow-sm"
+          className="group rounded-2xl border table-border user-surface p-5 text-left transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:-translate-y-0.5 shadow-sm"
         >
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-orange-500/20 bg-orange-500/10">
             <Lock className="h-5 w-5 text-orange-400" />
@@ -311,7 +311,7 @@ const SettingsScreen = () => {
         <button
           type="button"
           onClick={() => setOpenTab("routines")}
-          className="group rounded-2xl border table-border table-bg p-5 text-left transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:-translate-y-0.5 shadow-sm"
+          className="group rounded-2xl border table-border user-surface p-5 text-left transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:-translate-y-0.5 shadow-sm"
         >
           <div className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] border border-orange-500/20 bg-orange-500/10">
             <Dumbbell className="h-5 w-5 text-orange-400" />
@@ -327,7 +327,7 @@ const SettingsScreen = () => {
 
   const securityContent = (
     <div className="space-y-5 animate-fade-in">
-      <div className="rounded-[22px] border table-border table-bg shadow-sm overflow-hidden">
+      <div className="rounded-[22px] border table-border user-surface shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b table-border-cell flex items-center gap-3">
           {profile.emailVerified ? (
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-500/10 border border-emerald-500/20">
@@ -356,7 +356,7 @@ const SettingsScreen = () => {
         </div>
 
         {!profile.emailVerified && showVerificationInput && (
-          <div className="px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-end table-bg-alt">
+          <div className="px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-end user-surface-soft">
             <Field label="OTP Code" error={verificationError} className="flex-1">
               <TextInput
                 maxLength={6}
@@ -381,7 +381,7 @@ const SettingsScreen = () => {
         )}
       </div>
 
-      <div className="rounded-[22px] border table-border table-bg shadow-sm overflow-hidden">
+      <div className="rounded-[22px] border table-border user-surface shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b table-border-cell">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Password</p>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -405,7 +405,7 @@ const SettingsScreen = () => {
                 type="button"
                 onClick={() => setSecurityModal("forgot")}
                 disabled={!supportsLocalPassword}
-                className="flex-1 rounded-full border table-border table-bg-alt px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-all hover:text-white hover:border-white/25 disabled:opacity-40 sm:flex-none"
+                className="flex-1 rounded-full border table-border user-surface-soft px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-300 transition-all hover:text-white hover:border-white/25 disabled:opacity-40 sm:flex-none"
               >
                 <Mail className="mr-1.5 inline h-3 w-3" />
                 Reset
@@ -423,7 +423,7 @@ const SettingsScreen = () => {
                 Authentication providers currently linked to this account.
               </p>
             </div>
-            <span className="shrink-0 rounded-full border table-border table-bg-alt px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
+            <span className="shrink-0 rounded-full border table-border user-surface-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300">
               {linkedProviders.length} linked
             </span>
           </div>
@@ -433,7 +433,7 @@ const SettingsScreen = () => {
               {linkedProviders.map((provider) => (
                 <div
                   key={provider}
-                  className="inline-flex items-center gap-2 rounded-full border table-border table-bg-alt px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200"
+                  className="inline-flex items-center gap-2 rounded-full border table-border user-surface-soft px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-200"
                 >
                   {provider.toUpperCase() === "GOOGLE" ? (
                     <Globe className="h-3.5 w-3.5 text-sky-400" />
@@ -445,7 +445,7 @@ const SettingsScreen = () => {
               ))}
             </div>
           ) : (
-            <div className="mt-3 rounded-[14px] border table-border table-bg-alt px-4 py-3 text-xs table-text-muted">
+            <div className="mt-3 rounded-[14px] border table-border user-surface-soft px-4 py-3 text-xs table-text-muted">
               No sign-in providers are currently linked to this account.
             </div>
           )}
@@ -474,7 +474,7 @@ const SettingsScreen = () => {
         description="Security, routine controls, and account shortcuts live here."
       >
         <div className="mb-5 grid grid-cols-1 gap-3 xl:hidden sm:grid-cols-2">
-          <div className="rounded-[22px] border table-border table-bg shadow-sm p-4">
+          <div className="rounded-[22px] border table-border user-surface shadow-sm p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Account Status</p>
@@ -488,7 +488,7 @@ const SettingsScreen = () => {
               {accountStatusItems.map((item) => (
                 <div
                   key={item.label}
-                  className="flex items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-2.5"
+                  className="flex items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-2.5"
                 >
                   <span className="text-[12px] font-semibold text-slate-300">{item.label}</span>
                   <span
@@ -504,7 +504,7 @@ const SettingsScreen = () => {
             </div>
           </div>
 
-          <div className="rounded-[22px] border table-border table-bg shadow-sm p-4">
+          <div className="rounded-[22px] border table-border user-surface shadow-sm p-4">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Quick Links</p>
@@ -518,7 +518,7 @@ const SettingsScreen = () => {
               <button
                 type="button"
                 onClick={() => navigate("/membership")}
-                className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
               >
                 Open Membership
                 <Gem className="h-3.5 w-3.5 text-orange-400" />
@@ -526,7 +526,7 @@ const SettingsScreen = () => {
               <button
                 type="button"
                 onClick={() => navigate("/dashboard", { state: { activeSection: "routines" } })}
-                className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
               >
                 Routines Dashboard
                 <Dumbbell className="h-3.5 w-3.5 text-orange-400" />
@@ -534,7 +534,7 @@ const SettingsScreen = () => {
               <button
                 type="button"
                 onClick={() => navigate("/dashboard", { state: { activeSection: "checkin", checkInView: "logs" } })}
-                className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
               >
                 Check-In History
                 <Receipt className="h-3.5 w-3.5 text-orange-400" />
@@ -545,7 +545,7 @@ const SettingsScreen = () => {
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_1fr]">
           <aside className="hidden space-y-4 xl:block">
-            <div className="rounded-[22px] border table-border table-bg shadow-sm p-5">
+            <div className="rounded-[22px] border table-border user-surface shadow-sm p-5">
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] border",
@@ -569,7 +569,7 @@ const SettingsScreen = () => {
               </div>
             </div>
 
-            <div className="rounded-[22px] border table-border table-bg shadow-sm p-5">
+            <div className="rounded-[22px] border table-border user-surface shadow-sm p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Account Status</p>
@@ -583,7 +583,7 @@ const SettingsScreen = () => {
                 {accountStatusItems.map((item) => (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-2.5"
+                    className="flex items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-2.5"
                   >
                     <span className="text-[12px] font-semibold text-slate-300">{item.label}</span>
                     <span
@@ -599,7 +599,7 @@ const SettingsScreen = () => {
               </div>
             </div>
 
-            <div className="rounded-[22px] border table-border table-bg shadow-sm p-5">
+            <div className="rounded-[22px] border table-border user-surface shadow-sm p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Quick Links</p>
@@ -613,7 +613,7 @@ const SettingsScreen = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/membership")}
-                  className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+                  className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
                 >
                   Open Membership
                   <Gem className="h-3.5 w-3.5 text-orange-400" />
@@ -621,7 +621,7 @@ const SettingsScreen = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/dashboard", { state: { activeSection: "routines" } })}
-                  className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+                  className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
                 >
                   Routines Dashboard
                   <Dumbbell className="h-3.5 w-3.5 text-orange-400" />
@@ -629,7 +629,7 @@ const SettingsScreen = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/dashboard", { state: { activeSection: "checkin", checkInView: "logs" } })}
-                  className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+                  className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
                 >
                   Check-In History
                   <Receipt className="h-3.5 w-3.5 text-orange-400" />
@@ -650,8 +650,8 @@ const SettingsScreen = () => {
                   className={cn(
                     "overflow-hidden rounded-[22px] border transition-all shadow-sm",
                     isActive
-                      ? "border-orange-500/25 table-bg"
-                      : "table-border table-bg hover:border-white/15"
+                      ? "border-orange-500/25 user-surface"
+                      : "table-border user-surface hover:border-white/15"
                   )}
                 >
                   <button
@@ -677,7 +677,7 @@ const SettingsScreen = () => {
                           "flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] border transition-colors",
                           isActive
                             ? "border-orange-500/30 bg-orange-500/15 text-orange-300"
-                            : "table-border table-bg-alt text-slate-400"
+                            : "table-border user-surface-soft text-slate-400"
                         )}
                       >
                         <Icon className="h-5 w-5" />
@@ -697,7 +697,7 @@ const SettingsScreen = () => {
 
                     <div className="flex shrink-0 items-center gap-3">
                       {section.kind === "link" ? (
-                        <span className="hidden rounded-full border table-border table-bg-alt px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 sm:inline-flex">
+                        <span className="hidden rounded-full border table-border user-surface-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 sm:inline-flex">
                           Open Page
                         </span>
                       ) : isActive ? (
@@ -737,7 +737,7 @@ const SettingsScreen = () => {
                       id={`settings-section-${section.id}`}
                       role="region"
                       aria-labelledby={`settings-button-${section.id}`}
-                      className="border-t table-border-cell table-bg-alt px-5 py-6"
+                      className="border-t table-border-cell user-surface-soft px-5 py-6"
                     >
                       {renderSectionContent(section.id)}
                     </div>

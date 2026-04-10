@@ -353,25 +353,33 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
       label: "Completed",
       value: stats.totalCompleted.toString().padStart(2, "0"),
       icon: Trophy,
-      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
+      cardClassName: "border-orange-500/20 bg-orange-500/[0.06]",
+      accentClassName: "border-orange-500/25 bg-orange-500/[0.12] text-orange-300",
+      labelClassName: "text-orange-200/80",
     },
     {
       label: "This Week",
       value: stats.sessionsThisWeek.toString().padStart(2, "0"),
       icon: Activity,
-      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
+      cardClassName: "border-emerald-500/20 bg-emerald-500/[0.06]",
+      accentClassName: "border-emerald-500/25 bg-emerald-500/[0.12] text-emerald-300",
+      labelClassName: "text-emerald-200/80",
     },
     {
       label: "Avg Duration",
       value: `${stats.avgDuration}m`,
       icon: Clock3,
-      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
+      cardClassName: "border-sky-500/20 bg-sky-500/[0.06]",
+      accentClassName: "border-sky-500/25 bg-sky-500/[0.12] text-sky-300",
+      labelClassName: "text-sky-200/80",
     },
     {
       label: "Streak",
       value: `${stats.streak}d`,
       icon: Flame,
-      accentClassName: "border-orange-600/20 bg-orange-600/[0.08] text-orange-500",
+      cardClassName: "border-amber-500/20 bg-amber-500/[0.06]",
+      accentClassName: "border-amber-500/25 bg-amber-500/[0.12] text-amber-300",
+      labelClassName: "text-amber-200/80",
     },
   ];
 
@@ -430,10 +438,13 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
         {workoutStats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <div key={stat.label} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+            <div
+              key={stat.label}
+              className={`rounded-[1.2rem] border px-3 py-2.5 backdrop-blur-sm transition-all hover:-translate-y-0.5 ${stat.cardClassName}`}
+            >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-zinc-400 sm:text-[10px]">
+                  <p className={`text-[9px] font-bold uppercase tracking-[0.1em] sm:text-[10px] ${stat.labelClassName}`}>
                     {stat.label}
                   </p>
                   <p className="mt-1 font-mono text-[17px] font-bold text-white sm:text-[19px]">{stat.value}</p>
@@ -490,7 +501,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
               <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
             </div>
           ) : !historyPage || historyPage.items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-white/[0.02] py-12">
+            <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 user-surface py-12">
               <Dumbbell className="h-12 w-12 text-gray-600" />
               <h4 className="mt-4 text-lg font-bold text-white">No workout history</h4>
               <p className="mt-2 text-sm text-gray-500">
@@ -498,7 +509,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
               </p>
             </div>
           ) : (
-            <div className="flow-panel space-y-5 rounded-[1.6rem] p-4 sm:rounded-[2rem] sm:p-6">
+            <div className="space-y-5 rounded-[1.6rem] border border-white/[0.07] user-surface p-4 shadow-[0_24px_50px_-26px_rgba(0,0,0,0.85)] sm:rounded-[2rem] sm:p-6">
               {Object.entries(groupedHistory ?? {}).map(([date, sessions]) => (
                 <div key={date}>
                   <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
@@ -513,7 +524,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
                       return (
                         <div
                           key={session.routineLogId}
-                          className="group relative rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-white/15 hover:bg-white/[0.04]"
+                          className="group relative rounded-2xl border border-white/[0.06] user-surface-soft p-4 transition-all hover:border-white/[0.1] hover:bg-[#191919]"
                         >
                           <button
                             type="button"
@@ -686,12 +697,12 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
                 {getApiErrorMessage(insightsError, "Failed to load workout insights")}
               </div>
             ) : !hasInsightValues ? (
-              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center text-sm text-gray-400">
+              <div className="rounded-xl border border-dashed border-white/10 user-surface-soft p-6 text-center text-sm text-gray-400">
                 No workout insight data in this range yet. Complete a few sessions and refresh insights.
               </div>
             ) : (
               <>
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="rounded-2xl border border-white/[0.06] user-surface-soft p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                     Sessions (Completed vs Skipped)
                   </p>
@@ -717,7 +728,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="rounded-2xl border border-white/[0.06] user-surface-soft p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                     Sets and Volume
                   </p>

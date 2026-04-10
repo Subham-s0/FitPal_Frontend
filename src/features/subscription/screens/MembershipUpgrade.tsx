@@ -375,7 +375,7 @@ function MembershipActionSurface({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className={cn("max-h-[92vh] table-border table-bg text-white", className)}>
+        <DrawerContent className={cn("max-h-[92vh] table-border user-surface text-white", className)}>
           <DrawerHeader className="border-b table-border-cell px-4 pb-3 pt-2 text-left">
             <DrawerTitle className="text-xl font-black uppercase text-white">{title}</DrawerTitle>
             <DrawerDescription className="text-sm leading-relaxed table-text-muted">
@@ -391,7 +391,7 @@ function MembershipActionSurface({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("table-border table-bg p-0 text-white", className)}
+        className={cn("table-border user-surface p-0 text-white", className)}
       >
         <div className="max-h-[88vh] overflow-y-auto p-6">
           <DialogHeader>
@@ -413,7 +413,7 @@ function SubscriptionHistoryCards({ items }: { items: UserSubscriptionHistoryIte
       {items.map((item) => (
         <div
           key={item.subscriptionId}
-          className="rounded-[18px] border table-border table-bg-alt p-5 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+          className="rounded-[18px] border table-border user-surface-soft p-5 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
@@ -593,10 +593,10 @@ function MembershipPlanSelector({
         className={cn(
           "group relative flex h-full min-h-[230px] cursor-pointer flex-col rounded-[1.5rem] border text-left transition-all duration-300",
           isSelected
-            ? "border-orange-500/60 table-bg"
+            ? "border-orange-500/60 user-surface"
             : plan.mostPopular
-              ? "border-orange-500/30 table-bg-alt hover:border-orange-500/50"
-              : "border table-border table-bg-alt hover:border-orange-500/25 hover:shadow-[0_8px_32px_-8px_rgba(234,88,12,0.1)]",
+              ? "border-orange-500/30 user-surface-soft hover:border-orange-500/50"
+              : "border table-border user-surface-soft hover:border-orange-500/25 hover:shadow-[0_8px_32px_-8px_rgba(234,88,12,0.1)]",
           isSelected && !plan.mostPopular && "shadow-[0_0_0_1px_rgba(234,88,12,0.15),0_16px_48px_-12px_rgba(234,88,12,0.25)]",
           plan.mostPopular && "plan-popular-inner-glow"
         )}
@@ -671,7 +671,7 @@ function MembershipPlanSelector({
             className={cn(
               "mt-3 w-full rounded-[0.7rem] px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-200",
               isSelectionLocked
-                ? "cursor-not-allowed border border-white/10 bg-white/[0.03] text-slate-500"
+                ? "cursor-not-allowed border border-white/10 user-surface-muted text-slate-500"
                 : isSelected
                   ? "bg-[linear-gradient(135deg,#FF6A00,#FF9500)] text-white shadow-[0_6px_20px_-4px_rgba(249,115,22,0.4)] hover:-translate-y-0.5"
                   : "border border-orange-500/20 bg-orange-500/[0.08] text-orange-200 hover:bg-orange-500/15"
@@ -820,9 +820,9 @@ function MembershipPlanDialog({
 }: MembershipPlanDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col w-[calc(100vw-1rem)] max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-[1.4rem] border table-border table-bg p-0 text-white sm:w-[min(68rem,calc(100vw-2.5rem))] sm:max-w-[68rem] sm:max-h-[min(90vh,54rem)]">
+      <DialogContent className="flex flex-col w-[calc(100vw-1rem)] max-h-[calc(100dvh-1.5rem)] overflow-hidden rounded-[1.4rem] border table-border user-surface p-0 text-white sm:w-[min(68rem,calc(100vw-2.5rem))] sm:max-w-[68rem] sm:max-h-[min(90vh,54rem)]">
         {/* Header */}
-        <div className="shrink-0 relative border-b border-white/[0.06] bg-[linear-gradient(135deg,rgba(249,115,22,0.10),var(--table-bg)_40%,var(--table-bg))] px-4 py-3 sm:px-5">
+        <div className="shrink-0 relative border-b border-white/[0.06] bg-[linear-gradient(135deg,rgba(249,115,22,0.10),var(--user-surface)_40%,var(--user-surface))] px-4 py-3 sm:px-5">
           <div className="absolute -right-14 -top-8 h-28 w-28 rounded-full bg-orange-500/10 blur-3xl" />
           <div className="relative">
             <DialogTitle className="text-base font-black uppercase text-white sm:text-lg">
@@ -840,11 +840,11 @@ function MembershipPlanDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="shrink-0 gap-2.5 border-t border-white/[0.06] table-bg px-4 py-2.5 sm:justify-between sm:space-x-0 sm:px-5">
+        <DialogFooter className="shrink-0 gap-2.5 border-t border-white/[0.06] user-surface px-4 py-2.5 sm:justify-between sm:space-x-0 sm:px-5">
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="inline-flex items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-[0.08em] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
+            className="inline-flex items-center justify-center rounded-[0.8rem] border border-white/10 user-surface-muted px-4 py-2 text-xs font-black uppercase tracking-[0.08em] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
           >
             {cancelLabel}
           </button>
@@ -1613,7 +1613,7 @@ const MembershipUpgrade = () => {
               <button
                 type="button"
                 onClick={() => navigate("/profile?tab=membership")}
-                className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/[0.07]"
+                className="rounded-full border border-white/10 user-surface-muted px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-white transition-colors hover:bg-white/[0.07]"
               >
                 Back to Profile
               </button>
@@ -1634,7 +1634,7 @@ const MembershipUpgrade = () => {
         description="View the current plan, renew or change the next term, and manage pause controls from one place."
         width="wide"
       >
-        <section className="overflow-hidden rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]">
+        <section className="overflow-hidden rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]">
           {/* Section header */}
           <div className="border-b table-border-cell px-5 py-4 sm:px-7 sm:py-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1691,7 +1691,7 @@ const MembershipUpgrade = () => {
                         { label: "Billing", value: formatBillingCycleLabel(currentMembership.billingCycle) },
                         { label: "Next renewal", value: formatMembershipDate(nextMembershipStartsAt ?? currentAccessEndsAt) },
                       ].map(({ label, value }) => (
-                        <div key={label} className="rounded-[1rem] border table-border table-bg px-3 py-3">
+                        <div key={label} className="rounded-[1rem] border table-border user-surface px-3 py-3">
                           <p className="text-[9px] font-black uppercase tracking-[0.18em] table-text-muted">{label}</p>
                           <p className="mt-1.5 text-[13px] font-bold text-white">{value}</p>
                         </div>
@@ -1704,7 +1704,7 @@ const MembershipUpgrade = () => {
                         { label: "Next membership starts", value: formatMembershipDate(nextMembershipStartsAt) },
                         { label: "Total paid coverage ends", value: formatMembershipDate(totalPaidCoverageEndsAt) },
                       ].map(({ label, value }) => (
-                        <div key={label} className="rounded-[1rem] border table-border table-bg px-3 py-3">
+                        <div key={label} className="rounded-[1rem] border table-border user-surface px-3 py-3">
                           <p className="text-[9px] font-black uppercase tracking-[0.18em] table-text-muted">{label}</p>
                           <p className="mt-1.5 text-[13px] font-bold text-white">{value}</p>
                         </div>
@@ -1743,7 +1743,7 @@ const MembershipUpgrade = () => {
                 </div>
 
                 {/* Pause / Resume card */}
-                <div className="overflow-hidden rounded-[18px] border table-border table-bg shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+                <div className="overflow-hidden rounded-[18px] border table-border user-surface shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
                   {/* Card header */}
                   <div className="border-b border-white/[0.05] px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -1760,11 +1760,11 @@ const MembershipUpgrade = () => {
                   <div className="px-5 py-4">
                     {/* Pause usage indicator */}
                     <div className="mb-4 grid grid-cols-2 gap-2">
-                      <div className="rounded-xl border table-border table-bg px-3 py-2.5">
+                      <div className="rounded-xl border table-border user-surface px-3 py-2.5">
                         <p className="text-[9px] font-black uppercase tracking-[0.18em] table-text-muted">Pauses left</p>
                         <p className="mt-1 text-base font-black text-white">{currentMembership ? remainingFlexiblePauses : "—"}</p>
                       </div>
-                      <div className="rounded-xl border table-border table-bg px-3 py-2.5">
+                      <div className="rounded-xl border table-border user-surface px-3 py-2.5">
                         <p className="text-[9px] font-black uppercase tracking-[0.18em] table-text-muted">This window</p>
                         <p className="mt-1 text-base font-black text-white">{currentMembership ? remainingPausesThisWindow : "—"}</p>
                       </div>
@@ -1785,7 +1785,7 @@ const MembershipUpgrade = () => {
                     <button
                       type="button"
                       onClick={() => setIsFlexibleInfoOpen(true)}
-                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] border border-white/10 bg-white/[0.03] px-5 py-2.5 text-[12px] font-black uppercase tracking-[0.1em] text-slate-200 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
+                      className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] border border-white/10 user-surface-muted px-5 py-2.5 text-[12px] font-black uppercase tracking-[0.1em] text-slate-200 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
                     >
                       <Eye size={14} />
                       View Flexible Guide
@@ -1800,7 +1800,7 @@ const MembershipUpgrade = () => {
                           "inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] px-5 py-2.5 text-[12px] font-black uppercase tracking-[0.1em] transition-all",
                           canOpenPauseDialog && !isBusy
                             ? "bg-[linear-gradient(135deg,#FF6A00,#FF9500)] text-white shadow-[0_6px_20px_-4px_rgba(249,115,22,0.35)] hover:-translate-y-0.5"
-                            : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-slate-500"
+                            : "cursor-not-allowed border border-white/10 user-surface-muted text-slate-500"
                         )}
                       >
                         <PauseCircle size={14} />
@@ -1815,7 +1815,7 @@ const MembershipUpgrade = () => {
                           "inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] border px-5 py-2.5 text-[12px] font-black uppercase tracking-[0.1em] transition-colors",
                           canResumeCurrentMembership && !isBusy
                             ? "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-300 hover:bg-emerald-500/15"
-                            : "cursor-not-allowed border-white/10 bg-white/[0.03] text-slate-500"
+                            : "cursor-not-allowed border-white/10 user-surface-muted text-slate-500"
                         )}
                       >
                         <PlayCircle size={14} />
@@ -1826,7 +1826,7 @@ const MembershipUpgrade = () => {
                 </div>
               </div>
             ) : (
-              <div className="rounded-[1.5rem] border border-dashed border-white/12 bg-white/[0.02] p-5">
+              <div className="rounded-[1.5rem] border border-dashed border-white/12 user-surface-soft p-5">
                 <p className="text-lg font-black uppercase text-white">No live membership yet</p>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-400">
                   Choose a plan below to start your membership. Once a membership becomes active,
@@ -1867,7 +1867,7 @@ const MembershipUpgrade = () => {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]">
+        <section className="overflow-hidden rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)]">
           {/* Section header */}
           <div className="border-b table-border-cell px-5 py-4 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1918,7 +1918,7 @@ const MembershipUpgrade = () => {
                     { label: "Est. total", value: `${currency} ${formatCurrencyAmount(totalAmount)}` },
                     { label: "Starts", value: queuedMembership ? formatMembershipDate(nextMembershipStartsAt) : "After payment" },
                   ].map(({ label, value }) => (
-                    <div key={label} className="rounded-xl border table-border table-bg-alt px-3 py-2">
+                    <div key={label} className="rounded-xl border table-border user-surface-soft px-3 py-2">
                       <p className="text-[9px] font-black uppercase tracking-[0.18em] table-text-muted">{label}</p>
                       <p className="mt-0.5 text-[12px] font-bold text-white">{value}</p>
                     </div>
@@ -1961,7 +1961,7 @@ const MembershipUpgrade = () => {
                 <button
                   type="button"
                   onClick={() => setIsViewPlansOpen(true)}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] border table-border table-bg-alt px-5 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-slate-300 transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:text-white"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] border table-border user-surface-soft px-5 py-3 text-[12px] font-black uppercase tracking-[0.1em] text-slate-300 transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.04] hover:text-white"
                 >
                   <Eye size={14} />
                   View Plans
@@ -2044,7 +2044,7 @@ const MembershipUpgrade = () => {
                       ? "border-orange-500/30 bg-orange-500/10 text-orange-200"
                       : isComplete
                         ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
-                        : "border-white/10 bg-white/[0.03] text-slate-400"
+                        : "border-white/10 user-surface-muted text-slate-400"
                   )}
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current/20 text-[9px]">
@@ -2057,7 +2057,7 @@ const MembershipUpgrade = () => {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
+            <div className="rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
               <SectionLabel>Payment Gateway</SectionLabel>
               <p className="mb-5 max-w-2xl text-sm leading-relaxed table-text-muted">
                 FitPal saves your selected membership first, then hands you to the payment
@@ -2105,7 +2105,7 @@ const MembershipUpgrade = () => {
                         !method.isAvailable && "cursor-not-allowed opacity-60",
                         isSelected
                           ? "border-orange-500/40 bg-orange-500/10"
-                          : "table-border table-bg-alt hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+                          : "table-border user-surface-soft hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
                       )}
                     >
                       <div
@@ -2182,7 +2182,7 @@ const MembershipUpgrade = () => {
                         <button
                           type="button"
                           onClick={() => navigate("/profile?tab=membership")}
-                          className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-white/[0.07]"
+                          className="inline-flex items-center rounded-full border border-white/10 user-surface-muted px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-white/[0.07]"
                         >
                           Return to profile
                         </button>
@@ -2193,7 +2193,7 @@ const MembershipUpgrade = () => {
               ) : null}
 
               {selectedPaymentMethod === "khalti" ? (
-                <div className="mt-5 rounded-[18px] border table-border table-bg-alt p-4">
+                <div className="mt-5 rounded-[18px] border table-border user-surface-soft p-4">
                   <SectionLabel className="!mb-3">Khalti Billing Info</SectionLabel>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Full Name" error={khaltiBillingErrors.name} className="sm:col-span-2">
@@ -2231,7 +2231,7 @@ const MembershipUpgrade = () => {
                 </div>
               ) : null}
 
-              <div className="mt-5 rounded-[18px] border table-border table-bg-alt p-4">
+              <div className="mt-5 rounded-[18px] border table-border user-surface-soft p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
                     <CheckCircle2 size={18} />
@@ -2250,7 +2250,7 @@ const MembershipUpgrade = () => {
             </div>
 
             <div className="xl:sticky xl:top-6">
-              <div className="rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
+              <div className="rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
                 <SectionLabel>Order Summary</SectionLabel>
 
                 <div className="rounded-[18px] border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-4">
@@ -2349,12 +2349,12 @@ const MembershipUpgrade = () => {
                       {currency} {formatCurrencyAmount(totalAmount)}
                     </p>
                   </div>
-                  <div className="rounded-full border table-border table-bg-alt px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200">
+                  <div className="rounded-full border table-border user-surface-soft px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200">
                     {billingCycle === "yearly" ? "Yearly bill" : "Monthly bill"}
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-[18px] border table-border table-bg-alt p-4">
+                <div className="mt-5 rounded-[18px] border table-border user-surface-soft p-4">
                   <p className="text-sm font-black uppercase text-white">
                     Checkout note
                   </p>
@@ -2388,7 +2388,7 @@ const MembershipUpgrade = () => {
                   <button
                     type="button"
                     onClick={() => setRenewActionStep("plan")}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border table-border table-bg-alt px-6 py-3 text-sm font-black uppercase tracking-[0.08em] text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border table-border user-surface-soft px-6 py-3 text-sm font-black uppercase tracking-[0.08em] text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
                   >
                     Back
                   </button>
@@ -2403,7 +2403,7 @@ const MembershipUpgrade = () => {
         </MembershipActionSurface>
 
         <Collapsible open={isPauseHistoryOpen} onOpenChange={setIsPauseHistoryOpen}>
-          <section className="rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
+          <section className="rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
             <CollapsibleTrigger asChild>
               <button
                 type="button"
@@ -2418,13 +2418,13 @@ const MembershipUpgrade = () => {
                 </div>
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
                   {currentMembership ? (
-                    <div className="rounded-full border table-border table-bg-alt px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 sm:px-4 sm:py-2 sm:text-[11px]">
+                    <div className="rounded-full border table-border user-surface-soft px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 sm:px-4 sm:py-2 sm:text-[11px]">
                       {currentPauseHistory.length} event{currentPauseHistory.length === 1 ? "" : "s"}
                     </div>
                   ) : null}
                   <div
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full border table-border table-bg-alt text-slate-400 transition-transform duration-200",
+                      "flex h-9 w-9 items-center justify-center rounded-full border table-border user-surface-soft text-slate-400 transition-transform duration-200",
                       isPauseHistoryOpen ? "rotate-90 text-orange-300" : undefined
                     )}
                   >
@@ -2437,14 +2437,14 @@ const MembershipUpgrade = () => {
             <CollapsibleContent>
 
               {!currentMembership ? (
-                <div className="rounded-[18px] border border-dashed table-border table-bg-alt p-5">
+                <div className="rounded-[18px] border border-dashed table-border user-surface-soft p-5">
                   <p className="text-lg font-black uppercase text-white">No current subscription</p>
                   <p className="mt-3 max-w-2xl text-sm leading-relaxed table-text-muted">
                     Pause history appears once you have an active membership term to manage.
                   </p>
                 </div>
               ) : currentPauseHistory.length === 0 ? (
-                <div className="rounded-[18px] border border-dashed table-border table-bg-alt p-5">
+                <div className="rounded-[18px] border border-dashed table-border user-surface-soft p-5">
                   <p className="text-lg font-black uppercase text-white">No pause events yet</p>
                   <p className="mt-3 max-w-2xl text-sm leading-relaxed table-text-muted">
                     Schedule a future pause from this page when needed. Completed, resumed, and
@@ -2456,7 +2456,7 @@ const MembershipUpgrade = () => {
                   {currentPauseHistory.map((event) => (
                     <div
                       key={event.pauseEventId}
-                      className="rounded-[18px] border table-border table-bg-alt p-5 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+                      className="rounded-[18px] border table-border user-surface-soft p-5 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -2478,7 +2478,7 @@ const MembershipUpgrade = () => {
                       </div>
 
                       <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[14px] border table-border table-bg p-4">
+                        <div className="rounded-[14px] border table-border user-surface p-4">
                           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
                             <CalendarDays size={14} />
                             Pause Start
@@ -2488,7 +2488,7 @@ const MembershipUpgrade = () => {
                           </p>
                         </div>
 
-                        <div className="rounded-[14px] border table-border table-bg p-4">
+                        <div className="rounded-[14px] border table-border user-surface p-4">
                           <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
                             <Clock3 size={14} />
                             Planned Resume
@@ -2499,7 +2499,7 @@ const MembershipUpgrade = () => {
                         </div>
                       </div>
 
-                      <div className="mt-3 rounded-[14px] border table-border table-bg p-4">
+                      <div className="mt-3 rounded-[14px] border table-border user-surface p-4">
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
                           Actual Outcome
                         </p>
@@ -2520,7 +2520,7 @@ const MembershipUpgrade = () => {
         </Collapsible>
 
         <Collapsible open={isSubscriptionHistoryOpen} onOpenChange={setIsSubscriptionHistoryOpen}>
-          <section className="rounded-3xl border table-border table-bg shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
+          <section className="rounded-3xl border table-border user-surface shadow-[inset_0_2px_8px_rgba(0,0,0,0.4)] p-5 sm:p-6">
             <CollapsibleTrigger asChild>
               <button
                 type="button"
@@ -2533,12 +2533,12 @@ const MembershipUpgrade = () => {
                   </p>
                 </div>
                 <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
-                  <div className="rounded-full border table-border table-bg-alt px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 sm:px-4 sm:py-2 sm:text-[11px]">
+                  <div className="rounded-full border table-border user-surface-soft px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 sm:px-4 sm:py-2 sm:text-[11px]">
                     {subscriptionHistoryTotalItems} total
                   </div>
                   <div
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full border table-border table-bg-alt text-slate-400 transition-transform duration-200",
+                      "flex h-9 w-9 items-center justify-center rounded-full border table-border user-surface-soft text-slate-400 transition-transform duration-200",
                       isSubscriptionHistoryOpen ? "rotate-90 text-orange-300" : undefined
                     )}
                   >
@@ -2549,7 +2549,7 @@ const MembershipUpgrade = () => {
             </CollapsibleTrigger>
 
             <CollapsibleContent>
-              <div className="mb-5 flex flex-col gap-4 rounded-[18px] border table-border table-bg-alt p-4 sm:p-5">
+              <div className="mb-5 flex flex-col gap-4 rounded-[18px] border table-border user-surface-soft p-4 sm:p-5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                   <div>
                     <p className="max-w-3xl text-sm leading-relaxed table-text-muted">
@@ -2562,7 +2562,7 @@ const MembershipUpgrade = () => {
                       type="button"
                       onClick={handleSubscriptionHistoryRefresh}
                       disabled={subscriptionHistoryQuery.isFetching}
-                      className="flex items-center gap-1.5 rounded-full border table-border table-bg px-3.5 py-[7px] text-[12px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-full border table-border user-surface px-3.5 py-[7px] text-[12px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:opacity-50"
                     >
                       <RefreshCw
                         className={cn(
@@ -2582,7 +2582,7 @@ const MembershipUpgrade = () => {
                       }
                       className={`flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all ${subscriptionHistorySortDirection !== "DESC"
                           ? "border-orange-500/30 bg-orange-500/10 text-orange-400"
-                          : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"
+                          : "user-surface table-border table-text hover:border-orange-500/30 hover:text-orange-400"
                         }`}
                     >
                       <SubscriptionHistorySortIcon direction={subscriptionHistorySortDirection} />
@@ -2597,7 +2597,7 @@ const MembershipUpgrade = () => {
                         }
                         className={`flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all ${subscriptionHistoryFilterOpen
                             ? "border-orange-500/30 bg-orange-500/10 text-orange-400"
-                            : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"
+                            : "user-surface table-border table-text hover:border-orange-500/30 hover:text-orange-400"
                           }`}
                       >
                         <SlidersHorizontal className="h-4 w-4" />
@@ -2610,7 +2610,7 @@ const MembershipUpgrade = () => {
                       </button>
 
                       {subscriptionHistoryFilterOpen ? (
-                        <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[240px] rounded-2xl border table-border table-bg p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
+                        <div className="absolute right-0 top-[calc(100%+8px)] z-50 min-w-[240px] rounded-2xl border table-border user-surface p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
                           <div className="px-2.5 pb-2 pt-1">
                             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
                               History filters
@@ -2647,7 +2647,7 @@ const MembershipUpgrade = () => {
                       <button
                         type="button"
                         onClick={clearSubscriptionHistoryFilters}
-                        className="flex items-center gap-1.5 rounded-full border table-border table-bg px-3.5 py-[7px] text-[12px] font-bold table-text transition-all hover:border-white/20 hover:text-white"
+                        className="flex items-center gap-1.5 rounded-full border table-border user-surface px-3.5 py-[7px] text-[12px] font-bold table-text transition-all hover:border-white/20 hover:text-white"
                       >
                         <X className="h-3.5 w-3.5" />
                         Clear
@@ -2662,18 +2662,18 @@ const MembershipUpgrade = () => {
                       ? `Showing ${subscriptionHistoryItems.length} of ${subscriptionHistoryTotalItems} membership terms.`
                       : "No membership terms match the current filters yet."}
                   </p>
-                  <span className="hidden w-fit items-center rounded-full border table-border table-bg-alt px-3.5 py-1.5 text-[11px] font-semibold text-white sm:inline-flex">
+                  <span className="hidden w-fit items-center rounded-full border table-border user-surface-soft px-3.5 py-1.5 text-[11px] font-semibold text-white sm:inline-flex">
                     {subscriptionHistoryTotalItems} total
                   </span>
                 </div>
               </div>
 
               {subscriptionHistoryQuery.isLoading ? (
-                <div className="flex items-center justify-center rounded-[18px] border table-border table-bg py-16">
+                <div className="flex items-center justify-center rounded-[18px] border table-border user-surface py-16">
                   <div className="h-10 w-10 animate-spin rounded-full border-2 border-orange-500/20 border-t-orange-500" />
                 </div>
               ) : subscriptionHistoryQuery.isError ? (
-                <div className="rounded-[18px] border table-border table-bg p-6 text-center">
+                <div className="rounded-[18px] border table-border user-surface p-6 text-center">
                   <p className="text-sm font-bold text-red-200">
                     Subscription history could not be loaded.
                   </p>
@@ -2682,7 +2682,7 @@ const MembershipUpgrade = () => {
                   </p>
                 </div>
               ) : subscriptionHistoryItems.length === 0 ? (
-                <div className="rounded-[18px] border table-border table-bg px-6 py-14 text-center">
+                <div className="rounded-[18px] border table-border user-surface px-6 py-14 text-center">
                   <Search className="mx-auto h-10 w-10 text-orange-400" />
                   <p className="mt-4 text-lg font-black uppercase text-white">No subscriptions found</p>
                   <p className="mt-3 max-w-2xl text-sm leading-relaxed table-text-muted">
@@ -2692,7 +2692,7 @@ const MembershipUpgrade = () => {
               ) : isMobile ? (
                 <SubscriptionHistoryCards items={subscriptionHistoryItems} />
               ) : (
-                <div className="overflow-hidden rounded-[18px] border table-border table-bg">
+                <div className="overflow-hidden rounded-[18px] border table-border user-surface">
                   <Table>
                     <TableHeader>
                       <TableRow className="table-header-bg table-border border-b hover:bg-transparent">
@@ -2773,11 +2773,11 @@ const MembershipUpgrade = () => {
                       type="button"
                       onClick={() => setSubscriptionHistoryPage((page) => Math.max(0, page - 1))}
                       disabled={!subscriptionHistory.hasPrevious}
-                      className="rounded-full border table-border table-bg px-4 py-1.5 text-[11px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-full border table-border user-surface px-4 py-1.5 text-[11px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Previous
                     </button>
-                    <span className="rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
+                    <span className="rounded-full border table-border user-surface-soft px-4 py-1.5 text-[11px] font-semibold text-white">
                       {subscriptionHistory.page + 1} / {subscriptionHistory.totalPages}
                     </span>
                     <button
@@ -2788,7 +2788,7 @@ const MembershipUpgrade = () => {
                         )
                       }
                       disabled={!subscriptionHistory.hasNext}
-                      className="rounded-full border table-border table-bg px-4 py-1.5 text-[11px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-full border table-border user-surface px-4 py-1.5 text-[11px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Next
                     </button>
@@ -2833,7 +2833,7 @@ const MembershipUpgrade = () => {
                     <button
                       type="button"
                       onClick={() => setIsPauseDialogOpen(false)}
-                      className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
+                      className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 user-surface-muted px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
                     >
                       Close
                     </button>
@@ -2872,7 +2872,7 @@ const MembershipUpgrade = () => {
                     </Field>
                   </div>
 
-                  <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                  <div className="mt-5 rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                       Pause summary
                     </p>
@@ -2901,7 +2901,7 @@ const MembershipUpgrade = () => {
                     <button
                       type="button"
                       onClick={() => setIsPauseDialogOpen(false)}
-                      className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
+                      className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 user-surface-muted px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
                     >
                       Cancel
                     </button>
@@ -2942,7 +2942,7 @@ const MembershipUpgrade = () => {
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Pause limits
                   </p>
@@ -2952,7 +2952,7 @@ const MembershipUpgrade = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Pause timing
                   </p>
@@ -2962,7 +2962,7 @@ const MembershipUpgrade = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Resume early
                   </p>
@@ -2973,7 +2973,7 @@ const MembershipUpgrade = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Future plan changes
                   </p>
@@ -2988,7 +2988,7 @@ const MembershipUpgrade = () => {
                 <button
                   type="button"
                   onClick={() => setIsFlexibleInfoOpen(false)}
-                  className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
+                  className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 user-surface-muted px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
                 >
                   Close
                 </button>

@@ -52,24 +52,14 @@ export type CmsFaq = {
   order: number;
 };
 
-export type CmsAnnouncement = {
-  id: string;
-  title: string;
-  audience: string;
-  status: "draft" | "published" | "scheduled";
-  scheduledAt: string | null;
-};
-
 export type CmsState = {
   features: CmsFeature[];
   testimonials: CmsTestimonial[];
   howToSteps: CmsHowToStep[];
   stats: CmsStat[];
   faqs: CmsFaq[];
-  announcements: CmsAnnouncement[];
 };
 
-/** Slices rendered on the public home page from CMS */
 export type MarketingHomeCms = {
   features: CmsFeature[];
   testimonials: CmsTestimonial[];
@@ -95,8 +85,8 @@ const DEFAULTS: CmsState = {
     { id: "h1", stepNumber: "01", icon: "UserPlus", title: "Create", description: "Sign up with your email or Google account in seconds.", published: true, order: 1 },
     { id: "h2", stepNumber: "02", icon: "CreditCard", title: "Subscribe", description: "Pick a plan and activate access to partner gyms that match your goals.", published: true, order: 2 },
     { id: "h3", stepNumber: "03", icon: "Search", title: "Find", description: "Discover nearby partner gyms, amenities, and hours in one place.", published: true, order: 3 },
-    { id: "h4", stepNumber: "04", icon: "ScanLine", title: "Scan", description: "Check in at the door with your FitPal QR code—no cards or front-desk hassle.", published: true, order: 4 },
-    { id: "h5", stepNumber: "05", icon: "Dumbbell", title: "Train", description: "Work out with guided routines or freestyle using the gym’s equipment.", published: true, order: 5 },
+    { id: "h4", stepNumber: "04", icon: "ScanLine", title: "Scan", description: "Check in at the door with your FitPal QR code-no cards or front-desk hassle.", published: true, order: 4 },
+    { id: "h5", stepNumber: "05", icon: "Dumbbell", title: "Train", description: "Work out with guided routines or freestyle using the gym's equipment.", published: true, order: 5 },
     { id: "h6", stepNumber: "06", icon: "BarChart3", title: "Record", description: "Log sets and reps and watch your progress on your personal dashboard.", published: true, order: 6 },
   ],
   stats: [
@@ -112,7 +102,6 @@ const DEFAULTS: CmsState = {
     { id: "fq4", question: "How do I cancel my subscription?", answer: "You can manage your subscription from the app settings. Cancellations take effect at the end of your current billing period.", category: "Subscription", published: true, order: 4 },
     { id: "fq5", question: "Are there any hidden fees?", answer: "No hidden fees! The price you see includes all applicable taxes and charges. What you see is what you pay.", category: "Billing", published: true, order: 5 },
   ],
-  announcements: [],
 };
 
 export function getMarketingCmsFallback(): MarketingHomeCms {

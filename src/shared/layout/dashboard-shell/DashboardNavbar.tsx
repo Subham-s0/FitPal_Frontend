@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Building2, Search, Wallet } from "lucide-react";
+import { Building2, Search, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthState } from "@/features/auth/hooks";
 import { getMyProfileApi } from "@/features/profile/api";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { getAdminGymStatusCountsApi } from "@/features/admin/admin-gym.api";
 import { getGymPayoutBatchesApi } from "@/features/admin/admin-settlement.api";
+import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import {
   getDashboardPrimaryActionLabel,
   getDashboardRoleBadgeLabel,
@@ -161,10 +162,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
       </div>
 
       <div className="flex items-center gap-6">
-        <button className="group relative rounded-full p-2 transition-colors hover:bg-[#1a1a1a]">
-          <Bell className="h-6 w-6 text-gray-400 transition-colors group-hover:text-orange-600" />
-          <span className="absolute right-2 top-1 h-2 w-2 rounded-full bg-orange-600" />
-        </button>
+        <NotificationBell />
 
         {isAdminDashboard ? (
           <button

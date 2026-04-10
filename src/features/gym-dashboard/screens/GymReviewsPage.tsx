@@ -64,13 +64,6 @@ import { Input } from "@/shared/ui/input";
 import { Textarea } from "@/shared/ui/textarea";
 import { cn } from "@/shared/lib/utils";
 
-const FIRE = "var(--gradient-fire)";
-const fireStyle = {
-  background: FIRE,
-  WebkitBackgroundClip: "text" as const,
-  WebkitTextFillColor: "transparent",
-  backgroundClip: "text" as const,
-};
 
 const card =
   "rounded-2xl border table-border bg-[#121212] p-5 shadow-[0_20px_40px_-28px_rgba(0,0,0,0.92)]";
@@ -140,10 +133,10 @@ const ReviewReplyBlock = ({ review }: { review: PublicGymReviewResponse }) => {
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-orange-500/25 bg-[linear-gradient(160deg,rgba(249,115,22,0.12),rgba(17,17,17,0.96))] p-3.5 shadow-[inset_0_0_18px_rgba(249,115,22,0.12)]">
+    <div className="mt-3 rounded-xl border border-orange-500/30 bg-[linear-gradient(160deg,rgba(249,115,22,0.14),rgba(17,17,17,0.96))] p-3.5 shadow-[inset_0_0_18px_rgba(249,115,22,0.12)] transition-colors hover:border-orange-500/40">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-[0.13em] text-orange-300">Gym reply</p>
-        <p className="text-[11px] text-orange-100/75">{formatDate(review.gymReplyAt)}</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.12em] text-orange-300">Gym reply</p>
+        <p className="text-[10px] text-orange-200/80">{formatDate(review.gymReplyAt)}</p>
       </div>
       <p className="mt-1.5 text-[13px] leading-relaxed text-orange-50">{review.gymReply}</p>
     </div>
@@ -187,19 +180,17 @@ const ReviewMetricCard = ({
 }) => (
   <div
     className={cn(
-      "flex h-full min-h-[102px] flex-col rounded-2xl border p-3.5 transition-all hover:border-white/20",
+      "flex flex-col rounded-2xl border px-3 py-3 transition-all hover:border-white/20",
       borderClass,
       bgClass
     )}
   >
-    <div className="flex min-w-0 items-center gap-2">
-      <Icon className={cn("h-4 w-4 flex-shrink-0", iconClass)} />
-      <p className="truncate text-[11px] font-black uppercase tracking-wider table-text-muted">{label}</p>
+    <div className="flex min-w-0 items-center gap-1.5">
+      <Icon className={cn("h-3.5 w-3.5 flex-shrink-0", iconClass)} />
+      <p className="truncate text-[10px] font-black uppercase tracking-wider table-text-muted">{label}</p>
     </div>
-    <div className="mt-2.5 flex min-h-[28px] items-center">
-      <p className={cn("text-2xl font-black leading-none", valueClass)}>{value}</p>
-    </div>
-    <p className={cn("mt-1.5 text-[11px] font-medium", subClass)}>{sub}</p>
+    <p className={cn("mt-1.5 font-mono text-[17px] font-bold leading-none", valueClass)}>{value}</p>
+    <p className={cn("mt-1 text-[11px] font-medium", subClass)}>{sub}</p>
   </div>
 );
 
@@ -300,13 +291,13 @@ const GymReviewsPage: FC = () => {
       {
         label: "Replied",
         value: repliedCount,
-        color: "#22c55e",
+        color: "#f97316",
         meta: `${repliedRatePercentage.toFixed(1)}% covered`,
       },
       {
         label: "Awaiting reply",
         value: unrepliedCount,
-        color: "#f59e0b",
+        color: "#ef4444",
         meta:
           totalReviews > 0
             ? `${(100 - repliedRatePercentage).toFixed(1)}% pending`
@@ -382,11 +373,21 @@ const GymReviewsPage: FC = () => {
   };
 
   return (
-    <div className="max-w-[1600px] animate-fade-in space-y-5 font-['Outfit',system-ui,sans-serif]">
+    <div className="mx-auto max-w-[1600px] space-y-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-[32px] font-black tracking-tight text-white">
-            Reviews &amp; <span style={fireStyle}>Feedback</span>
+            Reviews &amp;{" "}
+            <span
+              style={{
+                background: "var(--gradient-fire)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Feedback
+            </span>
           </h1>
         </div>
         <button
@@ -399,7 +400,7 @@ const GymReviewsPage: FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
         <ReviewMetricCard
           label="Average Rating"
           value={averageRating == null ? "-" : averageRating.toFixed(1)}
@@ -442,45 +443,35 @@ const GymReviewsPage: FC = () => {
           subClass={repliedRatePercentage < 50 && totalReviews > 0 ? "text-amber-400" : "text-emerald-400"}
         />
         <ReviewMetricCard
-          label="Awaiting Reply"
-          value={String(unrepliedCount)}
-          sub={unrepliedCount > 0 ? "Reviews still need a response" : "Inbox cleared"}
-          icon={MessageSquareReply}
-          borderClass="border-amber-500/25"
-          bgClass="bg-amber-500/[0.06]"
-          iconClass="text-amber-400"
-          subClass={unrepliedCount > 0 ? "text-amber-400" : "text-zinc-500"}
-        />
-        <ReviewMetricCard
           label="Total Reviews"
           value={String(totalReviews)}
           sub={totalReviews > 0 ? "All member ratings collected" : "No reviews yet"}
           icon={UserRound}
-          borderClass="border-violet-500/25"
-          bgClass="bg-violet-500/[0.06]"
-          iconClass="text-violet-300"
+          borderClass="border-orange-500/25"
+          bgClass="bg-orange-500/[0.06]"
+          iconClass="text-orange-400"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <section className={card}>
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[12px] font-black uppercase tracking-[0.14em] text-zinc-400">Distribution</p>
-              <h2 className="mt-1 text-[22px] font-black text-white">Star breakdown</h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Star className="h-4 w-4 text-orange-400" />
+              <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Star breakdown</p>
             </div>
-            <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[12px] font-bold table-text-muted">
-              Based on {totalReviews} reviews
+            <div className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] font-bold table-text-muted">
+              {totalReviews} reviews
             </div>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {distribution.map((row) => (
-              <div key={row.rating} className="flex items-center gap-3">
-                <div className="flex w-14 items-center gap-1 text-[12px] font-bold text-zinc-200">
+              <div key={row.rating} className="flex items-center gap-2">
+                <div className="flex w-10 items-center gap-1 text-[11px] font-bold text-zinc-200">
                   <span>{row.rating}</span>
-                  <Star className="h-3.5 w-3.5 fill-current text-orange-400" />
+                  <Star className="h-3 w-3 fill-current text-orange-400" />
                 </div>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -490,20 +481,17 @@ const GymReviewsPage: FC = () => {
                     }}
                   />
                 </div>
-                <div className="w-14 text-right text-[12px] font-bold text-white">{row.count}</div>
-                <div className="w-16 text-right text-[12px] text-zinc-400">{row.percentage.toFixed(1)}%</div>
+                <div className="w-8 text-right text-[11px] font-bold text-white">{row.count}</div>
+                <div className="w-12 text-right text-[11px] text-zinc-400">{row.percentage.toFixed(1)}%</div>
               </div>
             ))}
           </div>
         </section>
 
         <section className={card}>
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[12px] font-black uppercase tracking-[0.14em] text-zinc-400">Response Health</p>
-              <h2 className="mt-1 text-[22px] font-black text-white">Reply coverage</h2>
-            </div>
-            <MessageSquareReply className="h-5 w-5 text-emerald-400" />
+          <div className="mb-3 flex items-center gap-2">
+            <MessageSquareReply className="h-4 w-4 text-emerald-400" />
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Reply coverage</p>
           </div>
           <AnalyticsPieChart
             className="pt-1"
@@ -515,12 +503,9 @@ const GymReviewsPage: FC = () => {
         </section>
 
         <section className={card}>
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[12px] font-black uppercase tracking-[0.14em] text-zinc-400">Sentiment Mix</p>
-              <h2 className="mt-1 text-[22px] font-black text-white">Review posture</h2>
-            </div>
-            <ShieldAlert className="h-5 w-5 text-red-400" />
+          <div className="mb-3 flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-red-400" />
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Review posture</p>
           </div>
           <AnalyticsPieChart
             className="pt-1"
@@ -533,10 +518,10 @@ const GymReviewsPage: FC = () => {
       </div>
 
       <section className={tableCard}>
-        <div className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[12px] font-black uppercase tracking-[0.14em] text-zinc-400">All Reviews</p>
-            <h2 className="mt-1 text-[22px] font-black text-white">Searchable feedback feed</h2>
+        <div className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquareReply className="h-4 w-4 text-orange-400" />
+            <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">All reviews</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-[260px]">
@@ -682,7 +667,7 @@ const GymReviewsPage: FC = () => {
               {reviews.map((review) => (
                 <div
                   key={review.reviewId}
-                  className="rounded-2xl border border-white/[0.08] bg-[#121212] p-5 transition-all hover:border-white/[0.12] hover:bg-[#161616]"
+                  className="rounded-2xl border border-white/[0.07] bg-[#111111] p-5 transition-colors hover:border-white/[0.08] hover:bg-[#0f0f0f]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
@@ -694,17 +679,14 @@ const GymReviewsPage: FC = () => {
                       </Avatar>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-[17px] font-black text-white">
+                          <p className="truncate text-[13px] font-black uppercase tracking-[0.1em] text-orange-300">
                             {review.reviewerName ?? "FitPal Member"}
                           </p>
-                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-[11px] font-bold table-text-muted">
-                            {formatDate(review.createdAt)}
-                          </span>
                         </div>
                         <div className="mt-1 flex items-center gap-3">
                           <RatingPips rating={review.rating} />
-                          <span className="text-[12px] table-text-muted">
-                            {review.rating == null ? "No rating" : `${review.rating}/5`}
+                          <span className="text-[11px] text-zinc-500">
+                            {formatDate(review.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -726,7 +708,7 @@ const GymReviewsPage: FC = () => {
                           <button
                             type="button"
                             aria-label="Review actions"
-                            className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white transition-colors"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/[0.02] hover:text-white"
                           >
                             <MoreVertical className="h-4 w-4" />
                           </button>
@@ -753,7 +735,7 @@ const GymReviewsPage: FC = () => {
                     </div>
                   </div>
 
-                  <div className="mt-3 rounded-xl border border-white/[0.05] bg-white/[0.015] px-4 py-3">
+                  <div className="mt-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
                     <p className="text-[13px] leading-relaxed text-zinc-300">
                       {review.comments ?? "No comment provided."}
                     </p>

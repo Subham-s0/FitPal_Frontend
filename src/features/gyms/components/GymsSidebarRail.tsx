@@ -142,7 +142,7 @@ const GymsSidebarRail = ({
             </div>
           )}
           {totalPages > 1 && (
-            <div className="mt-2 flex items-center justify-between rounded-[1.6rem] border border-white/10 bg-white/[0.03] px-4 py-3">
+            <div className="mt-2 flex items-center justify-between rounded-[1.6rem] border border-white/10 user-surface-muted px-4 py-3">
               <span className="text-xs font-bold text-slate-400">
                 Page {currentPage} of {totalPages}
               </span>
@@ -192,8 +192,8 @@ function DesktopGymCard({
       onClick={onClick}
       className={`group cursor-pointer overflow-hidden rounded-[2rem] border transition-all duration-300 ${
         selected
-          ? "border-orange-500/45 bg-card shadow-[0_0_40px_rgba(234,88,12,0.15)] ring-2 ring-orange-500/45"
-          : "border-border/50 bg-card hover:border-primary/30"
+          ? "border-orange-500/45 user-surface shadow-[0_0_40px_rgba(234,88,12,0.15)] ring-2 ring-orange-500/45"
+          : "border-border/50 user-surface hover:border-primary/30"
       }`}
     >
       <div className="flex h-full items-stretch gap-0">
@@ -205,7 +205,7 @@ function DesktopGymCard({
               className="h-full min-h-[116px] w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full min-h-[116px] w-full items-center justify-center bg-[#111]">
+            <div className="flex h-full min-h-[116px] w-full items-center justify-center user-surface">
               <span className="text-3xl font-black uppercase tracking-tight text-slate-500">
                 {getGymMonogram(gym)}
               </span>
@@ -262,7 +262,7 @@ function DesktopGymCard({
                   className={`rounded-full border p-2 transition-colors ${
                     isSaved
                       ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
-                      : "border-white/10 bg-white/[0.03] text-slate-500 hover:text-white"
+                      : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
                   }`}
                 >
                   <Bookmark size={14} className={isSaved ? "fill-current" : ""} />

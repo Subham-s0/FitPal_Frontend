@@ -50,7 +50,7 @@ const GymDetailsSheet = ({
   return (
     <div className="fixed bottom-[calc(var(--mobile-bottom-dock-height,80px)+env(safe-area-inset-bottom)+12px)] left-0 right-0 z-[1001] mx-3 overflow-hidden transition-all duration-300 md:hidden">
       <div
-        className={`flex flex-col overflow-hidden rounded-2xl border border-border/50 bg-card shadow-2xl transition-all duration-300 ${snapHeightClass}`}
+        className={`flex flex-col overflow-hidden rounded-2xl border border-border/50 user-surface shadow-2xl transition-all duration-300 ${snapHeightClass}`}
       >
         <div
           className="flex shrink-0 cursor-pointer items-center justify-center py-3"
@@ -128,7 +128,7 @@ function SheetContent({
         )}
         {!previewImageUrl && (
           <div
-            className={`flex shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] font-black uppercase tracking-tight text-slate-400 ${
+            className={`flex shrink-0 items-center justify-center rounded-xl border border-white/10 user-surface-muted font-black uppercase tracking-tight text-slate-400 ${
               isExpanded ? "h-16 w-16 text-lg" : "h-12 w-12 text-sm"
             }`}
           >
@@ -190,7 +190,7 @@ function SheetContent({
             className={`rounded-full border p-2 transition-colors ${
               isSaved
                 ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
-                : "border-white/10 bg-white/[0.03] text-slate-500 hover:text-white"
+                : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
             }`}
           >
             <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
@@ -227,7 +227,7 @@ function SheetContent({
         <div className="animate-in slide-in-from-bottom-2 fade-in pt-2 duration-300">
           <div className="flex gap-3">
             {gym.occupancyPercent != null && (
-              <div className="flex-1 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+              <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
                   Occupancy
                 </p>
@@ -248,7 +248,7 @@ function SheetContent({
               </div>
             )}
             {gym.minimumAccessTier && (
-              <div className="flex-1 rounded-xl border border-white/5 bg-white/[0.02] p-3">
+              <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
                   Required Tier
                 </p>

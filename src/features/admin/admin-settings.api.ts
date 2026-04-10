@@ -10,13 +10,9 @@ import type {
   CmsHowToStepUpsertRequest,
   CmsFaqResponse,
   CmsFaqUpsertRequest,
-  CmsAnnouncementResponse,
-  CmsAnnouncementUpsertRequest,
   CmsStatResponse,
   CmsStatUpsertRequest,
 } from "./admin-settings.model";
-
-// ─── Application Rules ───────────────────────────────────────────────────────
 
 export async function getApplicationRulesApi(): Promise<ApplicationRuleSummaryResponse> {
   const response = await apiClient.get<ApplicationRuleSummaryResponse>("/admin/application-rules/summary");
@@ -27,8 +23,6 @@ export async function updateApplicationRulesApi(payload: ApplicationRuleUpdateRe
   const response = await apiClient.patch<ApplicationRuleSummaryResponse>("/admin/application-rules", payload);
   return response.data;
 }
-
-// ─── CMS Features ────────────────────────────────────────────────────────────
 
 export async function getCmsFeaturesApi(): Promise<CmsFeatureResponse[]> {
   const response = await apiClient.get<CmsFeatureResponse[]>("/admin/cms/features");
@@ -49,8 +43,6 @@ export async function deleteCmsFeatureApi(id: string): Promise<void> {
   await apiClient.delete(`/admin/cms/features/${id}`);
 }
 
-// ─── CMS Testimonials ────────────────────────────────────────────────────────
-
 export async function getCmsTestimonialsApi(): Promise<CmsTestimonialResponse[]> {
   const response = await apiClient.get<CmsTestimonialResponse[]>("/admin/cms/testimonials");
   return response.data;
@@ -69,8 +61,6 @@ export async function updateCmsTestimonialApi(id: string, payload: CmsTestimonia
 export async function deleteCmsTestimonialApi(id: string): Promise<void> {
   await apiClient.delete(`/admin/cms/testimonials/${id}`);
 }
-
-// ─── CMS How-To Steps ────────────────────────────────────────────────────────
 
 export async function getCmsHowToStepsApi(): Promise<CmsHowToStepResponse[]> {
   const response = await apiClient.get<CmsHowToStepResponse[]>("/admin/cms/how-to-steps");
@@ -91,8 +81,6 @@ export async function deleteCmsHowToStepApi(id: string): Promise<void> {
   await apiClient.delete(`/admin/cms/how-to-steps/${id}`);
 }
 
-// ─── CMS FAQs ────────────────────────────────────────────────────────────────
-
 export async function getCmsFaqsApi(): Promise<CmsFaqResponse[]> {
   const response = await apiClient.get<CmsFaqResponse[]>("/admin/cms/faqs");
   return response.data;
@@ -111,29 +99,6 @@ export async function updateCmsFaqApi(id: string, payload: CmsFaqUpsertRequest):
 export async function deleteCmsFaqApi(id: string): Promise<void> {
   await apiClient.delete(`/admin/cms/faqs/${id}`);
 }
-
-// ─── CMS Announcements ───────────────────────────────────────────────────────
-
-export async function getCmsAnnouncementsApi(): Promise<CmsAnnouncementResponse[]> {
-  const response = await apiClient.get<CmsAnnouncementResponse[]>("/admin/cms/announcements");
-  return response.data;
-}
-
-export async function createCmsAnnouncementApi(payload: CmsAnnouncementUpsertRequest): Promise<CmsAnnouncementResponse> {
-  const response = await apiClient.post<CmsAnnouncementResponse>("/admin/cms/announcements", payload);
-  return response.data;
-}
-
-export async function updateCmsAnnouncementApi(id: string, payload: CmsAnnouncementUpsertRequest): Promise<CmsAnnouncementResponse> {
-  const response = await apiClient.patch<CmsAnnouncementResponse>(`/admin/cms/announcements/${id}`, payload);
-  return response.data;
-}
-
-export async function deleteCmsAnnouncementApi(id: string): Promise<void> {
-  await apiClient.delete(`/admin/cms/announcements/${id}`);
-}
-
-// ─── CMS Stats ───────────────────────────────────────────────────────────────
 
 export async function getCmsStatsApi(): Promise<CmsStatResponse[]> {
   const response = await apiClient.get<CmsStatResponse[]>("/admin/cms/stats");

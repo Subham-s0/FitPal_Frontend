@@ -1,4 +1,4 @@
-import type { MemberRow, NoticeRow, PayoutRow, ReviewRow, ScanRow } from "./types";
+import type { MemberRow, PayoutRow, ReviewRow, ScanRow } from "./types";
 
 export const SCANS: ScanRow[] = [
   { time: "08:14", member: "Aarav Sharma", plan: "Pro", result: "success" },
@@ -35,11 +35,4 @@ export const REVIEWS: ReviewRow[] = [
   { name: "Bikram Rai", rating: 5, text: "Best gym in Kathmandu! Love the atmosphere.", date: "1 week ago" },
   { name: "Anonymous", rating: 2, text: "Waiting times are too long in the morning. Please fix the QR scanner.", date: "1 week ago" },
   { name: "Manisha Poudel", rating: 4, text: "Great trainers and good facilities. Happy with my membership.", date: "2 weeks ago" },
-];
-
-export const NOTICES: NoticeRow[] = [
-  { title: "Gym closed on Holi - 14 March", audience: "All members", date: "10 Mar 2026", status: "sent" },
-  { title: "New cardio equipment arriving", audience: "All members", date: "20 Mar 2026", status: "scheduled" },
-  { title: "Summer schedule change", audience: "All members", date: "01 Apr 2026", status: "scheduled" },
-  { title: "Maintenance: showers out 9-11am", audience: "All members", date: "08 Mar 2026", status: "sent" },
 ];

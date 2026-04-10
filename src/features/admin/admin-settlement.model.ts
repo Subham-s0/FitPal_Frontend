@@ -125,6 +125,9 @@ export interface GymSettlementAnalyticsResponse {
   pendingBatchCount: number;
   gymReviewPendingAmount: number;
   gymReviewPendingCount: number;
+  pendingAmount: number;
+  inPayoutAmount: number;
+  inPayoutBatchCount: number;
   receivedAmount: number;
   receivedCount: number;
   receivableAmount: number;

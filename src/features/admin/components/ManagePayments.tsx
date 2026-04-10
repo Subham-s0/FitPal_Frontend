@@ -453,10 +453,6 @@ export default function ManagePayments() {
             TAB 1  MEMBER PAYMENTS (subscription attempts)
          */}
         <TabsContent value="subscriptions" className="mt-0 space-y-5">
-          <p className="text-[13px] table-text-muted">
-            Filters and search query the backend; the table is server-paged and server-filtered.
-          </p>
-
           {/* Charts strip */}
           <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-3 overflow-x-auto pb-1">
             {/* Revenue */}
@@ -1092,4 +1088,3 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

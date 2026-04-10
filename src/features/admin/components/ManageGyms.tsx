@@ -1335,6 +1335,10 @@ export default function ManageGyms() {
     toast.info(`Delete requested for ${gymName} (#${gymId}). Backend delete endpoint is not configured yet.`);
   };
 
+  const toggleExpanded = (gymId: number) => {
+    setExpandedId((current) => (current === gymId ? null : gymId));
+  };
+
   const TABS = [
     { key: "PENDING_REVIEW" as GymApprovalStatus, label: "Pending",  activeCls: "bg-[hsl(0,0%,9%)] text-yellow-400 border-yellow-500/20", ctCls: "bg-yellow-500/15 text-yellow-400" },
     { key: "APPROVED"       as GymApprovalStatus, label: "Approved", activeCls: "bg-[hsl(0,0%,9%)] text-green-400 border-green-500/20",   ctCls: "bg-green-500/15 text-green-400"   },
@@ -1473,12 +1477,13 @@ export default function ManageGyms() {
               const payoutMeta = [hasEsewa ? "eSewa" : null, hasKhalti ? "Khalti" : null].filter(Boolean).join(" + ") || "No payout wallet";
 
               return [
-                <tr key={gym.gymId}
-                    className={`border-b table-border-row last:border-0 transition-colors ${isExp ? "bg-orange-500/[0.05]" : "hover:bg-white/[0.025]"}`}>
+                <tr
+                    key={gym.gymId}
+                    onClick={() => toggleExpanded(gym.gymId)}
+                    className={`border-b table-border-row last:border-0 cursor-pointer transition-colors ${isExp ? "bg-orange-500/[0.05]" : "hover:bg-white/[0.025]"}`}>
 
                   <td className="p-0" style={colStyle(0)}>
-                    <div className="flex items-center gap-2.5 px-3.5 py-3.5 pl-5 cursor-pointer"
-                         onClick={() => setExpandedId(isExp ? null : gym.gymId)}>
+                    <div className="flex items-center gap-2.5 px-3.5 py-3.5 pl-5">
                       {gym.logoUrl
                           ? <img src={gym.logoUrl} alt={gym.gymName ?? ""} className="w-10 h-10 rounded-[10px] object-cover flex-shrink-0 border border-orange-500/25" />
                           : <div className="w-10 h-10 rounded-[10px] bg-orange-500/10 border border-orange-500/25 flex items-center justify-center text-[12px] font-black text-orange-400 flex-shrink-0">{initials(gym.gymName)}</div>}
@@ -1531,7 +1536,7 @@ export default function ManageGyms() {
                     <div className="text-[10px] table-text-muted truncate mt-1 max-w-full">{payoutMeta}</div>
                   </td>
 
-                  <td className="px-2 py-3.5" style={colStyle(8)}>
+                  <td className="px-2 py-3.5" style={colStyle(8)} onClick={(event) => event.stopPropagation()}>
                     <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         {(gym.approvalStatus === "APPROVED" || gym.approvalStatus === "REJECTED") && (
                           <ApprovalDropdown
@@ -1542,7 +1547,11 @@ export default function ManageGyms() {
                             onDelete={handleQuickDeleteRejected}
                           />
                       )}
-                      <button type="button" onClick={() => setExpandedId(isExp ? null : gym.gymId)}
+                      <button
+                              type="button"
+                              aria-expanded={isExp}
+                              aria-label={isExp ? `Collapse ${gym.gymName ?? "gym"} details` : `Expand ${gym.gymName ?? "gym"} details`}
+                              onClick={() => toggleExpanded(gym.gymId)}
                               className={`w-6 h-6 rounded-full border flex items-center justify-center transition-all ${isExp ? "bg-orange-500 border-orange-500 text-white shadow-[0_3px_12px_rgba(255,106,0,0.4)]" : "table-border table-text-muted hover:border-orange-500/30 hover:text-orange-400"}`}>
                         <ChevronDown className={`w-3 h-3 transition-transform ${isExp ? "rotate-180" : ""}`} strokeWidth={2.5} />
                       </button>
@@ -1618,7 +1627,7 @@ export default function ManageGyms() {
             </DialogHeader>
 
             <div className="mt-3">
-              <div className="mb-4 flex gap-1 rounded-xl border border-white/[0.06] bg-white/[0.03] p-1">
+              <div className="mb-4 flex gap-1 rounded-full border border-white/[0.08] bg-black/40 p-1 backdrop-blur-sm">
                 {(
                   [
                     { id: "profile", label: "Profile" },
@@ -1631,10 +1640,10 @@ export default function ManageGyms() {
                     key={t.id}
                     type="button"
                     onClick={() => setViewTab(t.id)}
-                    className={`flex-1 rounded-lg px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform ${
+                    className={`flex-1 rounded-full border px-3 py-2.5 text-center text-[11px] font-black uppercase tracking-[0.14em] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform ${
                       viewTab === t.id
-                        ? "bg-orange-500/[0.12] text-orange-500 scale-100"
-                        : "text-zinc-500 hover:bg-white/[0.03] hover:text-zinc-400 hover:scale-[1.02] active:scale-[0.98]"
+                        ? "border-orange-500 bg-orange-600 text-white shadow-[0_2px_12px_rgba(234,88,12,0.3)]"
+                        : "border-transparent text-slate-400 hover:border-white/[0.06] hover:bg-white/5 hover:text-white active:scale-[0.98]"
                     }`}
                   >
                     {t.label}

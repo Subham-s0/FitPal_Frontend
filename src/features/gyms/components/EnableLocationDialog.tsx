@@ -59,7 +59,7 @@ const EnableLocationDialog = ({
           </div>
 
           <div className="space-y-4 px-6 py-5">
-            <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-4">
+            <div className="rounded-2xl border border-white/8 user-surface-muted p-4">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04]">
                   <LocateFixed size={16} className="text-orange-500" />

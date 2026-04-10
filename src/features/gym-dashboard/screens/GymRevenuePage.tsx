@@ -326,6 +326,7 @@ const GymRevenuePage: FC = () => {
       setReviewTarget(null);
       setBatchDetail(null);
       queryClient.invalidateQueries({ queryKey: ["gym-settlement"] });
+      queryClient.invalidateQueries({ queryKey: ["gym-payout-batches", "pending-count"] });
     },
     onError: (err) => toast.error(getApiErrorMessage(err, "Review failed")),
   });
@@ -651,13 +652,7 @@ const GymRevenuePage: FC = () => {
                   {analyticsQ.isLoading
                     ? "—"
                     : a
-                    ? formatMoney(
-                        Math.max(
-                          a.receivableAmount - (a.pendingBatchAmount + a.gymReviewPendingAmount),
-                          0,
-                        ),
-                        a.currency,
-                      )
+                    ? formatMoney(a.pendingAmount, a.currency)
                     : "—"}
                 </p>
                 <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
@@ -673,7 +668,7 @@ const GymRevenuePage: FC = () => {
               </div>
               <div className="flex flex-1 flex-col justify-center">
                 <p className="text-[18px] font-black leading-tight text-white">
-                  {analyticsQ.isLoading ? "—" : a ? formatMoney(a.pendingBatchAmount + a.gymReviewPendingAmount, a.currency) : "—"}
+                  {analyticsQ.isLoading ? "—" : a ? formatMoney(a.inPayoutAmount, a.currency) : "—"}
                 </p>
                 <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-500">
                   {a ? `${a.checkinInPayoutCount} in-payout settlements` : ""}

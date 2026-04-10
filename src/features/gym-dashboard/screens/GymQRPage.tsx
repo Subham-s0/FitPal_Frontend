@@ -361,9 +361,6 @@ const GymQRPage: FC = () => {
           <h1 className="text-[32px] font-black tracking-tight text-white">
             QR &  <span style={fireStyle}>Check-Ins</span>
           </h1>
-          <p className="mt-1 text-[11px] table-text-muted">
-            Member access management &amp; live check-in log.
-          </p>
         </div>
       </div>
 

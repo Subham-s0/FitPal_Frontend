@@ -148,6 +148,55 @@ interface MapSectionProps {
   ) => void;
 }
 
+interface LeafletMapInstance {
+  setView(center: [number, number], zoom: number, options?: { animate?: boolean }): LeafletMapInstance;
+  flyTo(
+    center: [number, number],
+    zoom: number,
+    options?: { animate?: boolean; duration?: number },
+  ): LeafletMapInstance;
+  remove(): void;
+}
+
+interface LeafletMarkerInstance {
+  on(event: "dragend", handler: () => void): LeafletMarkerInstance;
+  getLatLng(): { lat: number; lng: number };
+  setLatLng(latlng: [number, number]): LeafletMarkerInstance;
+}
+
+interface LeafletApi {
+  latLngBounds(sw: [number, number], ne: [number, number]): unknown;
+  map(
+    element: HTMLElement,
+    options: {
+      zoomControl: boolean;
+      attributionControl: boolean;
+      maxBounds: unknown;
+      maxBoundsViscosity: number;
+      minZoom: number;
+    },
+  ): LeafletMapInstance;
+  tileLayer(url: string, options: { maxZoom: number }): { addTo(map: LeafletMapInstance): void };
+  divIcon(options: {
+    className: string;
+    html: string;
+    iconSize: [number, number];
+    iconAnchor: [number, number];
+  }): unknown;
+  marker(center: [number, number], options: { draggable: boolean; icon: unknown }): {
+    addTo(map: LeafletMapInstance): LeafletMarkerInstance;
+  };
+  control: {
+    zoom(options: { position: "bottomright" }): { addTo(map: LeafletMapInstance): void };
+  };
+}
+
+declare global {
+  interface Window {
+    L?: LeafletApi;
+  }
+}
+
 interface ActionsProps {
   label: string;
   step: number;
@@ -529,12 +578,11 @@ const Actions: FC<ActionsProps> = ({ label, step, totalSteps, hideBack = false, 
 
 const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, onLocationPicked }) => {
   const mapElRef  = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const leafletRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markerRef  = useRef<any>(null);
+  const leafletRef = useRef<LeafletMapInstance | null>(null);
+  const markerRef  = useRef<LeafletMarkerInstance | null>(null);
   const wrapRef    = useRef<HTMLDivElement>(null);
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onLocationPickedRef = useRef(onLocationPicked);
 
   const [query,   setQuery]   = useState("");
   const [results, setResults] = useState<LocationResult[]>([]);
@@ -561,18 +609,22 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
     setTimeout(() => setOob(false), 4000);
   }, []);
 
-  const applyResolvedAddress = (data: LocationResult) => {
+  useEffect(() => {
+    onLocationPickedRef.current = onLocationPicked;
+  }, [onLocationPicked]);
+
+  const applyResolvedAddress = useCallback((data: LocationResult) => {
     const address = data.address ?? {};
     const street = [address.road ?? address.pedestrian ?? address.footway ?? "", address.house_number ?? ""]
       .filter(Boolean).join(" ").trim() || data.display_name.split(",")[0]?.trim() || "";
-    onLocationPicked(null, null, data, {
+    onLocationPickedRef.current(null, null, data, {
       street,
       city:   address.city ?? address.town ?? address.village ?? address.county ?? "",
       postal: address.postcode ?? "",
     });
-  };
+  }, []);
 
-  const reverseGeocode = async (lat: number, lng: number) => {
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     try {
       const url = new URL("https://photon.komoot.io/reverse");
       url.searchParams.set("lat", String(lat));
@@ -592,11 +644,11 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
       const short = resolved.display_name.split(",").slice(0, 2).join(",").trim();
       setLocated(short);
       setQuery(short);
-      onLocationPicked(lat, lng, resolved);
+      onLocationPickedRef.current(lat, lng, resolved);
     } catch {
       // Ignore transient reverse lookup failures
     }
-  };
+  }, [applyResolvedAddress]);
 
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
@@ -607,8 +659,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
     }
 
     const init = () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const L = (window as any).L;
+      const L = window.L;
       if (!mapElRef.current || leafletRef.current || !L) return;
 
       const bounds = L.latLngBounds(
@@ -640,7 +691,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
           return;
         }
         rememberValidPosition(p.lat, p.lng);
-        onLocationPicked(p.lat, p.lng, { lat: String(p.lat), lon: String(p.lng), display_name: "" });
+        onLocationPickedRef.current(p.lat, p.lng, { lat: String(p.lat), lon: String(p.lng), display_name: "" });
         void reverseGeocode(p.lat, p.lng);
       });
 
@@ -649,8 +700,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
       markerRef.current  = marker;
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window as any).L) { setTimeout(init, 100); return; }
+    if (window.L) { setTimeout(init, 100); return; }
 
     const sc = document.createElement("script");
     sc.src    = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -660,8 +710,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
     return () => {
       if (leafletRef.current) { leafletRef.current.remove(); leafletRef.current = null; markerRef.current = null; }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reverseGeocode, showOutOfBoundsError]);
 
   useEffect(() => {
     if (initialLatitude === null || initialLongitude === null || !isInKtm(initialLatitude, initialLongitude) || !leafletRef.current || !markerRef.current) return;
@@ -717,7 +766,7 @@ const MapSection: FC<MapSectionProps> = ({ initialLatitude, initialLongitude, on
     applyResolvedAddress(item);
     const short = item.display_name.split(",").slice(0, 2).join(",").trim();
     setQuery(short); setLocated(short); setShowRes(false); setResults([]);
-    onLocationPicked(lat, lng, item);
+    onLocationPickedRef.current(lat, lng, item);
     void reverseGeocode(lat, lng);
   };
 
@@ -1001,7 +1050,7 @@ const FitPalGymSetup: FC = () => {
       return (a.photoId ?? Number.MAX_SAFE_INTEGER) - (b.photoId ?? Number.MAX_SAFE_INTEGER);
     });
 
-  const syncAuthOnboardingStatus = (
+  const syncAuthOnboardingStatus = useCallback((
     profile: Pick<GymProfileResponse, "profileCompleted" | "registeredEmailVerified" | "submittedForReview" | "approved">,
   ) => {
     authStore.updateOnboardingStatus({
@@ -1013,9 +1062,9 @@ const FitPalGymSetup: FC = () => {
       hasActiveSubscription: false,
       hasDashboardAccess: false,
     });
-  };
+  }, []);
 
-  const syncLogoProfileState = (
+  const syncLogoProfileState = useCallback((
     profile: Pick<GymProfileResponse, "approvalStatus" | "profileCompleted" | "registeredEmailVerified" | "submittedForReview" | "approved" | "logoUrl" | "logoPublicId" | "logoResourceType">,
   ) => {
     syncAuthOnboardingStatus(profile);
@@ -1023,9 +1072,9 @@ const FitPalGymSetup: FC = () => {
     setGymLogoUrl(profile.logoUrl ?? "");
     setGymLogoPublicId(profile.logoPublicId ?? "");
     setGymLogoResourceType(profile.logoResourceType ?? "");
-  };
+  }, [syncAuthOnboardingStatus]);
 
-  const toPhotoRow = (p: GymPhotoResponse): PhotoRow => ({
+  const toPhotoRow = useCallback((p: GymPhotoResponse): PhotoRow => ({
     photoId:      p.photoId ?? null,
     publicId:     p.publicId,
     resourceType: p.resourceType,
@@ -1033,9 +1082,9 @@ const FitPalGymSetup: FC = () => {
     caption:      p.caption ?? "",
     displayOrder: p.displayOrder,
     cover:        p.cover,
-  });
+  }), []);
 
-  const hydrateProfile = (
+  const hydrateProfile = useCallback((
     profile: GymProfileResponse,
     documents?: GymDocumentResponse[],
     gymPhotos?: GymPhotoResponse[],
@@ -1073,9 +1122,9 @@ const FitPalGymSetup: FC = () => {
     setKhaltiAccountName(profile.khaltiAccountName ?? "");
     if (documents) setDocs(buildDocRows(documents));
     if (gymPhotos)  setPhotos(sortPhotos(gymPhotos.map(toPhotoRow)));
-  };
+  }, [syncAuthOnboardingStatus, toPhotoRow]);
 
-  const resolveStep = (profile: GymProfileResponse): number => {
+  const resolveStep = useCallback((profile: GymProfileResponse): number => {
     if (editSubmissionRequestedRef.current && profile.approvalStatus === "REJECTED") {
       editSubmissionRequestedRef.current = false;
       return DOCUMENTS_STEP_INDEX;
@@ -1090,7 +1139,7 @@ const FitPalGymSetup: FC = () => {
     return isComplete
       ? FINAL_REVIEW_STEP_INDEX
       : Math.max(0, Math.min(profile.onboardingStep ?? 0, REVIEW_SUBMIT_STEP_INDEX));
-  };
+  }, []);
 
   // ── Effects ────────────────────────────────────────────────────────────────
 
@@ -1109,8 +1158,7 @@ const FitPalGymSetup: FC = () => {
     if (!editSubmissionRequestedRef.current) return;
     navigate({ pathname: location.pathname, search: location.search, hash: location.hash },
       { replace: true, state: null });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.hash, location.pathname, location.search, navigate]);
 
   // Load profile on mount / token change
   useEffect(() => {
@@ -1133,8 +1181,7 @@ const FitPalGymSetup: FC = () => {
     };
     void load();
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.accessToken]);
+  }, [auth.accessToken, hydrateProfile, resolveStep]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [step]);
   useEffect(() => { setFieldErrors({}); }, [step]);

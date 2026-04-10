@@ -44,6 +44,12 @@
     --surface-raised: #1a1a1a;
     --surface-elevated: #1e1e1e;
     --surface-overlay: #252525;
+    --user-surface: #111111;
+    --user-surface-soft: #151515;
+    --user-surface-muted: #171717;
+    --user-surface-strong: #101010;
+    --user-surface-overlay: rgba(17, 17, 17, 0.88);
+    --user-surface-hover: #161616;
 
     /* ── Border variants ── */
     --border-subtle: #1a1a1a;
@@ -501,6 +507,26 @@
     @apply rounded-2xl border border-white/[0.07] bg-[#0c0c0c] p-5;
   }
 
+  .user-surface {
+    background: var(--user-surface);
+  }
+
+  .user-surface-soft {
+    background: var(--user-surface-soft);
+  }
+
+  .user-surface-muted {
+    background: var(--user-surface-muted);
+  }
+
+  .user-surface-strong {
+    background: var(--user-surface-strong);
+  }
+
+  .user-surface-overlay {
+    background: var(--user-surface-overlay);
+  }
+
   .flow-shell {
     position: relative;
     background: #050505;
@@ -514,14 +540,14 @@
   }
 
   .flow-panel {
-    background: rgba(17, 17, 17, 0.96);
+    background: var(--user-surface-overlay);
     border: 1px solid rgba(255, 255, 255, 0.07);
     box-shadow: 0 24px 50px -26px rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(12px);
   }
 
   .flow-panel-subtle {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--user-surface-muted);
     border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
@@ -534,7 +560,7 @@
   }
 
   .flow-panel-interactive:hover {
-    background: rgba(23, 23, 23, 0.98);
+    background: var(--user-surface-hover);
     border-color: rgba(249, 115, 22, 0.26);
     box-shadow: 0 28px 55px -30px rgba(249, 115, 22, 0.28);
     transform: translateY(-1px);

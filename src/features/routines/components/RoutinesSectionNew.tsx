@@ -151,8 +151,8 @@ function SortableDayRow({
       {/* Day Card - Click to View */}
       <div
         onClick={() => onViewDay(routineId, day.id)}
-        className={`flow-panel flow-panel-interactive flex flex-1 items-center gap-3 rounded-[1.5rem] p-3 ${
-          isUpcomingDay ? "border border-emerald-500/40 bg-emerald-500/5" : ""
+        className={`flex flex-1 items-center gap-3 rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-3 transition-all duration-200 hover:border-white/15 hover:bg-[#191919] ${
+          isUpcomingDay ? "border-emerald-500/40 bg-emerald-500/5" : ""
         }`}
       >
         {/* Clickable Day Info Area */}
@@ -1149,4 +1149,3 @@ const RoutinesSection = ({
 };
 
 export default RoutinesSection;
-

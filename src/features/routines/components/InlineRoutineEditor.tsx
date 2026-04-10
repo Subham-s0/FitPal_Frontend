@@ -122,7 +122,7 @@ function SortableDayRow({
         {/* Day Card - Clickable to toggle expand */}
         <div
           onClick={onToggleExpand}
-          className="flow-panel flow-panel-interactive flex flex-1 cursor-pointer items-center gap-3 rounded-[1.5rem] p-3"
+          className="flex flex-1 cursor-pointer items-center gap-3 rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-3 transition-all duration-200 hover:border-white/15 hover:bg-[#191919]"
         >
           {/* Expand/Collapse Icon */}
           {isExpanded ? (
@@ -229,7 +229,7 @@ function SortableDayRow({
 
       {/* Expanded: Show day description and exercises list */}
       {isExpanded && (
-        <div className="flow-panel-subtle ml-6 mt-2 rounded-[1.5rem] p-4">
+        <div className="ml-6 mt-2 rounded-[1.5rem] border border-white/[0.06] user-surface-muted p-4">
           {day.description && (
             <p className="mb-3 text-sm text-gray-400">{day.description}</p>
           )}
@@ -516,7 +516,7 @@ export default function InlineRoutineEditor({
 
           <div className="flex items-center gap-2">
             {routine.days.length > 0 && (
-              <span className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">
+              <span className="rounded-2xl border border-white/10 user-surface-muted px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">
                 Drag to reorder
               </span>
             )}
@@ -533,7 +533,7 @@ export default function InlineRoutineEditor({
         {showDays && (
           <>
             {routine.days.length === 0 ? (
-              <div className="flow-panel-subtle rounded-[1.5rem] p-6 text-center">
+              <div className="rounded-[1.5rem] border border-white/[0.06] user-surface-muted p-6 text-center">
                 <p className="mb-3 text-xs text-gray-500">No workout days yet</p>
                 <button
                   onClick={handleAddDay}

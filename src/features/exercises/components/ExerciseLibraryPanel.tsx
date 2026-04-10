@@ -452,7 +452,7 @@ export function ExerciseLibraryPanel({
         </div>
         <div className="space-y-2 border-b border-white/5 p-4">
           {exercisesQuery.isLoading ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               Loading...
             </p>
           ) : popularExercises.length > 0 ? (
@@ -469,7 +469,7 @@ export function ExerciseLibraryPanel({
               />
             ))
           ) : (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               No popular exercises
             </p>
           )}
@@ -484,7 +484,7 @@ export function ExerciseLibraryPanel({
         </div>
         <div className="space-y-2 p-4">
           {exercisesQuery.isLoading ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               Loading...
             </p>
           ) : allExercises.length > 0 ? (
@@ -501,11 +501,11 @@ export function ExerciseLibraryPanel({
               />
             ))
           ) : exercises.length === 0 && customExercises.length === 0 ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               No exercises found
             </p>
           ) : (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               No additional exercises
             </p>
           )}

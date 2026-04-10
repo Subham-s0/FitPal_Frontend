@@ -754,7 +754,7 @@ const ExercisesScreen = () => {
       <div className="flex-grow overflow-y-auto custom-scrollbar">
         <div className="space-y-2 border-b border-white/5 p-4">
           {customExercisesQuery.isLoading ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               Loading custom exercises...
             </p>
           ) : customExercises.length > 0 ? (
@@ -771,7 +771,7 @@ const ExercisesScreen = () => {
             </>
           ) : null}
           {exercisesQuery.isLoading ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               Loading...
             </p>
           ) : popularExercises.length > 0 ? (
@@ -779,7 +779,7 @@ const ExercisesScreen = () => {
               renderExerciseListItem(exercise, selectedExerciseKey, handleExerciseSelect, handleDeleteCustomExercise)
             )
           ) : (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               No popular exercises
             </p>
           )}
@@ -794,7 +794,7 @@ const ExercisesScreen = () => {
 
         <div className="space-y-2 p-4">
           {exercisesQuery.isLoading ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               Loading...
             </p>
           ) : allExercises.length > 0 ? (
@@ -802,11 +802,11 @@ const ExercisesScreen = () => {
               renderExerciseListItem(exercise, selectedExerciseKey, handleExerciseSelect, handleDeleteCustomExercise)
             )
           ) : exercises.length === 0 && customExercises.length === 0 ? (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               No exercises found
             </p>
           ) : (
-            <p className="rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            <p className="rounded-[1.5rem] border border-white/5 user-surface-soft px-4 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
               No additional exercises
             </p>
           )}
@@ -856,7 +856,7 @@ const ExercisesScreen = () => {
             ) : null}
 
           {!selectedExerciseRef ? (
-            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] p-4 sm:p-8">
+            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 user-surface p-4 sm:p-8">
               <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_350px] lg:items-start lg:gap-8">
                 <div className="min-w-0">
                   <div className="mb-4">
@@ -907,7 +907,7 @@ const ExercisesScreen = () => {
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#111] p-4 sm:p-8">
+            <div className="overflow-hidden rounded-[2.5rem] border border-white/5 user-surface p-4 sm:p-8">
               <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_350px] lg:items-start lg:gap-8">
                 <div className="min-w-0">
                   <div className="mb-4 flex items-start justify-between gap-3">
@@ -1084,7 +1084,7 @@ const ExercisesScreen = () => {
 
               {activeTab === "stats" && (
                 <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 bg-[#111] p-8 lg:col-span-8">
+                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 user-surface p-8 lg:col-span-8">
                     <div className="mb-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">
@@ -1127,13 +1127,13 @@ const ExercisesScreen = () => {
                         {statsErrorMessage}
                       </div>
                     ) : exerciseStatsQuery.isLoading && !hasTrendData ? (
-                      <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/5 bg-white/[0.02] px-6 text-center">
+                      <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/5 user-surface-soft px-6 text-center">
                         <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
                           Loading trend...
                         </p>
                       </div>
                     ) : !hasTrendData && !exerciseStatsQuery.isLoading ? (
-                      <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/5 bg-white/[0.02] px-6 text-center">
+                      <div className="flex h-64 items-center justify-center rounded-[2rem] border border-white/5 user-surface-soft px-6 text-center">
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
                             No exercise stats yet
@@ -1144,7 +1144,7 @@ const ExercisesScreen = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-72 rounded-[2rem] border border-white/5 bg-white/[0.02] p-3">
+                      <div className="h-72 rounded-[2rem] border border-white/5 user-surface-soft p-3">
                         <ResponsiveContainer width="100%" height="100%">
                           <AreaChart
                             data={trendChartData}
@@ -1179,7 +1179,7 @@ const ExercisesScreen = () => {
                                 };
 
                                 return (
-                                  <div className="rounded-2xl border border-white/10 bg-[#111] px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
+                                  <div className="rounded-2xl border border-white/10 user-surface px-4 py-3 shadow-[0_18px_50px_rgba(0,0,0,0.45)]">
                                     <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                                       {point.periodLabel}
                                     </p>
@@ -1220,7 +1220,7 @@ const ExercisesScreen = () => {
                   </div>
 
                   <div className="col-span-12 space-y-4 lg:col-span-4">
-                    <div className="rounded-[2.5rem] border border-white/5 bg-[#111] p-6">
+                    <div className="rounded-[2.5rem] border border-white/5 user-surface p-6">
                       <p className="mb-4 text-[9px] font-black uppercase tracking-widest text-gray-500">
                         Personal Best
                       </p>
@@ -1294,7 +1294,7 @@ const ExercisesScreen = () => {
 
               {activeTab === "history" && (
                 <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 bg-[#111] p-8">
+                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 user-surface p-8">
                     <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">
@@ -1424,7 +1424,7 @@ const ExercisesScreen = () => {
 
                     {/*
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4">
+                      <div className="flex items-center justify-between rounded-2xl border border-white/5 user-surface-muted p-4">
                         <div>
                           <p className="text-[10px] font-black uppercase text-white">Dec 15, 2023</p>
                           <p className="mt-1 text-[9px] font-bold uppercase text-gray-600">4 Sets - 12 Reps</p>
@@ -1433,7 +1433,7 @@ const ExercisesScreen = () => {
                           80.0<span className="ml-1 text-[10px]">KG</span>
                         </p>
                       </div>
-                      <div className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/[0.03] p-4 opacity-60">
+                      <div className="flex items-center justify-between rounded-2xl border border-white/5 user-surface-muted p-4 opacity-60">
                         <div>
                           <p className="text-[10px] font-black uppercase text-white">Dec 08, 2023</p>
                           <p className="mt-1 text-[9px] font-bold uppercase text-gray-600">4 Sets - 10 Reps</p>
@@ -1450,7 +1450,7 @@ const ExercisesScreen = () => {
 
               {activeTab === "howto" && (
                 <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 bg-[#111] p-8">
+                  <div className="col-span-12 rounded-[2.5rem] border border-white/5 user-surface p-8">
                     <h3 className="mb-8 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
                       Instructions
                     </h3>

@@ -102,7 +102,7 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
             <button
               type="button"
               onClick={() => state.setLocationPopupOpen(true)}
-              className="pointer-events-auto w-full rounded-2xl border border-white/10 bg-[rgba(10,10,10,0.88)] px-5 py-3 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300 backdrop-blur-2xl transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)] hover:text-white"
+              className="pointer-events-auto w-full rounded-2xl border border-white/10 user-surface-overlay px-5 py-3 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300 backdrop-blur-2xl transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)] hover:text-white"
             >
               Location off. Showing all gyms. Click here to enable.
             </button>
@@ -145,7 +145,7 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
             <button
               type="button"
               onClick={() => state.setLocationPopupOpen(true)}
-              className="w-full rounded-xl border border-white/10 bg-[rgba(10,10,10,0.84)] px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300 backdrop-blur-2xl transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)] hover:text-white"
+              className="w-full rounded-xl border border-white/10 user-surface-overlay px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300 backdrop-blur-2xl transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)] hover:text-white"
             >
               Location off. Showing all gyms. Click here to enable.
             </button>
@@ -235,7 +235,7 @@ function MobileGymCard({
   return (
     <div
       onClick={onClick}
-      className="w-[248px] shrink-0 cursor-pointer rounded-2xl border border-border/50 bg-card p-4 shadow-xl transition-all hover:border-primary/30"
+      className="w-[248px] shrink-0 cursor-pointer rounded-2xl border border-border/50 user-surface p-4 shadow-xl transition-all hover:border-primary/30"
     >
       <div className="mb-2 flex items-start gap-2.5">
         {previewImageUrl && (
@@ -246,7 +246,7 @@ function MobileGymCard({
           />
         )}
         {!previewImageUrl && (
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-[11px] font-black uppercase tracking-tight text-slate-400">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 user-surface-muted text-[11px] font-black uppercase tracking-tight text-slate-400">
             {getGymMonogram(gym)}
           </div>
         )}
@@ -302,7 +302,7 @@ function MobilePaginationCard({
   onNextPage: () => void;
 }) {
   return (
-    <div className="flex w-[248px] shrink-0 flex-col justify-between rounded-2xl border border-white/10 bg-[rgba(10,10,10,0.84)] p-4 shadow-xl backdrop-blur-2xl">
+    <div className="flex w-[248px] shrink-0 flex-col justify-between rounded-2xl border border-white/10 user-surface-overlay p-4 shadow-xl backdrop-blur-2xl">
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">
           More Gyms
@@ -316,7 +316,7 @@ function MobilePaginationCard({
           type="button"
           onClick={onPreviousPage}
           disabled={currentPage === 1}
-          className="flex flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/[0.03]"
+          className="flex flex-1 items-center justify-center rounded-xl border border-white/10 user-surface-muted px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-white/[0.03]"
         >
           <ChevronLeft size={14} className="mr-1" />
           Prev

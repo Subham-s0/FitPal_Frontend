@@ -67,6 +67,7 @@ import {
 } from "@/features/workout-sessions/workoutSessionApi";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
+import NotificationInboxPage from "@/features/notifications/components/NotificationInboxPage";
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -90,11 +91,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-type UserDashboardSection = "home" | "gyms" | "routines" | "exercises" | "workouts" | "checkin" | "progress" | "profile";
+type UserDashboardSection = "home" | "gyms" | "routines" | "exercises" | "workouts" | "notifications" | "checkin" | "progress" | "profile";
 type MemberStatsRange = "week" | "month" | "year";
 type CheckInView = "scanner" | "logs";
 
-const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "exercises", "workouts", "checkin", "progress", "profile"];
+const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "exercises", "workouts", "notifications", "checkin", "progress", "profile"];
 const ACTIVITY_MONTH_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "long",
   year: "numeric",
@@ -219,7 +220,7 @@ const buildActivityCellClass = (displayState: DashboardMonthlyActivityDayRespons
       " border-2 border-orange-600 bg-gradient-to-br from-orange-600 to-yellow-400 text-white shadow-[0_0_15px_rgba(234,88,12,0.5)]";
   } else {
     classes +=
-      " border border-white/5 bg-white/[0.02] text-white/15 hover:scale-[1.08] hover:-rotate-[4deg] hover:border-white/20";
+      " border border-white/5 user-surface-soft text-white/15 hover:scale-[1.08] hover:-rotate-[4deg] hover:border-white/20";
   }
 
   return classes;
@@ -817,7 +818,7 @@ const UserDashboard = () => {
           className="fade-up"
           bodyClassName="space-y-5"
         >
-          <div className="flex min-h-[360px] items-center justify-center rounded-[36px] border border-white/5 bg-[#111]">
+          <div className="flex min-h-[360px] items-center justify-center rounded-[36px] border border-white/5 user-surface">
             <div className="flex items-center gap-3 text-sm font-black uppercase tracking-[0.14em] text-white/60">
               <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
               Loading dashboard
@@ -986,7 +987,7 @@ const UserDashboard = () => {
             )}
           </div>
 
-          <div className="card relative flex flex-col overflow-hidden rounded-[40px] border border-white/[0.06] bg-[#111] p-7 lg:min-h-[372px] lg:px-5 lg:py-4">
+          <div className="card relative flex flex-col overflow-hidden rounded-[40px] border border-white/[0.06] user-surface p-7 lg:min-h-[372px] lg:px-5 lg:py-4">
             <div className="pointer-events-none absolute -right-5 -top-5 h-[120px] w-[120px] rounded-full bg-[radial-gradient(circle,rgba(234,88,12,0.05)_0%,transparent_70%)]" />
 
             <div className="mb-6 lg:mb-3">
@@ -994,7 +995,7 @@ const UserDashboard = () => {
                 Monthly <span className="text-gradient-fire">Activity</span>
               </h3>
               <div className="flex w-full justify-center">
-                <div className="inline-flex min-w-[160px] items-center justify-center gap-3.5 rounded-xl border border-white/[0.06] bg-white/[0.03] px-4 py-2 lg:min-w-[136px] lg:gap-2 lg:px-2.5 lg:py-1">
+                <div className="inline-flex min-w-[160px] items-center justify-center gap-3.5 rounded-xl border border-white/[0.06] user-surface-muted px-4 py-2 lg:min-w-[136px] lg:gap-2 lg:px-2.5 lg:py-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -1046,7 +1047,7 @@ const UserDashboard = () => {
                   ))}
                 </div>
 
-                <div className="relative mt-2 flex items-center justify-between rounded-[20px] border border-orange-600/20 bg-white/[0.03] p-4 px-5 lg:mt-1.5 lg:p-2.5 lg:px-3.5">
+                <div className="relative mt-2 flex items-center justify-between rounded-[20px] border border-orange-600/20 user-surface-muted p-4 px-5 lg:mt-1.5 lg:p-2.5 lg:px-3.5">
                   <div className="flex items-center gap-3.5 lg:gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-orange-600/20 bg-orange-600/[0.08] lg:h-10 lg:w-10">
                       <TrendingUp className="h-6 w-6 text-orange-600 lg:h-5 lg:w-5" />
@@ -1075,13 +1076,13 @@ const UserDashboard = () => {
                 ) : null}
               </>
             ) : (
-              <div className="flex min-h-[230px] items-center justify-center rounded-[22px] border border-dashed border-white/10 bg-white/[0.02]">
+              <div className="flex min-h-[230px] items-center justify-center rounded-[22px] border border-dashed border-white/10 user-surface-soft">
                 <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
               </div>
             )}
           </div>
 
-          <div className="card flex h-full flex-col rounded-[36px] border border-white/5 bg-[#111] p-6 lg:min-h-[372px] lg:p-5">
+          <div className="card flex h-full flex-col rounded-[36px] border border-white/5 user-surface p-6 lg:min-h-[372px] lg:p-5">
             <div className="mb-4 flex w-full flex-wrap items-center justify-between gap-2 lg:mb-3">
               <h3 className="text-2xl font-black uppercase tracking-[-0.03em]">
                 Plan <span className="text-gradient-fire">Duration</span>
@@ -1124,7 +1125,7 @@ const UserDashboard = () => {
               </div>
 
               <div className="mt-auto flex flex-col gap-4 pt-4 lg:gap-5 lg:pt-5">
-                <div className="w-full rounded-2xl border border-white/[0.04] bg-white/[0.02] p-3.5 px-4 lg:p-3.5 lg:px-4">
+                <div className="w-full rounded-2xl border border-white/[0.04] user-surface-soft p-3.5 px-4 lg:p-3.5 lg:px-4">
                   <div className="mb-1.5 flex justify-between gap-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.1em] text-gray-500">Current Tier</span>
                     <span className="text-right text-[10px] font-black uppercase tracking-[0.1em] text-orange-600">
@@ -1181,13 +1182,13 @@ const UserDashboard = () => {
 
         {/* Bottom Row Grid - Member Stats + Live Session */}
         <div className="bottom-sys grid grid-cols-1 gap-5 lg:grid-cols-[1fr_2fr]">
-          <div className="card order-2 flex h-full flex-col rounded-[36px] border border-white/5 bg-[#121212] p-6 lg:order-1">
+          <div className="card order-2 flex h-full flex-col rounded-[36px] border border-white/5 user-surface p-6 lg:order-1">
             <div className="mb-4 text-left">
               <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
                 <h3 className="text-2xl font-black uppercase tracking-[-0.03em]">
                   Member <span className="text-gradient-fire">Stats</span>
                 </h3>
-                <div className="inline-flex rounded-full border border-white/10 bg-white/[0.03] p-1">
+                <div className="inline-flex rounded-full border border-white/10 user-surface-muted p-1">
                   {(["week", "month", "year"] as const).map((range) => {
                     const isActive = memberStatsRange === range;
                     return (
@@ -1229,7 +1230,7 @@ const UserDashboard = () => {
                   ) : null}
                 </>
               ) : (
-                <div className="mb-5 flex min-h-[120px] items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-white/[0.02]">
+                <div className="mb-5 flex min-h-[120px] items-center justify-center rounded-[24px] border border-dashed border-white/10 user-surface-soft">
                   <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
                 </div>
               )}
@@ -1279,7 +1280,7 @@ const UserDashboard = () => {
                     );
                   })
                 ) : (
-                  <div className="flex flex-1 items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] p-5 text-center">
+                  <div className="flex flex-1 items-center justify-center rounded-[24px] border border-dashed border-white/10 user-surface-soft p-5 text-center">
                     <p className="max-w-xs text-sm text-white/45">
                       No gym visits recorded in this range yet.
                     </p>
@@ -1287,7 +1288,7 @@ const UserDashboard = () => {
                 )}
               </div>
             ) : (
-              <div className="flex flex-1 items-center justify-center rounded-[24px] border border-dashed border-white/10 bg-white/[0.02]">
+              <div className="flex flex-1 items-center justify-center rounded-[24px] border border-dashed border-white/10 user-surface-soft">
                 <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
               </div>
             )}
@@ -1300,7 +1301,7 @@ const UserDashboard = () => {
 
           </div>
 
-          <div className="card order-1 relative flex h-full flex-col overflow-hidden rounded-[40px] border border-white/[0.06] bg-[#111] p-8 lg:order-2">
+          <div className="card order-1 relative flex h-full flex-col overflow-hidden rounded-[40px] border border-white/[0.06] user-surface p-8 lg:order-2">
             <div className="pointer-events-none absolute -right-[50px] -top-[50px] h-[200px] w-[200px] rounded-full bg-[radial-gradient(circle,rgba(234,88,12,0.05)_0%,transparent_70%)]" />
 
             <div className="live-sys grid grid-cols-1 gap-10 xl:grid-cols-2">
@@ -1340,7 +1341,7 @@ const UserDashboard = () => {
                     {upcomingSessionCard.exercises.map((exercise) => (
                       <div
                         key={exercise.exerciseName}
-                        className="group/ex flex items-center rounded-[20px] border border-white/[0.06] bg-white/[0.02] p-4 transition-transform duration-200 hover:-translate-y-1"
+                        className="group/ex flex items-center rounded-[20px] border border-white/[0.06] user-surface-soft p-4 transition-transform duration-200 hover:-translate-y-1"
                       >
                         <div className="mr-4 flex h-[60px] w-[60px] shrink-0 flex-col items-center justify-center rounded-[14px] border border-white/[0.08] bg-[#1a1a1a]">
                           <span className="text-[9px] font-black uppercase text-gray-500">Sets</span>
@@ -1361,7 +1362,7 @@ const UserDashboard = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="flex min-h-[240px] flex-1 items-center justify-center rounded-[28px] border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
+                  <div className="flex min-h-[240px] flex-1 items-center justify-center rounded-[28px] border border-dashed border-white/10 user-surface-soft p-6 text-center">
                     <p className="max-w-sm text-sm text-white/50">
                       {upcomingSessionCard?.emptyStateMessage ??
                         "No workout is ready yet. Activate a routine to populate this section."}
@@ -1453,6 +1454,8 @@ const UserDashboard = () => {
         return <ExercisesScreen />;
       case "workouts":
         return <WorkoutsSection onOpenRoutines={() => setActiveSection("routines")} />;
+      case "notifications":
+        return <NotificationInboxPage />;
       case "checkin":
         return (
           <CheckInScreen
@@ -1532,7 +1535,7 @@ const UserDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setIsPauseDialogOpen(false)}
-                    className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
+                    className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 user-surface-muted px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
                   >
                     Close
                   </button>
@@ -1571,7 +1574,7 @@ const UserDashboard = () => {
                   </Field>
                 </div>
 
-                <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+                <div className="mt-5 rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                     Pause summary
                   </p>
@@ -1600,7 +1603,7 @@ const UserDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setIsPauseDialogOpen(false)}
-                    className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
+                    className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 user-surface-muted px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
                   >
                     Cancel
                   </button>
@@ -1636,12 +1639,12 @@ const UserDashboard = () => {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-4">
+            <div className="mt-5 rounded-[1.2rem] border border-white/10 user-surface-muted p-4">
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
                 Confirmation details
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[14px] border border-white/10 bg-[#111] p-3">
+                <div className="rounded-[14px] border border-white/10 user-surface p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                     Membership
                   </p>
@@ -1650,7 +1653,7 @@ const UserDashboard = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[14px] border border-white/10 bg-[#111] p-3">
+                <div className="rounded-[14px] border border-white/10 user-surface p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                     Current state
                   </p>
@@ -1659,7 +1662,7 @@ const UserDashboard = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[14px] border border-white/10 bg-[#111] p-3">
+                <div className="rounded-[14px] border border-white/10 user-surface p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                     {resumeAlertPrimaryDateLabel}
                   </p>
@@ -1668,7 +1671,7 @@ const UserDashboard = () => {
                   </p>
                 </div>
 
-                <div className="rounded-[14px] border border-white/10 bg-[#111] p-3">
+                <div className="rounded-[14px] border border-white/10 user-surface p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
                     {resumeAlertSecondaryDateLabel}
                   </p>
@@ -1684,7 +1687,7 @@ const UserDashboard = () => {
                 type="button"
                 onClick={() => handleResumeAlertOpenChange(false)}
                 disabled={isUpdatingMembership}
-                className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
+                className="inline-flex items-center justify-center rounded-[1rem] border border-white/10 user-surface-muted px-5 py-3 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-white/[0.07]"
               >
                 Keep Current State
               </button>

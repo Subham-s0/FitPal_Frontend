@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
-  Bell,
   Building2,
   CalendarRange,
   ChartColumnBig,
@@ -9,6 +8,7 @@ import {
   DollarSign,
   Dumbbell,
   LayoutDashboard,
+  Megaphone,
   MessageSquare,
   QrCode,
   Settings,
@@ -37,8 +37,8 @@ const GYM_NAV_ITEMS: DashboardNavItem[] = [
   { id: "qr",        label: "QR & Check-In",  icon: QrCode },
   { id: "members",   label: "Members",        icon: Users },
   { id: "revenue",   label: "Revenue",        icon: DollarSign },
-  { id: "insights",  label: "Insights",       icon: ChartColumnBig },
   { id: "reviews",   label: "Reviews",        icon: MessageSquare },
+  { id: "announcements", label: "Announcements", icon: Megaphone },
 ];
 
 const ADMIN_NAV_ITEMS: DashboardNavItem[] = [
@@ -48,8 +48,7 @@ const ADMIN_NAV_ITEMS: DashboardNavItem[] = [
   { id: "plans", label: "Plans", icon: ClipboardList },
   { id: "payments", label: "Payments", icon: ChartColumnBig },
   { id: "settlements", label: "Settlements", icon: CalendarRange },
-  { id: "notices", label: "Notices", icon: Bell }
-  
+  { id: "announcements", label: "Announcements", icon: Megaphone },
 ];
 
 export const getDashboardRole = (role: string | null | undefined): DashboardShellRole => {
