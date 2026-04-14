@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { useAuthState } from "@/features/auth";
@@ -106,8 +106,83 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const resolveDocumentTitle = (pathname: string) => {
+  if (pathname === "/") {
+    return "FitPal";
+  }
+
+  if (pathname === "/admin") {
+    return "FitPal | Admin";
+  }
+
+  if (pathname === ADMIN_DASHBOARD_ROUTE) {
+    return "FitPal | Admin Dashboard";
+  }
+
+  if (pathname === "/login") {
+    return "FitPal | Login";
+  }
+
+  if (pathname === "/signup" || pathname === "/register") {
+    return "FitPal | Sign Up";
+  }
+
+  if (pathname === "/dashboard") {
+    return "FitPal | Dashboard";
+  }
+
+  if (pathname === "/profile") {
+    return "FitPal | Profile";
+  }
+
+  if (pathname === "/settings") {
+    return "FitPal | Settings";
+  }
+
+  if (pathname === "/membership" || pathname === "/membership/upgrade") {
+    return "FitPal | Membership";
+  }
+
+  if (
+    pathname === "/payments" ||
+    pathname.startsWith("/payments/esewa/") ||
+    pathname.startsWith("/payments/khalti/")
+  ) {
+    return "FitPal | Payments";
+  }
+
+  if (
+    pathname === PROFILE_SETUP_ROUTE ||
+    pathname === "/user-profile-setup" ||
+    pathname === "/gym-profile-setup"
+  ) {
+    return "FitPal | Profile Setup";
+  }
+
+  if (pathname.startsWith("/gym/")) {
+    return "FitPal | Gym";
+  }
+
+  if (pathname.startsWith("/workout-session/")) {
+    return "FitPal | Workout Session";
+  }
+
+  return "FitPal";
+};
+
+const RouteTitleManager = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    document.title = resolveDocumentTitle(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+};
+
 const AppRouter = () => (
   <BrowserRouter>
+    <RouteTitleManager />
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/home" element={<Navigate to="/" replace />} />

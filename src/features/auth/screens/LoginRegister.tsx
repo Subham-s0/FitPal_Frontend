@@ -29,6 +29,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
   const navigate = useNavigate();
   const auth = useAuthState();
   const previousAccessTokenRef = useRef(auth.accessToken);
+  const isLoginMode = mode === "login";
 
   useEffect(() => {
     setMode(initialMode);
@@ -210,7 +211,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
 
   return (
     <main className="min-h-screen bg-background">
-      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden pt-0">
+      <div className="relative flex min-h-screen items-start justify-center overflow-hidden px-3 py-4 sm:px-6 sm:py-8 md:items-center md:p-8">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* HSL Gradient & Blur Layers */}
           <div className="absolute inset-0 bg-background overflow-hidden">
@@ -218,7 +219,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
             <div className="absolute inset-0 bg-[linear-gradient(to_bottom_right,hsla(30,100%,20%,0.2),hsla(0,0%,0%,0))]" />
             
             {/* Orbiting Icons & Emojis Container */}
-            <div className="absolute inset-0 overflow-hidden perspective-[1000px]">
+            <div className="absolute inset-0 hidden overflow-hidden perspective-[1000px] md:block">
               
               {/* Outer Orbit Ring (Counter-Clockwise) */}
               <div className="absolute inset-0 animate-[spin-90_60s_linear_infinite_reverse] opacity-30">
@@ -307,52 +308,56 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
           </div>
         </div>
 
-        <div className="relative w-full max-w-5xl">
-          <div className="bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+        <div className="relative w-full max-w-[30rem] sm:max-w-2xl md:max-w-5xl">
+          <div className="bg-card border border-border rounded-[1.25rem] shadow-2xl overflow-hidden sm:rounded-2xl">
             <div className="grid md:grid-cols-2">
-              <div className="relative">
-                {mode === "login" ? (
-                  <div className="flex flex-col justify-center items-center p-12 bg-[linear-gradient(145deg,hsl(0_0%_10%),hsl(0_0%_6%))] relative overflow-hidden h-full">
+              <div className={`relative ${isLoginMode ? "order-2 md:order-1" : "order-1"}`}>
+                {isLoginMode ? (
+                  <div className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-[linear-gradient(145deg,hsl(0_0%_10%),hsl(0_0%_6%))] p-6 sm:p-10 md:p-12">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(25_100%_50%/.15),transparent_50%)]" />
                     <div className="relative z-10 text-center">
-                      <img src="/logo.svg" alt="FitPal Logo" className="w-24 h-24 mx-auto mb-6" />
-                      <h2 className="text-4xl font-bold mb-2">
+                      <img src="/logo.svg" alt="FitPal Logo" className="mx-auto mb-4 h-16 w-16 sm:mb-6 sm:h-24 sm:w-24" />
+                      <h2 className="mb-2 text-3xl font-bold sm:text-4xl">
                         <span className="text-gradient-fire">Fit</span>
                         <span className="text-white">Pal</span>
                       </h2>
-                      <h3 className="text-3xl font-bold mb-4 text-white">Welcome Back!</h3>
-                      <p className="text-muted-foreground text-lg leading-relaxed mb-8">
+                      <h3 className="mb-3 text-2xl font-bold text-white sm:mb-4 sm:text-3xl">Welcome Back!</h3>
+                      <p className="mb-6 text-sm leading-relaxed text-muted-foreground sm:mb-8 sm:text-lg">
                         Access your <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent font-semibold">FitPass Hub</span> dashboard to manage workouts, subscriptions, and more.
                       </p>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-3">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                           <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          <span className="text-foreground">Real-time gym access</span>
+                          <span className="text-sm text-foreground sm:text-base">Real-time gym access</span>
                         </div>
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                           <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          <span className="text-foreground">Manage your membership</span>
+                          <span className="text-sm text-foreground sm:text-base">Manage your membership</span>
                         </div>
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                           <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          <span className="text-foreground">Track fitness progress</span>
+                          <span className="text-sm text-foreground sm:text-base">Track fitness progress</span>
                         </div>
                       </div>
                     </div>
                     
-                    <Link to="/" className="absolute bottom-6 left-6 z-20 group" aria-label="Go to Home">
-                      <div className="flex items-center justify-center px-6 py-3 rounded-full bg-[hsla(30,100%,50%,0.05)] border border-[hsla(30,100%,50%,0.2)] hover:bg-[hsla(30,100%,50%,0.1)] backdrop-blur-xl transition-all duration-300">
-                        <span className="text-xs font-black uppercase leading-none text-white tracking-widest group-hover:text-orange-500 transition-colors">Home</span>
+                    <Link
+                      to="/"
+                      className="group relative z-20 mt-8 inline-flex self-center md:absolute md:bottom-6 md:left-6 md:mt-0"
+                      aria-label="Go to Home"
+                    >
+                      <div className="flex items-center justify-center rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.05)] px-4 py-2.5 backdrop-blur-xl transition-all duration-300 hover:bg-[hsla(30,100%,50%,0.1)] sm:px-6 sm:py-3">
+                        <span className="text-[11px] font-black uppercase leading-none tracking-[0.18em] text-white transition-colors group-hover:text-orange-500 sm:text-xs sm:tracking-widest">Home</span>
                       </div>
                     </Link>
                   </div>
                 ) : (
-                  <div className="p-6 md:p-8">
-                    <div className="text-center mb-6">
-                      <h3 className="text-2xl font-bold text-white mb-2">Create Account</h3>
+                  <div className="p-4 sm:p-6 md:p-8">
+                    <div className="mb-5 text-center sm:mb-6">
+                      <h3 className="mb-2 text-xl font-bold text-white sm:text-2xl">Create Account</h3>
                       <p className="text-muted-foreground text-sm">Join the FitPass Hub community today.</p>
                     </div>
-                    <div className="mb-6 rounded-full border-2 border-[#FF6A00] bg-transparent relative flex w-full">
+                    <div className="relative mb-5 flex w-full rounded-full border-2 border-[#FF6A00] bg-transparent sm:mb-6">
                       <div
                         className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-[#FF6A00] transition-transform duration-500 [transition-timing-function:cubic-bezier(0.25,1,0.5,1)]"
                         style={{
@@ -362,7 +367,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       <button
                         type="button"
                         onClick={() => setUserType("user")}
-                        className={`relative z-10 w-1/2 py-2.5 text-sm font-semibold transition-colors duration-500 rounded-full ${
+                        className={`relative z-10 w-1/2 rounded-full py-2 text-xs font-semibold transition-colors duration-500 sm:py-2.5 sm:text-sm ${
                           userType === "user" ? "text-white" : "text-white/70 hover:text-white"
                         }`}
                       >
@@ -371,7 +376,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       <button
                         type="button"
                         onClick={() => setUserType("gym")}
-                        className={`relative z-10 w-1/2 py-2.5 text-sm font-semibold transition-colors duration-500 rounded-full ${
+                        className={`relative z-10 w-1/2 rounded-full py-2 text-xs font-semibold transition-colors duration-500 sm:py-2.5 sm:text-sm ${
                           userType === "gym" ? "text-white" : "text-white/70 hover:text-white"
                         }`}
                       >
@@ -505,18 +510,18 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                 )}
               </div>
 
-              <div className="relative">
-                {mode === "login" ? (
-                  <div className="p-8 md:p-12">
-                    <div className="text-center mb-8">
-                      <h3 className="text-3xl font-bold text-foreground mb-2">Sign In</h3>
-                      <p className="text-muted-foreground text-lg">Continue your fitness journey</p>
+              <div className={`relative ${isLoginMode ? "order-1 md:order-2" : "order-2"}`}>
+                {isLoginMode ? (
+                  <div className="p-4 sm:p-8 md:p-12">
+                    <div className="mb-6 text-center sm:mb-8">
+                      <h3 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">Sign In</h3>
+                      <p className="text-sm text-muted-foreground sm:text-lg">Continue your fitness journey</p>
                     </div>
                     
                     <button 
                       type="button"
                       onClick={handleGoogleLogin} 
-                      className="w-full py-3 px-6 border-2 border-[#FF6A00] text-white rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 mb-6 hover:bg-[#FF6A00]"
+                      className="mb-5 flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#FF6A00] px-6 py-2.5 text-sm font-medium text-white transition-all duration-300 hover:bg-[#FF6A00] sm:mb-6 sm:py-3 sm:text-base"
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill="#4285F4" d="M21.35 11.1c0-.72-.06-1.24-.19-1.78H12v3.22h5.32c-.11.9-.72 2.25-2.08 3.16l-.02.14 3.03 2.34.21.02c1.94-1.79 2.99-4.43 2.99-7.34z"/>
@@ -527,22 +532,22 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       Continue with Google
                     </button>
                     
-                    <div className="relative mb-6">
+                    <div className="relative mb-5 sm:mb-6">
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-border" />
                       </div>
-                      <div className="relative flex justify-center text-sm">
+                      <div className="relative flex justify-center text-xs sm:text-sm">
                         <span className="px-4 bg-card text-muted-foreground">Or continue with email</span>
                       </div>
                     </div>
                     
-                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-3.5 sm:space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">Email</label>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground sm:mb-2">Email</label>
                         <input 
                           {...loginForm.register("email")}
                           type="email" 
-                          className={`w-full px-4 py-3 bg-input border rounded-full text-foreground ${loginForm.formState.errors.email ? "border-red-500" : "border-border"}`} 
+                          className={`w-full rounded-full border bg-input px-4 py-2.5 text-sm text-foreground sm:py-3 sm:text-base ${loginForm.formState.errors.email ? "border-red-500" : "border-border"}`} 
                           placeholder="you@example.com" 
                         />
                         {loginForm.formState.errors.email && (
@@ -550,11 +555,11 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                         )}
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">Password</label>
+                        <label className="mb-1.5 block text-sm font-medium text-foreground sm:mb-2">Password</label>
                         <input 
                           {...loginForm.register("password")}
                           type="password" 
-                          className={`w-full px-4 py-3 bg-input border rounded-full text-foreground ${loginForm.formState.errors.password ? "border-red-500" : "border-border"}`} 
+                          className={`w-full rounded-full border bg-input px-4 py-2.5 text-sm text-foreground sm:py-3 sm:text-base ${loginForm.formState.errors.password ? "border-red-500" : "border-border"}`} 
                           placeholder="••••••••" 
                         />
                         {loginForm.formState.errors.password && (
@@ -562,15 +567,15 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                         )}
                       </div>
                       
-                      <div className="flex items-center justify-between text-sm mt-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="mt-2 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                        <label className="flex cursor-pointer items-center gap-2">
                           <input type="checkbox" className="w-4 h-4 rounded border-border bg-input" />
                           <span className="text-muted-foreground">Remember me</span>
                         </label>
                         <button
                           type="button"
                           onClick={() => setIsForgotPasswordOpen(true)}
-                          className="text-primary hover:underline"
+                          className="self-start text-primary hover:underline sm:self-auto"
                         >
                           Forgot password?
                         </button>
@@ -579,7 +584,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       <button 
                         type="submit"
                         disabled={isLoggingIn}
-                        className="w-full py-3 px-6 bg-button-gradient text-white rounded-full font-bold transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100 mt-6"
+                        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-button-gradient px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/20 transition-all duration-300 hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100 sm:mt-6 sm:py-3 sm:text-base"
                       >
                         {isLoggingIn ? (
                           <><Loader2 className="w-5 h-5 animate-spin" /> Signing In...</>
@@ -588,44 +593,48 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                         )}
                       </button>
                       
-                      <p className="text-sm text-center text-muted-foreground mt-6">
+                      <p className="mt-5 text-center text-sm text-muted-foreground sm:mt-6">
                         Don't have an account?{" "}
                         <button type="button" onClick={() => setMode("register")} className="text-primary font-semibold hover:underline">Sign up</button>
                       </p>
                     </form>
                   </div>
                 ) : (
-                  <div className="flex flex-col justify-center items-center p-12 bg-[linear-gradient(145deg,hsl(0_0%_10%),hsl(0_0%_6%))] relative overflow-hidden h-full">
+                  <div className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-[linear-gradient(145deg,hsl(0_0%_10%),hsl(0_0%_6%))] p-6 sm:p-10 md:p-12">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,hsl(25_100%_50%/.15),transparent_50%)]" />
                     <div className="relative z-10 text-center">
-                      <img src="/logo.svg" alt="FitPal Logo" className="w-24 h-24 mx-auto mb-6" />
-                      <h2 className="text-4xl font-bold mb-2">
+                      <img src="/logo.svg" alt="FitPal Logo" className="mx-auto mb-4 h-16 w-16 sm:mb-6 sm:h-24 sm:w-24" />
+                      <h2 className="mb-2 text-3xl font-bold sm:text-4xl">
                         <span className="text-gradient-fire">Fit</span>
                         <span className="text-white">Pal</span>
                       </h2>
-                      <h3 className="text-3xl font-bold mb-4 text-white">Join the Elite!</h3>
-                      <p className="text-muted-foreground text-lg leading-relaxed mb-8">
+                      <h3 className="mb-3 text-2xl font-bold text-white sm:mb-4 sm:text-3xl">Join the Elite!</h3>
+                      <p className="mb-6 text-sm leading-relaxed text-muted-foreground sm:mb-8 sm:text-lg">
                         Start your transformation with <span className="bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent font-semibold">FitPass Hub</span>.
                       </p>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-center gap-3">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                           <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          <span className="text-foreground">Access premium gyms</span>
+                          <span className="text-sm text-foreground sm:text-base">Access premium gyms</span>
                         </div>
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                           <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          <span className="text-foreground">Personalized analytics</span>
+                          <span className="text-sm text-foreground sm:text-base">Personalized analytics</span>
                         </div>
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2.5 sm:gap-3">
                           <div className="w-2 h-2 rounded-full bg-orange-500" />
-                          <span className="text-foreground">Expert community</span>
+                          <span className="text-sm text-foreground sm:text-base">Expert community</span>
                         </div>
                       </div>
                     </div>
 
-                    <Link to="/" className="absolute bottom-6 right-6 z-20 group" aria-label="Go to Home">
-                      <div className="flex items-center justify-center px-6 py-3 rounded-full bg-[hsla(30,100%,50%,0.05)] border border-[hsla(30,100%,50%,0.2)] hover:bg-[hsla(30,100%,50%,0.1)] backdrop-blur-xl transition-all duration-300">
-                        <span className="text-xs font-black uppercase leading-none text-white tracking-widest group-hover:text-orange-500 transition-colors">Home</span>
+                    <Link
+                      to="/"
+                      className="group relative z-20 mt-8 inline-flex self-center md:absolute md:bottom-6 md:right-6 md:mt-0"
+                      aria-label="Go to Home"
+                    >
+                      <div className="flex items-center justify-center rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.05)] px-4 py-2.5 backdrop-blur-xl transition-all duration-300 hover:bg-[hsla(30,100%,50%,0.1)] sm:px-6 sm:py-3">
+                        <span className="text-[11px] font-black uppercase leading-none tracking-[0.18em] text-white transition-colors group-hover:text-orange-500 sm:text-xs sm:tracking-widest">Home</span>
                       </div>
                     </Link>
                   </div>
