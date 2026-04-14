@@ -383,18 +383,18 @@ export default function PlanBrowser({
       <div className="mt-6">
         {isMobile && orderedPlans.length > 1 ? (
           <div className="space-y-4">
-            <div className="relative">
+            <div className="relative px-7">
               <button
                 type="button"
                 onClick={() => setMobilePlanIndex(Math.max(0, boundedMobileIndex - 1))}
                 disabled={boundedMobileIndex === 0}
-                className="absolute left-0 top-1/2 z-10 -translate-x-3 -translate-y-1/2 p-1 text-slate-500 transition-all duration-200 hover:text-orange-400 hover:drop-shadow-[0_0_8px_rgba(249,115,22,0.7)] disabled:pointer-events-none disabled:opacity-20"
+                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-[#0f0f0f]/90 p-1.5 text-slate-500 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur transition-all duration-200 hover:text-orange-400 hover:drop-shadow-[0_0_8px_rgba(249,115,22,0.7)] disabled:pointer-events-none disabled:opacity-20"
                 aria-label="Previous plan"
               >
                 <ChevronLeft size={22} strokeWidth={2.5} />
               </button>
 
-              <div className="mx-5">
+              <div>
                 {mobilePlan ? renderPlanCard(mobilePlan, boundedMobileIndex) : null}
               </div>
 
@@ -404,7 +404,7 @@ export default function PlanBrowser({
                   setMobilePlanIndex(Math.min(orderedPlans.length - 1, boundedMobileIndex + 1))
                 }
                 disabled={boundedMobileIndex >= orderedPlans.length - 1}
-                className="absolute right-0 top-1/2 z-10 translate-x-3 -translate-y-1/2 p-1 text-slate-500 transition-all duration-200 hover:text-orange-400 hover:drop-shadow-[0_0_8px_rgba(249,115,22,0.7)] disabled:pointer-events-none disabled:opacity-20"
+                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-[#0f0f0f]/90 p-1.5 text-slate-500 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur transition-all duration-200 hover:text-orange-400 hover:drop-shadow-[0_0_8px_rgba(249,115,22,0.7)] disabled:pointer-events-none disabled:opacity-20"
                 aria-label="Next plan"
               >
                 <ChevronRight size={22} strokeWidth={2.5} />

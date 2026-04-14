@@ -37,7 +37,7 @@ const Footer = () => {
                 </a>
               ))}
             </div>
-            <div className="flex items-center justify-center gap-8 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm">
               <a href="/" className="text-muted-foreground hover:text-foreground">Home</a>
               <a href="#pricing" className="text-muted-foreground hover:text-foreground">Pricing</a>
               <a href="#services" className="text-muted-foreground hover:text-foreground">Services</a>

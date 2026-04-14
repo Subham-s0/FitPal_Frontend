@@ -22,13 +22,13 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background">
+    <nav className="fixed top-0 left-0 right-0 z-50 overflow-x-clip border-b border-border bg-background">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="flex h-14 items-center justify-between gap-3 sm:h-16 md:h-20">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-2 group">
-            <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 md:h-12 md:w-12" />
-            <span className="text-xl font-bold">
+          <a href="/" className="group flex min-w-0 items-center gap-2">
+            <img src="/logo.svg" alt="FitPal Logo" className="h-8 w-8 shrink-0 sm:h-10 sm:w-10 md:h-12 md:w-12" />
+            <span className="truncate text-lg font-bold sm:text-xl">
               <span className="text-gradient-fire">Fit</span>Pal
             </span>
           </a>
@@ -77,7 +77,9 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-foreground"
+            className="shrink-0 p-2 text-foreground md:hidden"
+            aria-expanded={isOpen}
+            aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
           >
             {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -85,7 +87,7 @@ const Navbar = () => {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-fade-in">
+          <div className="animate-fade-in border-t border-border py-4 md:hidden">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
                 <a
@@ -97,7 +99,7 @@ const Navbar = () => {
                   {link.name}
                 </a>
               ))}
-              <div className="flex flex-col gap-2 pt-4 border-t border-border">
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
                 <ToggleGroup
                   type="single"
                   value={currentAuth}
@@ -111,17 +113,17 @@ const Navbar = () => {
                       setIsOpen(false);
                     }
                   }}
-                  className="rounded-full p-1 border border-[#2e2e2e] bg-transparent"
+                  className="grid w-full grid-cols-2 rounded-full border border-[#2e2e2e] bg-transparent p-1"
                 >
                   <ToggleGroupItem
                     value="signup"
-                    className="rounded-full px-5 py-2 w-full text-white hover:bg-muted/40 transition-colors data-[state=on]:font-bold data-[state=on]:text-white"
+                    className="min-w-0 rounded-full px-3 py-2 text-white transition-colors hover:bg-muted/40 data-[state=on]:font-bold data-[state=on]:text-white"
                   >
                     Sign up
                   </ToggleGroupItem>
                   <ToggleGroupItem
                     value="login"
-                    className="rounded-full px-5 py-2 w-full text-white transition-colors data-[state=on]:font-bold
+                    className="min-w-0 rounded-full px-3 py-2 text-white transition-colors data-[state=on]:font-bold
                       data-[state=on]:bg-button-gradient
                       data-[state=on]:text-white"
                   >

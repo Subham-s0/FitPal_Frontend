@@ -26,7 +26,7 @@ const HowItWorks = ({ howToSteps }: HowItWorksProps) => {
   if (steps.length === 0) return null;
 
   return (
-    <section id="about" className="relative py-24">
+    <section id="about" className="relative overflow-hidden py-24">
       <div className="container mx-auto px-4">
         <div className="mb-16 text-center">
           <span className="mb-4 inline-block rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
@@ -51,8 +51,8 @@ const HowItWorks = ({ howToSteps }: HowItWorksProps) => {
             const Icon = ICON_MAP[step.icon] ?? UserPlus;
             return (
               <div key={step.id} className="group relative">
-                <div className="relative rounded-3xl border border-border/50 bg-card p-8 transition-all duration-500 hover:-translate-y-2 hover:border-primary/50">
-                  <span className="absolute -right-4 -top-4 p-5 text-7xl font-black text-primary/10 transition-colors group-hover:text-primary/20">
+                <div className="relative overflow-hidden rounded-3xl border border-border/50 bg-card p-8 transition-all duration-500 hover:-translate-y-2 hover:border-primary/50">
+                  <span className="absolute right-3 top-2 p-3 text-6xl font-black text-primary/10 transition-colors group-hover:text-primary/20">
                     {step.stepNumber}
                   </span>
                   <div className="relative mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-fire transition-transform duration-300 group-hover:scale-110">

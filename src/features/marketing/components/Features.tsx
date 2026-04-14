@@ -17,9 +17,9 @@ const Features = ({ features }: FeaturesProps) => {
   if (activeFeatures.length === 0) return null;
 
   return (
-    <section id="features" className="relative py-24">
+    <section id="features" className="relative overflow-hidden py-24">
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]" />
+      <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/5 blur-[120px]" />
 
       <div className="container relative mx-auto px-4">
         {/* Section Header */}

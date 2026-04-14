@@ -141,11 +141,13 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: clip;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-display);
+    overflow-x: clip;
   }
 
   ::selection {
