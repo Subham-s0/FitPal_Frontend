@@ -14,6 +14,7 @@ import {
   Settings,
   Users,
 } from "lucide-react";
+import { getDisplayNameFromEmail as getDisplayNameFromEmailFromAvatar } from "@/shared/lib/avatar";
 
 export type DashboardRole = "USER" | "GYM" | "ADMIN";
 export type DashboardShellRole = DashboardRole;
@@ -96,10 +97,10 @@ export const getDashboardRoleBadgeLabel = (role: string | null | undefined) =>
 
 export const getDashboardSearchPlaceholder = (role: string | null | undefined) =>
   getDashboardRole(role) === "GYM"
-    ? "Search members or classes..."
+    ? "Jump to gym pages..."
     : getDashboardRole(role) === "ADMIN"
-      ? "Search admin tools..."
-      : "Search routines...";
+      ? "Jump to admin pages..."
+      : "Jump to pages...";
 
 export const getDashboardPrimaryActionLabel = (role: string | null | undefined) =>
   getDashboardRole(role) === "GYM"
@@ -108,18 +109,5 @@ export const getDashboardPrimaryActionLabel = (role: string | null | undefined) 
       ? "Users"
       : "Check In";
 
-export const getDisplayNameFromEmail = (email: string | null | undefined, role: string | null | undefined) => {
-  const fallback =
-    getDashboardRole(role) === "GYM"
-      ? "Gym Owner"
-      : getDashboardRole(role) === "ADMIN"
-        ? "Admin"
-        : "Member";
-  if (!email) return fallback;
-
-  const localPart = email.split("@")[0] ?? "";
-  const cleaned = localPart.replace(/[._-]+/g, " ").trim();
-  if (!cleaned) return fallback;
-
-  return cleaned.replace(/\b\w/g, (letter) => letter.toUpperCase());
-};
+export const getDisplayNameFromEmail = (email: string | null | undefined, role: string | null | undefined) =>
+  getDisplayNameFromEmailFromAvatar(email, role);

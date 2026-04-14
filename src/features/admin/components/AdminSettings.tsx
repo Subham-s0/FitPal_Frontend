@@ -7,9 +7,15 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { getApplicationRulesApi, updateApplicationRulesApi } from "@/features/admin/admin-settings.api";
-import type { ApplicationRuleSummaryResponse, ApplicationRuleUpdateRequest, DoorAccessMode, CheckInAccessMode, DoorFailsafeMode } from "@/features/admin/admin-settings.model";
+import {
+  getExerciseEmbeddingStatusApi,
+  getApplicationRulesApi,
+  reindexAllExerciseEmbeddingsApi,
+  updateApplicationRulesApi,
+} from "@/features/admin/admin-settings.api";
+import type { ApplicationRuleUpdateRequest, DoorAccessMode, CheckInAccessMode, DoorFailsafeMode } from "@/features/admin/admin-settings.model";
 import AdminCmsView from "@/features/admin/components/AdminCmsView";
+import { getApiErrorMessage } from "@/shared/api/client";
 import { cn } from "@/shared/lib/utils";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
@@ -25,7 +31,7 @@ import {
 } from "@/shared/ui/select";
 
 /* ─── Types ─────────────────────────────────────────────────────────── */
-type AdminSettingsTab = "overview" | "app-rules";
+type AdminSettingsTab = "overview" | "app-rules" | "embeddings";
 
 /* ─── Helpers ────────────────────────────────────────────────────────── */
 const fireStyle = {
@@ -35,6 +41,16 @@ const fireStyle = {
   backgroundClip: "text" as const,
 };
 
+/** Radix Select on admin dark surfaces — aligned with Edit Application Rules text fields. */
+const ADMIN_SELECT_TRIGGER =
+  "h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-left text-[13px] font-medium leading-none text-white shadow-none transition-colors hover:border-white/[0.14] focus:border-orange-500/50 focus:outline-none focus:ring-0 focus:ring-offset-0 data-[state=open]:border-orange-500/40 data-[placeholder]:text-slate-500 [&>span]:line-clamp-1 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:shrink-0 [&>svg]:text-slate-400 [&>svg]:opacity-100";
+
+const ADMIN_SELECT_CONTENT =
+  "z-[400] max-h-[min(18rem,50vh)] overflow-hidden rounded-[10px] border border-white/[0.1] bg-[#121212] p-1 text-white shadow-[0_16px_48px_rgba(0,0,0,0.55)]";
+
+const ADMIN_SELECT_ITEM =
+  "cursor-pointer rounded-[8px] py-2 pl-8 pr-3 text-[12px] leading-snug text-slate-200 outline-none focus:bg-white/[0.07] focus:text-white data-[highlighted]:bg-white/[0.07] data-[highlighted]:text-white data-[state=checked]:bg-white/[0.06]";
+
 /* ─── Overview quick‑links ───────────────────────────────────────────── */
 function OverviewContent({ onOpenTab, onOpenCms }: {
   onOpenTab: (t: AdminSettingsTab) => void;
@@ -43,12 +59,13 @@ function OverviewContent({ onOpenTab, onOpenCms }: {
   const links: { label: string; desc: string; icon: React.ElementType; accent: string; action: () => void }[] = [
     { label: "App Rules", desc: "Billing, timezone, and door access settings", icon: Cog, accent: "border-orange-500/25 bg-orange-500/[0.07] text-orange-400", action: () => onOpenTab("app-rules") },
     { label: "CMS Management", desc: "Guides, testimonials, FAQs, features, and stats", icon: FileText, accent: "border-blue-500/25 bg-blue-500/[0.07] text-blue-400", action: onOpenCms },
+    { label: "Exercise Embeddings", desc: "Generate AI search embeddings for the full exercise library", icon: Zap, accent: "border-amber-500/25 bg-amber-500/[0.07] text-amber-300", action: () => onOpenTab("embeddings") },
   ];
   return (
     <div className="space-y-5 animate-fade-in">
       <div>
         <p className="mb-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Settings Modules</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {links.map((link) => {
             const Icon = link.icon;
             return (
@@ -75,6 +92,140 @@ function OverviewContent({ onOpenTab, onOpenCms }: {
       <div className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-[11px] text-slate-600">
         <Info className="mr-1.5 inline h-3.5 w-3.5 text-slate-500" />
         CMS edits are saved to the API; the public home page loads them from GET /public/cms/home (with offline fallback).
+      </div>
+    </div>
+  );
+}
+
+function EmbeddingsContent() {
+  const queryClient = useQueryClient();
+  const statusQ = useQuery({
+    queryKey: ["admin", "embeddings", "status"],
+    queryFn: getExerciseEmbeddingStatusApi,
+    staleTime: 60_000,
+  });
+
+  const reindexEmbeddingsMutation = useMutation({
+    mutationFn: reindexAllExerciseEmbeddingsApi,
+    onSuccess: (result) => {
+      const summary = `Success: ${result.success}, Failed: ${result.failed}`;
+      if (result.failed > 0) {
+        toast.warning("Exercise embeddings finished with errors", {
+          description: summary,
+        });
+      } else {
+        toast.success("Exercise embeddings generated", {
+          description: summary,
+        });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["admin", "embeddings", "status"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to generate exercise embeddings", {
+        description: getApiErrorMessage(error, "Embedding generation failed."),
+      });
+    },
+  });
+
+  const status = statusQ.data;
+  const showGenerateButton = !!status && status.totalExercises > 0 && !status.fullyIndexed;
+
+  return (
+    <div className="space-y-3 animate-fade-in">
+      <div className="rounded-xl border border-orange-500/20 bg-orange-500/[0.04] p-3.5 sm:p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-orange-400/90">AI Retrieval</p>
+            <h3 className="text-base font-black tracking-tight text-white sm:text-[17px]">Exercise Embeddings</h3>
+            <p className="max-w-xl text-[11px] leading-snug text-slate-500">
+              Status is checked first. Generate appears only when some exercises are missing embeddings.
+            </p>
+          </div>
+          <div className="flex flex-shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => statusQ.refetch()}
+              disabled={statusQ.isFetching}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 transition hover:border-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {statusQ.isFetching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+              Check Status
+            </button>
+            {showGenerateButton ? (
+              <button
+                type="button"
+                onClick={() => reindexEmbeddingsMutation.mutate()}
+                disabled={reindexEmbeddingsMutation.isPending}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-orange-300 transition hover:bg-orange-500/18 disabled:cursor-not-allowed disabled:opacity-50"
+                title="POST /admin/embeddings/reindex"
+              >
+                {reindexEmbeddingsMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Zap className="h-3.5 w-3.5" />
+                )}
+                Generate embeddings
+              </button>
+            ) : status?.fullyIndexed ? (
+              <span
+                className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-2 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-300/95"
+                title="All exercises have embeddings"
+              >
+                Embeddings ready
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {statusQ.isError && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2.5 text-[11px] leading-snug text-amber-300">
+          <AlertCircle className="mr-1.5 inline h-3 w-3 align-text-bottom" />
+          Failed to load embedding status. Use Check Status to try again.
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2">
+        {(
+          [
+            { key: "ex", label: "Exercises", value: status?.totalExercises ?? 0 },
+            { key: "emb", label: "Embeddings", value: status?.totalEmbeddings ?? 0 },
+            { key: "miss", label: "Missing", value: status?.missing ?? 0 },
+          ] as const
+        ).map((cell) => (
+          <div
+            key={cell.key}
+            className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2.5 sm:px-3"
+          >
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">{cell.label}</p>
+            <p className="mt-1 tabular-nums text-lg font-black leading-none text-white sm:text-xl">
+              {statusQ.isLoading ? <Loader2 className="inline h-4 w-4 animate-spin text-orange-400" /> : cell.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">What it does</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            <code className="rounded bg-black/30 px-1 py-px text-[10px] text-slate-400">POST /admin/embeddings/reindex</code>
+            {" "}rebuilds embeddings for the exercise library.
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+          <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Current state</p>
+          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            {statusQ.isLoading
+              ? "Checking embedding coverage…"
+              : status?.totalExercises === 0
+                ? "No exercises in the library yet."
+                : status?.fullyIndexed
+                  ? "Fully indexed — no generation needed."
+                  : `${status?.missing ?? 0} exercise${status?.missing === 1 ? "" : "s"} still need embeddings.`}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -264,14 +415,14 @@ function AppRulesContent() {
                     value={formData.doorAccessMode ?? "AUTOMATIC"}
                     onValueChange={(value) => setFormData((p) => ({ ...p, doorAccessMode: value as DoorAccessMode }))}
                   >
-                    <SelectTrigger className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white focus:border-orange-500/50 focus:ring-0 focus:ring-offset-0">
+                    <SelectTrigger className={ADMIN_SELECT_TRIGGER}>
                       <SelectValue placeholder="Select access mode" />
                     </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-[#111] text-white">
-                      <SelectItem value="AUTOMATIC" className="text-[12px] focus:bg-white/10 focus:text-white">
+                    <SelectContent className={ADMIN_SELECT_CONTENT} position="popper" sideOffset={6}>
+                      <SelectItem value="AUTOMATIC" className={ADMIN_SELECT_ITEM}>
                         Automatic (queue unlock on member check-in)
                       </SelectItem>
-                      <SelectItem value="MANUAL" className="text-[12px] focus:bg-white/10 focus:text-white">
+                      <SelectItem value="MANUAL" className={ADMIN_SELECT_ITEM}>
                         Manual (no auto unlock from check-in)
                       </SelectItem>
                     </SelectContent>
@@ -283,14 +434,14 @@ function AppRulesContent() {
                     value={formData.checkInAccessMode ?? "MANUAL"}
                     onValueChange={(value) => setFormData((p) => ({ ...p, checkInAccessMode: value as CheckInAccessMode }))}
                   >
-                    <SelectTrigger className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white focus:border-orange-500/50 focus:ring-0 focus:ring-offset-0">
+                    <SelectTrigger className={ADMIN_SELECT_TRIGGER}>
                       <SelectValue placeholder="Select check-in mode" />
                     </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-[#111] text-white">
-                      <SelectItem value="MANUAL" className="text-[12px] focus:bg-white/10 focus:text-white">
+                    <SelectContent className={ADMIN_SELECT_CONTENT} position="popper" sideOffset={6}>
+                      <SelectItem value="MANUAL" className={ADMIN_SELECT_ITEM}>
                         Manual (staff marks complete)
                       </SelectItem>
-                      <SelectItem value="DOOR_ACK_REQUIRED" className="text-[12px] focus:bg-white/10 focus:text-white">
+                      <SelectItem value="DOOR_ACK_REQUIRED" className={ADMIN_SELECT_ITEM}>
                         Door ACK Required (door confirmation)
                       </SelectItem>
                     </SelectContent>
@@ -304,14 +455,14 @@ function AppRulesContent() {
                     value={formData.doorFailsafeMode ?? "LOCKED"}
                     onValueChange={(value) => setFormData((p) => ({ ...p, doorFailsafeMode: value as DoorFailsafeMode }))}
                   >
-                    <SelectTrigger className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white focus:border-orange-500/50 focus:ring-0 focus:ring-offset-0">
+                    <SelectTrigger className={ADMIN_SELECT_TRIGGER}>
                       <SelectValue placeholder="Select failsafe mode" />
                     </SelectTrigger>
-                    <SelectContent className="border-white/10 bg-[#111] text-white">
-                      <SelectItem value="LOCKED" className="text-[12px] focus:bg-white/10 focus:text-white">
+                    <SelectContent className={ADMIN_SELECT_CONTENT} position="popper" sideOffset={6}>
+                      <SelectItem value="LOCKED" className={ADMIN_SELECT_ITEM}>
                         Locked (Secure)
                       </SelectItem>
-                      <SelectItem value="UNLOCKED" className="text-[12px] focus:bg-white/10 focus:text-white">
+                      <SelectItem value="UNLOCKED" className={ADMIN_SELECT_ITEM}>
                         Unlocked (Emergency Egress)
                       </SelectItem>
                     </SelectContent>
@@ -384,6 +535,7 @@ const SETTINGS_ITEMS: SettingsItem[] = [
   { id: "overview", label: "Overview", description: "Quick-access to all settings modules.", icon: LayoutGrid },
   { id: "app-rules", label: "Application Rules", description: "Currency, commission, timezone, and door access timing.", icon: Cog },
   { id: "cms", label: "CMS Management", description: "How-to guides, testimonials, features, FAQs, and stats.", icon: FileText },
+  { id: "embeddings", label: "Exercise Embeddings", description: "Generate AI embeddings for the complete exercise library.", icon: Zap },
 ];
 
 /* ─── Admin Settings shell ───────────────────────────────────────────── */
@@ -397,6 +549,7 @@ export default function AdminSettings() {
     switch (tab) {
       case "overview": return <OverviewContent onOpenTab={(t) => setActiveTab(t)} onOpenCms={() => setShowCms(true)} />;
       case "app-rules": return <AppRulesContent />;
+      case "embeddings": return <EmbeddingsContent />;
     }
   };
 
@@ -411,9 +564,11 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Administration</p>
-        <h1 className="mt-1 text-[32px] font-black tracking-tight text-white">Admin <span style={fireStyle}>Settings</span></h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-500">Administration</p>
+          <h1 className="mt-1 text-[32px] font-black tracking-tight text-white">Admin <span style={fireStyle}>Settings</span></h1>
+        </div>
       </div>
 
       {/* Mobile top cards */}
@@ -468,6 +623,9 @@ export default function AdminSettings() {
               <button type="button" onClick={() => setActiveTab("app-rules")} className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition hover:border-orange-500/30 hover:bg-orange-500/[0.06]">
                 App Rules <ArrowUpRight className="h-3.5 w-3.5 text-orange-400" />
               </button>
+              <button type="button" onClick={() => setActiveTab("embeddings")} className="flex w-full items-center justify-between rounded-[14px] border table-border table-bg-alt px-3 py-3 text-left text-[12px] font-bold text-white transition hover:border-orange-500/30 hover:bg-orange-500/[0.06]">
+                Exercise Embeddings <ArrowUpRight className="h-3.5 w-3.5 text-orange-400" />
+              </button>
             </div>
           </div>
         </aside>
@@ -511,17 +669,29 @@ export default function AdminSettings() {
                       <p className="mt-0.5 text-[11px] leading-5 table-text-muted">{item.description}</p>
                     </div>
                   </div>
-                  <div className="flex flex-shrink-0 items-center gap-3">
+                  <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3">
                     {isCms ? (
                       <span className="hidden rounded-full border table-border table-bg-alt px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 sm:inline-flex">Open Page</span>
                     ) : isActive ? (
                       <span className="hidden rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-300 sm:inline-flex">Expanded</span>
                     ) : null}
-                    {isCms ? (
-                      <ArrowUpRight className="h-4 w-4 text-slate-400" />
-                    ) : (
-                      <ChevronDown className={cn("h-5 w-5 transition-transform duration-200", isActive ? "rotate-180 text-orange-400" : "text-slate-500")} />
-                    )}
+                    <span
+                      className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-[10px] border border-white/[0.08] bg-white/[0.03] transition-colors",
+                        !isCms && isActive && "border-orange-500/30 bg-orange-500/10",
+                      )}
+                    >
+                      {isCms ? (
+                        <ArrowUpRight className="h-3.5 w-3.5 text-slate-400" />
+                      ) : (
+                        <ChevronDown
+                          className={cn(
+                            "h-3.5 w-3.5 text-slate-500 transition-transform duration-200",
+                            isActive && "rotate-180 text-orange-400",
+                          )}
+                        />
+                      )}
+                    </span>
                   </div>
                 </button>
 

@@ -391,7 +391,7 @@ function AdminLocationMap({
       markerRef.current = null;
       mapRef.current = null;
     };
-  }, [gymId]);
+  }, [gymId, latitude, longitude]);
 
   useEffect(() => {
     if (!mapRef.current || !markerRef.current) {

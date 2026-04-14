@@ -15,7 +15,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 import "@/shared/lib/animations.css";
 
@@ -33,12 +32,23 @@ import {
   Field,
   SectionLabel,
   TextInput,
-} from "@/features/profile/components/ProfileSetupShell";
+} from "@/shared/ui/form-kit";
 import type { UserProfileResponse } from "@/features/profile/model";
 import { getApiErrorMessage } from "@/shared/api/client";
+import { useOtpCountdown } from "@/shared/hooks/useOtpCountdown";
+import { showApiErrorToast, showApiSuccessToast } from "@/shared/lib/toast-helpers";
 import { cn } from "@/shared/lib/utils";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
+import {
+  navigateToCheckInView,
+  navigateToUserDashboardSection,
+} from "@/shared/navigation/dashboard-navigation";
+import {
+  readOptionalEnumSearchParam,
+  writeSearchParam,
+} from "@/shared/navigation/search-params";
+import { PageErrorState, PageLoadingState } from "@/shared/ui/state";
 
 type SettingsTab = "overview" | "security" | "routines";
 type SecurityModalMode = "change" | "forgot";
@@ -63,7 +73,7 @@ const isSettingsTab = (value: string | null | undefined): value is SettingsTab =
   value === "overview" || value === "security" || value === "routines";
 
 const resolveSettingsTab = (search: string): SettingsTab | null => {
-  const tab = new URLSearchParams(search).get("tab");
+  const tab = readOptionalEnumSearchParam(search, "tab", ["overview", "security", "routines"] as const);
   return isSettingsTab(tab) ? tab : null;
 };
 
@@ -98,15 +108,17 @@ const SettingsScreen = () => {
   const auth = useAuthState();
   const location = useLocation();
   const navigate = useNavigate();
-  const requestedTab = new URLSearchParams(location.search).get("tab");
+  const requestedTab = readOptionalEnumSearchParam(location.search, "tab", ["payments"] as const);
 
   const activeTab = resolveSettingsTab(location.search);
+  const handleSectionChange = (section: string) => navigateToUserDashboardSection(navigate, section);
   const [securityModal, setSecurityModal] = useState<SecurityModalMode | null>(null);
   const [isRequestingVerification, setIsRequestingVerification] = useState(false);
   const [isConfirmingVerification, setIsConfirmingVerification] = useState(false);
   const [showVerificationInput, setShowVerificationInput] = useState(false);
   const [verificationOtp, setVerificationOtp] = useState("");
   const [verificationError, setVerificationError] = useState("");
+  const verificationOtpCountdown = useOtpCountdown();
 
   const profileQuery = useQuery({
     queryKey: profileQueryKeys.user(),
@@ -118,14 +130,10 @@ const SettingsScreen = () => {
   const supportsLocalPassword = linkedProviders.some((provider) => provider.toUpperCase() === "LOCAL");
 
   const setOpenTab = (tab: SettingsTab | null) => {
-    const params = new URLSearchParams(location.search);
-    if (!tab) params.delete("tab");
-    else params.set("tab", tab);
-
     navigate(
       {
         pathname: location.pathname,
-        search: params.toString() ? `?${params.toString()}` : "",
+        search: writeSearchParam(location.search, "tab", tab),
       },
       { replace: true }
     );
@@ -134,12 +142,13 @@ const SettingsScreen = () => {
   const handleRequestVerification = async () => {
     try {
       setIsRequestingVerification(true);
-      await requestMyEmailVerificationApi();
+      const response = await requestMyEmailVerificationApi();
+      verificationOtpCountdown.start(response.expiresInSeconds);
       setShowVerificationInput(true);
       setVerificationError("");
-      toast.success("Verification code sent. Use 123456 for the current dummy flow.");
+      showApiSuccessToast("Verification code sent to your email.");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to request verification code"));
+      showApiErrorToast(error, "Failed to request verification code");
     } finally {
       setIsRequestingVerification(false);
     }
@@ -158,10 +167,11 @@ const SettingsScreen = () => {
       setVerificationOtp("");
       setVerificationError("");
       setShowVerificationInput(false);
+      verificationOtpCountdown.reset();
       await profileQuery.refetch();
-      toast.success("Email verified successfully");
+      showApiSuccessToast("Email verified successfully");
     } catch (error) {
-      toast.error(getApiErrorMessage(error, "Failed to verify email"));
+      showApiErrorToast(error, "Failed to verify email");
     } finally {
       setIsConfirmingVerification(false);
     }
@@ -252,25 +262,19 @@ const SettingsScreen = () => {
 
   if (profileQuery.isLoading) {
     return (
-      <UserLayout activeSection="settings" onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}>
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500/20 border-t-orange-500" />
-        </div>
+      <UserLayout activeSection="settings" onSectionChange={handleSectionChange}>
+        <PageLoadingState label="Loading settings..." />
       </UserLayout>
     );
   }
 
   if (profileQuery.isError || !profile) {
     return (
-      <UserLayout activeSection="settings" onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}>
-        <div className="flex flex-1 items-center justify-center px-6">
-          <div className="max-w-md rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center">
-            <p className="text-sm font-bold text-red-200">Settings could not be loaded.</p>
-            <p className="mt-2 text-xs text-slate-400">
-              {getApiErrorMessage(profileQuery.error, "Try refreshing the page.")}
-            </p>
-          </div>
-        </div>
+      <UserLayout activeSection="settings" onSectionChange={handleSectionChange}>
+        <PageErrorState
+          title="Settings could not be loaded."
+          message={getApiErrorMessage(profileQuery.error, "Try refreshing the page.")}
+        />
       </UserLayout>
     );
   }
@@ -347,17 +351,27 @@ const SettingsScreen = () => {
             <button
               type="button"
               onClick={handleRequestVerification}
-              disabled={isRequestingVerification}
+              disabled={isRequestingVerification || (showVerificationInput && verificationOtpCountdown.isActive)}
               className="shrink-0 rounded-full bg-orange-500/10 border border-orange-500/25 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-orange-400 transition-all hover:bg-orange-500/20 disabled:opacity-50"
             >
-              {isRequestingVerification ? "Sending..." : "Verify Email"}
+              {isRequestingVerification
+                ? "Sending..."
+                : showVerificationInput
+                  ? verificationOtpCountdown.isActive
+                    ? `Resend in ${verificationOtpCountdown.formattedTime}`
+                    : "Resend Code"
+                  : "Verify Email"}
             </button>
           )}
         </div>
 
         {!profile.emailVerified && showVerificationInput && (
           <div className="px-5 py-4 flex flex-col gap-3 sm:flex-row sm:items-end user-surface-soft">
-            <Field label="OTP Code" error={verificationError} className="flex-1">
+            <Field
+              label={`OTP Code${verificationOtpCountdown.isActive ? ` (${verificationOtpCountdown.formattedTime})` : ""}`}
+              error={verificationError}
+              className="flex-1"
+            >
               <TextInput
                 maxLength={6}
                 inputMode="numeric"
@@ -369,10 +383,17 @@ const SettingsScreen = () => {
                 }}
               />
             </Field>
+            <div className="sm:min-w-[180px]">
+              <p className="mb-2 text-[11px] text-slate-400">
+                {verificationOtpCountdown.isActive
+                  ? `Code expires in ${verificationOtpCountdown.formattedTime}`
+                  : "Code expired. Request a new verification code."}
+              </p>
+            </div>
             <button
               type="button"
               onClick={handleConfirmVerification}
-              disabled={isConfirmingVerification}
+              disabled={isConfirmingVerification || !verificationOtpCountdown.isActive}
               className="rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:shadow-orange-500/30 hover:-translate-y-0.5 disabled:opacity-50"
             >
               {isConfirmingVerification ? "Verifying..." : "Confirm OTP"}
@@ -468,7 +489,7 @@ const SettingsScreen = () => {
   };
 
   return (
-    <UserLayout activeSection="settings" onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}>
+    <UserLayout activeSection="settings" onSectionChange={handleSectionChange}>
       <UserSectionShell
         title={<>Account <span className="text-orange-500">Settings</span></>}
         description="Security, routine controls, and account shortcuts live here."
@@ -525,7 +546,7 @@ const SettingsScreen = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/dashboard", { state: { activeSection: "routines" } })}
+                onClick={() => navigateToUserDashboardSection(navigate, "routines")}
                 className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
               >
                 Routines Dashboard
@@ -533,7 +554,7 @@ const SettingsScreen = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/dashboard", { state: { activeSection: "checkin", checkInView: "logs" } })}
+                onClick={() => navigateToCheckInView(navigate, "logs")}
                 className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
               >
                 Check-In History
@@ -620,7 +641,7 @@ const SettingsScreen = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/dashboard", { state: { activeSection: "routines" } })}
+                  onClick={() => navigateToUserDashboardSection(navigate, "routines")}
                   className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
                 >
                   Routines Dashboard
@@ -628,7 +649,7 @@ const SettingsScreen = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/dashboard", { state: { activeSection: "checkin", checkInView: "logs" } })}
+                  onClick={() => navigateToCheckInView(navigate, "logs")}
                   className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
                 >
                   Check-In History
@@ -761,5 +782,3 @@ const SettingsScreen = () => {
 };
 
 export default SettingsScreen;
-
-

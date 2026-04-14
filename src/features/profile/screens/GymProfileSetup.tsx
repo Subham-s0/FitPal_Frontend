@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ChangeEvent,
   FC,
@@ -7,6 +8,7 @@ import type {
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/shared/api/client";
+import { resolveAvatarUrl } from "@/shared/lib/avatar";
 import { DefaultLayout } from "@/shared/layout/dashboard-shell";
 import { NumberInput } from "@/shared/ui/number-input";
 import { TimeInput } from "@/shared/ui/time-picker";
@@ -39,6 +41,7 @@ import type {
   GymProfileResponse,
   GymType as ApiGymType,
 } from "@/features/profile/model";
+import { gymQueryKeys } from "@/features/profile/gymQueryKeys";
 import { authStore } from "@/features/auth/store";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -902,10 +905,12 @@ const FitPalGymSetup: FC = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const auth      = useAuthState();
+  const queryClient = useQueryClient();
 
   const logoInputRef             = useRef<HTMLInputElement>(null);
   const documentInputRef         = useRef<HTMLInputElement>(null);
   const photoInputRef            = useRef<HTMLInputElement>(null);
+  const hasInitializedSetupRef   = useRef(false);
   // Tracks whether the user navigated here with editSubmission intent.
   // Stored in a ref so applyProfileState can read it synchronously without
   // triggering a re-render, and so the value survives the navigate() call
@@ -917,7 +922,6 @@ const FitPalGymSetup: FC = () => {
   const [step,             setStep]             = useState(0);
   const [stepError,        setStepError]        = useState<string | null>(null);
   const [fieldErrors,      setFieldErrors]      = useState<GymFieldErrors>({});
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [isSavingStep,     setIsSavingStep]     = useState(false);
   const [isUploadingLogo,  setIsUploadingLogo]  = useState(false);
   const [isRemovingLogo,   setIsRemovingLogo]   = useState(false);
@@ -963,12 +967,39 @@ const FitPalGymSetup: FC = () => {
   ]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
 
+  const setupQuery = useQuery({
+    queryKey: gymQueryKeys.setup(),
+    enabled: Boolean(auth.accessToken),
+    queryFn: async () => {
+      const [profile, documents, gymPhotos] = await Promise.all([
+        getMyGymProfileApi(),
+        getMyGymDocumentsApi(),
+        getMyGymPhotosApi(),
+      ]);
+      return { profile, documents, gymPhotos };
+    },
+  });
+
+  const isLoadingProfile = setupQuery.isLoading;
+
+  const invalidateGymSetupQueries = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: gymQueryKeys.setup() }),
+      queryClient.invalidateQueries({ queryKey: gymQueryKeys.profile() }),
+      queryClient.invalidateQueries({ queryKey: gymQueryKeys.documents() }),
+      queryClient.invalidateQueries({ queryKey: gymQueryKeys.photos() }),
+    ]);
+  }, [queryClient]);
+
   // ── Derived auth values ────────────────────────────────────────────────────
   const authEmail       = auth.email ?? "gym.owner@fitpal.com";
   const authDisplayName =
     authEmail.split("@")[0].split(/[._-]+/).filter(Boolean)
       .map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ") || "Gym Owner";
-  const authAvatarUrl   = `https://ui-avatars.com/api/?name=${encodeURIComponent(authDisplayName)}&background=111&color=fb923c`;
+  const authAvatarUrl = resolveAvatarUrl({
+    displayName: authDisplayName,
+    fallbackName: "Gym Owner",
+  });
 
   // ── Derived approval flags — single source of truth ──────────────────────
   const isGymPendingReview = gymApprovalStatus === "PENDING_REVIEW";
@@ -982,14 +1013,14 @@ const FitPalGymSetup: FC = () => {
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const resolveUploadedFileName = (fileUrl?: string | null, fallback = "uploaded-file") => {
+  const resolveUploadedFileName = useCallback((fileUrl?: string | null, fallback = "uploaded-file") => {
     if (!fileUrl) return fallback;
     const raw = fileUrl.split("/").pop()?.split("?")[0];
     if (!raw) return fallback;
     try { return decodeURIComponent(raw); } catch { return raw; }
-  };
+  }, []);
 
-  const toDocRow = (doc: GymDocumentResponse): DocRow => ({
+  const toDocRow = useCallback((doc: GymDocumentResponse): DocRow => ({
     documentId:   doc.documentId,
     type:         doc.documentType as DocTypeValue,
     fileName:     resolveUploadedFileName(doc.fileUrl, doc.documentType),
@@ -997,9 +1028,9 @@ const FitPalGymSetup: FC = () => {
     publicId:     doc.publicId,
     resourceType: doc.resourceType,
     uploaded:     true,
-  });
+  }), [resolveUploadedFileName]);
 
-  const buildDocRows = (documents: GymDocumentResponse[]) => {
+  const buildDocRows = useCallback((documents: GymDocumentResponse[]) => {
     const requiredRows: DocRow[] = REQUIRED_DOC_TYPES.map(type => {
       const existing = documents.find(d => d.documentType === type);
       return existing ? toDocRow(existing) : { type, fileName: "", uploaded: false };
@@ -1008,7 +1039,7 @@ const FitPalGymSetup: FC = () => {
       .filter(d => !isRequiredDocType(d.documentType as DocTypeValue))
       .map(toDocRow);
     return [...requiredRows, ...optionalRows];
-  };
+  }, [toDocRow]);
 
   // Collapsed from two functions (deleteUploadedAsset + deleteUploadedAssetSilently)
   // into one with an optional silent flag
@@ -1042,13 +1073,13 @@ const FitPalGymSetup: FC = () => {
   const hasFieldErrors = (errors: GymFieldErrors): boolean => Object.keys(errors).length > 0;
   const inputErrorStyle = (key: GymFieldKey) => fieldErrors[key] ? { borderColor: "rgba(239,68,68,.5)" } : undefined;
 
-  const sortPhotos = (items: PhotoRow[]) =>
+  const sortPhotos = useCallback((items: PhotoRow[]) =>
     [...items].sort((a, b) => {
       const oa = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
       const ob = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
       if (oa !== ob) return oa - ob;
       return (a.photoId ?? Number.MAX_SAFE_INTEGER) - (b.photoId ?? Number.MAX_SAFE_INTEGER);
-    });
+    }), []);
 
   const syncAuthOnboardingStatus = useCallback((
     profile: Pick<GymProfileResponse, "profileCompleted" | "registeredEmailVerified" | "submittedForReview" | "approved">,
@@ -1122,7 +1153,7 @@ const FitPalGymSetup: FC = () => {
     setKhaltiAccountName(profile.khaltiAccountName ?? "");
     if (documents) setDocs(buildDocRows(documents));
     if (gymPhotos)  setPhotos(sortPhotos(gymPhotos.map(toPhotoRow)));
-  }, [syncAuthOnboardingStatus, toPhotoRow]);
+  }, [buildDocRows, sortPhotos, syncAuthOnboardingStatus, toPhotoRow]);
 
   const resolveStep = useCallback((profile: GymProfileResponse): number => {
     if (editSubmissionRequestedRef.current && profile.approvalStatus === "REJECTED") {
@@ -1160,28 +1191,34 @@ const FitPalGymSetup: FC = () => {
       { replace: true, state: null });
   }, [location.hash, location.pathname, location.search, navigate]);
 
-  // Load profile on mount / token change
   useEffect(() => {
-    if (!auth.accessToken) return;
-    let cancelled = false;
-    const load = async () => {
-      setIsLoadingProfile(true);
-      try {
-        const [profile, documents, gymPhotos] = await Promise.all([
-          getMyGymProfileApi(), getMyGymDocumentsApi(), getMyGymPhotosApi(),
-        ]);
-        if (cancelled) return;
-        hydrateProfile(profile, documents, gymPhotos);
-        setStep(resolveStep(profile));
-      } catch (error) {
-        if (!cancelled) toast.error(getApiErrorMessage(error, "Failed to load gym onboarding profile"));
-      } finally {
-        if (!cancelled) setIsLoadingProfile(false);
-      }
-    };
-    void load();
-    return () => { cancelled = true; };
-  }, [auth.accessToken, hydrateProfile, resolveStep]);
+    if (!auth.accessToken) {
+      hasInitializedSetupRef.current = false;
+    }
+  }, [auth.accessToken]);
+
+  useEffect(() => {
+    if (!setupQuery.data) {
+      return;
+    }
+
+    if (hasInitializedSetupRef.current) {
+      return;
+    }
+
+    const { profile, documents, gymPhotos } = setupQuery.data;
+    hydrateProfile(profile, documents, gymPhotos);
+    setStep(resolveStep(profile));
+    hasInitializedSetupRef.current = true;
+  }, [hydrateProfile, resolveStep, setupQuery.data]);
+
+  useEffect(() => {
+    if (!setupQuery.error) {
+      return;
+    }
+
+    toast.error(getApiErrorMessage(setupQuery.error, "Failed to load gym onboarding profile"));
+  }, [setupQuery.error]);
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [step]);
   useEffect(() => { setFieldErrors({}); }, [step]);
@@ -1390,6 +1427,7 @@ const FitPalGymSetup: FC = () => {
         registrationNo: gymRegNo.trim() || undefined, maxCapacity: capacityValue,
       });
       hydrateProfile(profile);
+      void invalidateGymSetupQueries();
       setStep(1);
       toast.success("Basics saved");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to save basics step")); }
@@ -1415,6 +1453,7 @@ const FitPalGymSetup: FC = () => {
         opensAt: gymOpens, closesAt: gymCloses,
       });
       hydrateProfile(profile);
+      void invalidateGymSetupQueries();
       setStep(2);
       toast.success("Location and contact saved");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to save location step")); }
@@ -1439,6 +1478,7 @@ const FitPalGymSetup: FC = () => {
         khaltiAccountName: khaltiEnabled ? khaltiAccountName.trim() || undefined : undefined,
       });
       hydrateProfile(profile);
+      void invalidateGymSetupQueries();
       setStep(DOCUMENTS_STEP_INDEX);
       toast.success("Payout wallets saved");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to save payout wallets")); }
@@ -1457,6 +1497,7 @@ const FitPalGymSetup: FC = () => {
     try {
       const profile = await submitGymReviewSubmissionApi();
       hydrateProfile(profile);
+      void invalidateGymSetupQueries();
       setStep(resolveStep(profile));
       toast.success(wasRejectedBeforeSubmit ? "Gym resubmitted for review" : "Gym submitted for review");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to submit gym for review")); }
@@ -1479,6 +1520,7 @@ const FitPalGymSetup: FC = () => {
     try {
       const status = await verifyGymRegisteredEmailApi();
       setGymEmailVerified(status.registeredEmailVerified);
+      void invalidateGymSetupQueries();
       toast.success("Registered email verified");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to verify registered email")); }
     finally { setVerifying(false); }
@@ -1503,7 +1545,11 @@ const FitPalGymSetup: FC = () => {
     const isRequired = isRequiredDocType(doc.type);
     if (doc.documentId) {
       setUploadingDocIndex(idx);
-      try { await deleteGymDocumentApi(doc.documentId); toast.success("Document removed"); }
+      try {
+        await deleteGymDocumentApi(doc.documentId);
+        void invalidateGymSetupQueries();
+        toast.success("Document removed");
+      }
       catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove document")); setUploadingDocIndex(null); return; }
       setUploadingDocIndex(null);
     }
@@ -1533,6 +1579,7 @@ const FitPalGymSetup: FC = () => {
     try {
       const profile = await uploadGymLogoApi(file);
       syncLogoProfileState(profile);
+      void invalidateGymSetupQueries();
       toast.success("Logo uploaded");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to upload logo")); }
     finally { setIsUploadingLogo(false); e.target.value = ""; }
@@ -1545,6 +1592,7 @@ const FitPalGymSetup: FC = () => {
     try {
       const profile = await deleteGymLogoApi();
       syncLogoProfileState(profile);
+      void invalidateGymSetupQueries();
       toast.success("Logo removed");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove logo")); }
     finally { setIsRemovingLogo(false); }
@@ -1573,6 +1621,7 @@ const FitPalGymSetup: FC = () => {
         ? { ...d, documentId: saved.documentId, fileName: file.name, fileUrl: saved.fileUrl, publicId: saved.publicId, resourceType: saved.resourceType, uploaded: true }
         : d
       ));
+      void invalidateGymSetupQueries();
       clearFieldError("documents");
       toast.success("Document uploaded");
     } catch (error) {
@@ -1625,6 +1674,9 @@ const FitPalGymSetup: FC = () => {
         }
       }
       setPhotos(nextPhotos);
+      if (uploadCount > 0) {
+        void invalidateGymSetupQueries();
+      }
       if (uploadCount > 0) clearFieldError("photos");
       if (uploadCount > 0) toast.success(`${uploadCount} photo${uploadCount > 1 ? "s" : ""} uploaded`);
     } finally { setIsUploadingPhotos(false); }
@@ -1646,6 +1698,7 @@ const FitPalGymSetup: FC = () => {
     try {
       const updated = await updateGymPhotoApi(photoId, { cover: true });
       setPhotos(prev => sortPhotos(prev.map(p => p.photoId === updated.photoId ? toPhotoRow(updated) : { ...p, cover: false })));
+      void invalidateGymSetupQueries();
       toast.success("Cover photo updated");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to update cover photo")); }
     finally { setActivePhotoId(null); }
@@ -1665,6 +1718,7 @@ const FitPalGymSetup: FC = () => {
         remaining = remaining.map(p => p.photoId === updated.photoId ? toPhotoRow(updated) : { ...p, cover: false });
       }
       setPhotos(sortPhotos(remaining));
+      void invalidateGymSetupQueries();
       toast.success("Photo removed");
     } catch (error) { setStepError(getApiErrorMessage(error, "Failed to remove photo")); }
     finally { setActivePhotoId(null); }

@@ -2,7 +2,10 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
+  CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Plus,
   MoreVertical,
@@ -14,6 +17,7 @@ import {
   Copy,
   Play,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import {
   DndContext,
@@ -37,6 +41,8 @@ import { toast } from "sonner";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import MuscleHeatmap from "@/features/routines/components/MuscleHeatmap";
 import InlineRoutineEditor from "@/features/routines/components/InlineRoutineEditor";
+import AiRoutineGenerationDialog from "@/features/routines/components/AiRoutineGenerationDialog";
+import AiRoutinePreviewPanel from "@/features/routines/components/AiRoutinePreviewPanel";
 import StartWorkoutDayDialog from "@/features/routines/components/StartWorkoutDayDialog";
 import {
   AlertDialog,
@@ -71,9 +77,22 @@ import {
   routineQueryKeys,
 } from "@/features/routines/routineApi";
 import {
+  generateAiRoutinePreviewApi,
+  prepareAiRoutineSuggestionsApi,
+} from "@/features/routines/aiRoutineApi";
+import type {
+  AiRoutinePreviewResponse,
+  AiRoutineSuggestionsResponse,
+  EquipmentPreference,
+  GenerateRoutineSuggestionsRequest,
+} from "@/features/routines/aiRoutineTypes";
+import { mapAiRoutinePreviewToRoutine } from "@/features/routines/aiRoutinePreview";
+import type { PrimaryFitnessFocus } from "@/features/profile/model";
+import {
   startWorkoutSessionApi,
   workoutSessionQueryKeys,
 } from "@/features/workout-sessions/workoutSessionApi";
+import { getApiErrorMessage } from "@/shared/api/client";
 
 // ============================================
 // SORTABLE DAY ROW (for reordering inside the card)
@@ -329,6 +348,63 @@ interface RoutinesSectionProps {
   initialExpandedRoutineId?: string | null;
 }
 
+function formatGeneratedGoal(value: PrimaryFitnessFocus | null | undefined): string {
+  switch (value) {
+    case "HYPERTROPHY":
+      return "Hypertrophy";
+    case "STRENGTH_POWER":
+      return "Strength & Power";
+    case "ENDURANCE_CARDIO":
+      return "Endurance & Cardio";
+    case "FLEXIBILITY_MOBILITY":
+      return "Flexibility & Mobility";
+    case "WEIGHT_LOSS":
+      return "Weight Loss";
+    default:
+      return "";
+  }
+}
+
+function formatGeneratedEquipment(value: EquipmentPreference): string {
+  switch (value) {
+    case "ALL":
+      return "All equipment";
+    case "NONE":
+      return "No equipment";
+    case "DUMBBELL":
+      return "Dumbbell";
+    case "MACHINE":
+      return "Machine";
+    case "BARBELL":
+      return "Barbell";
+    default:
+      return value;
+  }
+}
+
+function buildGeneratedRoutineSummary(
+  daysPerWeek: number,
+  goal: PrimaryFitnessFocus | null | undefined,
+  equipmentPreferences: EquipmentPreference[]
+): string {
+  const parts: string[] = [];
+
+  if (daysPerWeek > 0) {
+    parts.push(`${daysPerWeek} day${daysPerWeek === 1 ? "" : "s"}`);
+  }
+
+  const goalLabel = formatGeneratedGoal(goal);
+  if (goalLabel) {
+    parts.push(goalLabel);
+  }
+
+  if (equipmentPreferences.length > 0) {
+    parts.push(equipmentPreferences.map(formatGeneratedEquipment).join(", "));
+  }
+
+  return parts.join(" | ") || "AI-generated split suggestions";
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -367,6 +443,19 @@ const RoutinesSection = ({
   const [inlineEditRoutineId, setInlineEditRoutineId] = useState<string | null>(initialInlineEditRoutineId);
   const [isCreatingNewRoutine, setIsCreatingNewRoutine] = useState(false);
   const [librarySecondaryLookup, setLibrarySecondaryLookup] = useState<Record<number, string[]>>({});
+  const [isAiDialogOpen, setIsAiDialogOpen] = useState(false);
+  const [generatedRoutineResult, setGeneratedRoutineResult] =
+    useState<AiRoutineSuggestionsResponse | null>(null);
+  const [generatedRoutineRequest, setGeneratedRoutineRequest] =
+    useState<GenerateRoutineSuggestionsRequest | null>(null);
+  const [generatedRoutineError, setGeneratedRoutineError] = useState<string | null>(null);
+  const [generatedRoutineExpanded, setGeneratedRoutineExpanded] = useState(true);
+  const [activeGeneratedSuggestionIndex, setActiveGeneratedSuggestionIndex] = useState(0);
+  const [rejectedGeneratedSuggestionIds, setRejectedGeneratedSuggestionIds] = useState<string[]>([]);
+  const [generatedPreviewResult, setGeneratedPreviewResult] =
+    useState<AiRoutinePreviewResponse | null>(null);
+  const [generatedPreviewRoutine, setGeneratedPreviewRoutine] = useState<Routine | null>(null);
+  const [generatedPreviewError, setGeneratedPreviewError] = useState<string | null>(null);
 
   // Fetch active routine settings to identify the upcoming day
   const { data: routineSettings } = useQuery({
@@ -414,6 +503,64 @@ const RoutinesSection = ({
     },
     onError: (error: Error) => {
       toast.error("Failed to start workout", { description: error.message });
+    },
+  });
+
+  const generateAiRoutineMutation = useMutation({
+    mutationFn: prepareAiRoutineSuggestionsApi,
+    onSuccess: (response) => {
+      setGeneratedRoutineResult(response);
+      setGeneratedRoutineError(null);
+      setGeneratedRoutineExpanded(true);
+      setActiveGeneratedSuggestionIndex(0);
+      toast.success("AI routine suggestions generated.");
+    },
+    onError: (error) => {
+      const message = getApiErrorMessage(error, "Failed to generate AI routine suggestions.");
+      setGeneratedRoutineResult(null);
+      setGeneratedRoutineError(message);
+      setGeneratedRoutineExpanded(true);
+      toast.error("AI routine generation failed", { description: message });
+    },
+  });
+
+  const generateAiRoutinePreviewMutation = useMutation({
+    mutationFn: generateAiRoutinePreviewApi,
+    onSuccess: (response) => {
+      setGeneratedPreviewResult(response);
+      setGeneratedPreviewRoutine(mapAiRoutinePreviewToRoutine(response));
+      setGeneratedPreviewError(null);
+      setGeneratedRoutineResult(null);
+      toast.success("AI routine preview generated.");
+    },
+    onError: (error) => {
+      const message = getApiErrorMessage(error, "Failed to generate AI routine preview.");
+      setGeneratedPreviewResult(null);
+      setGeneratedPreviewRoutine(null);
+      setGeneratedPreviewError(message);
+      toast.error("AI routine preview failed", { description: message });
+    },
+  });
+
+  const importGeneratedRoutineMutation = useMutation({
+    mutationFn: async () => {
+      if (!generatedPreviewResult) {
+        throw new Error("No AI routine preview is available to import.");
+      }
+
+      return addRoutine(mapAiRoutinePreviewToRoutine(generatedPreviewResult), {
+        sync: "force",
+        throwOnSyncError: true,
+      });
+    },
+    onSuccess: async () => {
+      await refreshRoutinesFromBackend();
+      queryClient.invalidateQueries({ queryKey: routineQueryKeys.list() });
+      toast.success("Routine imported.");
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Failed to import AI routine.";
+      toast.error("Routine import failed", { description: message });
     },
   });
 
@@ -500,6 +647,22 @@ const RoutinesSection = ({
     }
   }, []);
 
+  const handleGenerateRoutineRequest = useCallback(
+    (request: GenerateRoutineSuggestionsRequest) => {
+      setGeneratedRoutineRequest(request);
+      setGeneratedRoutineResult(null);
+      setGeneratedRoutineError(null);
+      setGeneratedRoutineExpanded(true);
+      setActiveGeneratedSuggestionIndex(0);
+      setRejectedGeneratedSuggestionIds([]);
+      setGeneratedPreviewResult(null);
+      setGeneratedPreviewRoutine(null);
+      setGeneratedPreviewError(null);
+      generateAiRoutineMutation.mutate(request);
+    },
+    [generateAiRoutineMutation]
+  );
+
   // Toggle routine expansion
   const toggleRoutineExpanded = useCallback((routineId: string) => {
     setExpandedRoutines((prev) => {
@@ -508,6 +671,10 @@ const RoutinesSection = ({
       else next.add(routineId);
       return next;
     });
+  }, []);
+
+  const toggleGeneratedRoutineExpanded = useCallback(() => {
+    setGeneratedRoutineExpanded((prev) => !prev);
   }, []);
 
   // Toggle menu
@@ -802,6 +969,109 @@ const RoutinesSection = ({
     return parts.join(" • ") || "No workout days";
   }, []);
 
+  const generatedRoutinePending = generateAiRoutineMutation.isPending;
+  const availableGeneratedSuggestions =
+    generatedRoutineResult?.suggestions.filter(
+      (suggestion) => !rejectedGeneratedSuggestionIds.includes(suggestion.splitId)
+    ) ?? [];
+  const hasGeneratedRoutinePanel =
+    (generatedRoutinePending || generatedRoutineResult !== null || generatedRoutineError !== null)
+    && !(generatedPreviewResult !== null && generatedPreviewRoutine !== null);
+  const hasGeneratedPreviewPanel =
+    generateAiRoutinePreviewMutation.isPending
+    || generatedPreviewResult !== null
+    || generatedPreviewError !== null;
+  const activeGeneratedSuggestion =
+    availableGeneratedSuggestions[activeGeneratedSuggestionIndex] ?? null;
+  const previewGeneratedDaysPerWeek =
+    generatedRoutineResult?.promptInput.daysPerWeek ?? generatedRoutineRequest?.daysPerWeek ?? 0;
+  const previewGeneratedGoal =
+    generatedRoutineResult?.effectiveGoal ?? generatedRoutineRequest?.routineGoal ?? null;
+  const previewGeneratedEquipment =
+    generatedRoutineResult?.normalizedEquipmentPreferences
+    ?? generatedRoutineRequest?.equipmentPreferences
+    ?? [];
+  const generatedRoutineSummary = buildGeneratedRoutineSummary(
+    previewGeneratedDaysPerWeek,
+    previewGeneratedGoal,
+    previewGeneratedEquipment
+  );
+  const generatedRoutineStatusLabel = generatedRoutinePending
+    ? "Thinking"
+    : generatedRoutineResult && availableGeneratedSuggestions.length > 0
+      ? `${availableGeneratedSuggestions.length} splits available`
+      : generatedRoutineResult
+        ? "No splits left"
+      : "Failed";
+
+  useEffect(() => {
+    if (activeGeneratedSuggestionIndex < availableGeneratedSuggestions.length) {
+      return;
+    }
+    setActiveGeneratedSuggestionIndex(0);
+  }, [activeGeneratedSuggestionIndex, availableGeneratedSuggestions.length]);
+
+  const handlePreviousGeneratedSuggestion = useCallback(() => {
+    if (availableGeneratedSuggestions.length <= 1) {
+      return;
+    }
+
+    setActiveGeneratedSuggestionIndex((prev) =>
+      prev === 0 ? availableGeneratedSuggestions.length - 1 : prev - 1
+    );
+  }, [availableGeneratedSuggestions.length]);
+
+  const handleNextGeneratedSuggestion = useCallback(() => {
+    if (availableGeneratedSuggestions.length <= 1) {
+      return;
+    }
+
+    setActiveGeneratedSuggestionIndex((prev) =>
+      prev === availableGeneratedSuggestions.length - 1 ? 0 : prev + 1
+    );
+  }, [availableGeneratedSuggestions.length]);
+
+  const handleAcceptGeneratedSuggestion = useCallback(() => {
+    if (!generatedRoutineRequest || !activeGeneratedSuggestion) {
+      return;
+    }
+
+    const selectedSuggestionForPreview = {
+      ...activeGeneratedSuggestion,
+      split: activeGeneratedSuggestion.split.map((day) => ({
+        day: day.day,
+        label: day.label,
+        muscles: [...day.muscles],
+        targetSlotCount: day.targetSlotCount ?? undefined,
+      })),
+    };
+
+    setGeneratedPreviewResult(null);
+    setGeneratedPreviewRoutine(null);
+    setGeneratedPreviewError(null);
+    generateAiRoutinePreviewMutation.mutate({
+      generationRequest: generatedRoutineRequest,
+      selectedSuggestion: selectedSuggestionForPreview,
+    });
+  }, [
+    activeGeneratedSuggestion,
+    generateAiRoutinePreviewMutation,
+    generatedRoutineRequest,
+  ]);
+
+  const handleRejectGeneratedSuggestion = useCallback(() => {
+    if (!activeGeneratedSuggestion) {
+      return;
+    }
+
+    setRejectedGeneratedSuggestionIds((prev) => [...prev, activeGeneratedSuggestion.splitId]);
+    if (generatedPreviewResult?.selectedSuggestion.splitId === activeGeneratedSuggestion.splitId) {
+      setGeneratedPreviewResult(null);
+      setGeneratedPreviewRoutine(null);
+      setGeneratedPreviewError(null);
+    }
+  }, [activeGeneratedSuggestion, generatedPreviewResult]);
+
   // ============================================
   // RENDER
   // ============================================
@@ -816,17 +1086,269 @@ const RoutinesSection = ({
       description="Create and manage your workout routines"
       actions={
         !inlineEditRoutineId && (
-          <button
-            onClick={handleNewRoutine}
-            className="flow-button-primary"
-          >
-            <Plus className="h-4 w-4" />
-            New Routine
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsAiDialogOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.12em] text-orange-200 transition-colors hover:bg-orange-500/15"
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate with AI
+            </button>
+            <button
+              onClick={handleNewRoutine}
+              className="flow-button-primary"
+            >
+              <Plus className="h-4 w-4" />
+              New Routine
+            </button>
+          </div>
         )
       }
     >
       <div className="space-y-4">
+        {hasGeneratedPreviewPanel && (
+          generateAiRoutinePreviewMutation.isPending ? (
+            <section className="flow-panel rounded-[2rem] border border-orange-500/15 bg-orange-500/[0.04] p-5">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-500/10">
+                  <Loader2 className="h-5 w-5 animate-spin text-orange-200" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-white">Building your final routine preview</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    Resolving real library exercises, set templates, and muscle distribution.
+                  </p>
+                </div>
+              </div>
+            </section>
+          ) : generatedPreviewError ? (
+            <section className="flow-panel rounded-[2rem] border border-red-500/20 bg-red-500/5 p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-red-400/20 bg-red-500/10">
+                  <AlertTriangle className="h-5 w-5 text-red-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-white">Routine preview failed</p>
+                  <p className="mt-1 text-xs leading-5 text-red-100/80">{generatedPreviewError}</p>
+                </div>
+              </div>
+            </section>
+          ) : generatedPreviewResult && generatedPreviewRoutine ? (
+            <AiRoutinePreviewPanel
+              key={generatedPreviewResult.selectedSuggestion.splitId}
+              previewRoutine={generatedPreviewRoutine}
+              previewResponse={generatedPreviewResult}
+              onImport={() => importGeneratedRoutineMutation.mutate()}
+              importPending={importGeneratedRoutineMutation.isPending}
+            />
+          ) : null
+        )}
+
+        {hasGeneratedRoutinePanel && (
+          <section className="relative flow-panel rounded-[2rem]">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 p-4">
+              <button
+                type="button"
+                onClick={handlePreviousGeneratedSuggestion}
+                disabled={availableGeneratedSuggestions.length <= 1}
+                className="inline-flex h-9 w-9 items-center justify-center text-slate-300 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label="Previous generated split"
+              >
+                <ChevronLeft className="h-6 w-6 [stroke-width:2.6]" />
+              </button>
+
+              <div
+                onClick={toggleGeneratedRoutineExpanded}
+                className="min-w-0 cursor-pointer text-center"
+              >
+                <div className="mb-1 flex flex-wrap items-center justify-center gap-2">
+                  <h3 className="text-lg font-black text-white">AI Split Suggestions</h3>
+                  <span
+                    className={`rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase ${
+                      generatedRoutinePending
+                        ? "bg-orange-500/15 text-orange-200"
+                        : generatedRoutineResult
+                          ? "bg-emerald-500/15 text-emerald-300"
+                          : "bg-red-500/15 text-red-300"
+                    }`}
+                  >
+                    {generatedRoutineStatusLabel}
+                  </span>
+                </div>
+                <p className="line-clamp-2 text-xs text-gray-500">
+                  {generatedRoutinePending
+                    ? `Generating ranked split suggestions | ${generatedRoutineSummary}`
+                    : generatedRoutineSummary}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextGeneratedSuggestion}
+                disabled={availableGeneratedSuggestions.length <= 1}
+                className="inline-flex h-9 w-9 items-center justify-center text-slate-300 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label="Next generated split"
+              >
+                <ChevronRight className="h-6 w-6 [stroke-width:2.6]" />
+              </button>
+            </div>
+
+            {generatedRoutineExpanded && (
+              <div className="border-t border-white/5 p-5 pt-4">
+                {generatedRoutinePending ? (
+                  <div className="space-y-4">
+                    <div className="rounded-[1.5rem] border border-orange-500/15 bg-orange-500/[0.04] p-4">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-500/10">
+                          <Loader2 className="h-5 w-5 animate-spin text-orange-200" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-black text-white">Thinking through your routine split</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-400">
+                            Matching recovery, training days, goal, and equipment before showing 3 ranked options.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {Array.from({ length: Math.max(previewGeneratedDaysPerWeek, 3) }).map((_, index) => (
+                        <div
+                          key={`generated-routine-placeholder-${index}`}
+                          className="flex items-center gap-3 rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-4"
+                        >
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white/[0.05] text-sm font-black text-slate-500">
+                            {index + 1}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="h-3 w-36 max-w-[70%] animate-pulse rounded-full bg-white/10" />
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {Array.from({ length: 4 }).map((__, chipIndex) => (
+                                <span
+                                  key={`generated-routine-placeholder-chip-${index}-${chipIndex}`}
+                                  className="h-6 w-20 animate-pulse rounded-full bg-white/[0.06]"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : generatedRoutineError ? (
+                  <div className="rounded-[1.5rem] border border-red-500/20 bg-red-500/5 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-red-400/20 bg-red-500/10">
+                        <AlertTriangle className="h-5 w-5 text-red-300" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-white">Routine generation failed</p>
+                        <p className="mt-1 text-xs leading-5 text-red-100/80">{generatedRoutineError}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : activeGeneratedSuggestion ? (
+                  <div className="space-y-4">
+                    <div className="rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10">
+                              <CheckCircle2 className="h-5 w-5 text-emerald-300" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-black uppercase tracking-[0.12em] text-orange-200">
+                                Active split
+                              </p>
+                              <h4 className="truncate text-base font-black text-white">
+                                {activeGeneratedSuggestion.splitName}
+                              </h4>
+                            </div>
+                          </div>
+                          <p className="mt-3 text-xs leading-5 text-slate-400">
+                            {activeGeneratedSuggestion.description}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-300">
+                            {`${activeGeneratedSuggestionIndex + 1} / ${availableGeneratedSuggestions.length}`}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAcceptGeneratedSuggestion}
+                          disabled={!generatedRoutineRequest || generateAiRoutinePreviewMutation.isPending}
+                          className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-200 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {generateAiRoutinePreviewMutation.isPending
+                            && generatedPreviewResult?.selectedSuggestion.splitId !== activeGeneratedSuggestion.splitId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" />
+                          )}
+                          Accept Split
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRejectGeneratedSuggestion}
+                          disabled={generateAiRoutinePreviewMutation.isPending}
+                          className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-black/25 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-300 transition-colors hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Reject Split
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {activeGeneratedSuggestion.split.map((day) => (
+                        <div
+                          key={`${activeGeneratedSuggestion.splitId}-${day.day}`}
+                          className="rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-4 transition-colors hover:border-white/15 hover:bg-[#191919]"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-orange-600/20 text-sm font-black text-orange-300">
+                              {day.day}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-bold text-white">{day.label}</p>
+                                <span className="rounded bg-white/5 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-300">
+                                  Day {day.day}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {day.muscles.map((muscle) => (
+                                  <span
+                                    key={`${activeGeneratedSuggestion.splitId}-${day.day}-${muscle}`}
+                                    className="rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-[10px] font-bold text-slate-300"
+                                  >
+                                    {muscle}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : generatedRoutineResult ? (
+                  <div className="rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-4 text-xs text-slate-400">
+                    All suggested splits were rejected. Generate again to get a new set of options.
+                  </div>
+                ) : (
+                  <div className="rounded-[1.5rem] border border-white/[0.07] user-surface-soft p-4 text-xs text-slate-400">
+                    No generated split is available yet.
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Inline Editor for New/Edit Routine */}
         {inlineEditRoutineId && (
           <InlineRoutineEditor
@@ -853,13 +1375,22 @@ const RoutinesSection = ({
             <p className="mb-6 text-xs text-gray-500">
               Create your first routine to start tracking your workouts
             </p>
-            <button
-              onClick={handleNewRoutine}
-              className="flow-button-primary"
-            >
-              <Plus className="h-4 w-4" />
-              Create Your First Routine
-            </button>
+            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <button
+                onClick={() => setIsAiDialogOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-5 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-orange-200 transition-colors hover:bg-orange-500/15"
+              >
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </button>
+              <button
+                onClick={handleNewRoutine}
+                className="flow-button-primary"
+              >
+                <Plus className="h-4 w-4" />
+                Create Your First Routine
+              </button>
+            </div>
           </div>
         ) : (
           [...routines]
@@ -1143,6 +1674,12 @@ const RoutinesSection = ({
         routineName={startWorkoutDialog?.routineName ?? ""}
         onConfirm={handleConfirmStartWorkout}
         isStarting={startWorkoutMutation.isPending}
+      />
+
+      <AiRoutineGenerationDialog
+        open={isAiDialogOpen}
+        onOpenChange={setIsAiDialogOpen}
+        onGenerateRequest={handleGenerateRoutineRequest}
       />
     </UserSectionShell>
   );

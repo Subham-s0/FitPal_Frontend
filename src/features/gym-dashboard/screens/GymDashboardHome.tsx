@@ -59,6 +59,7 @@ import {
   getGymDashboardOverviewApi,
   getGymDashboardRevenueTrendApi,
 } from "@/features/gym-dashboard/gym-dashboard.api";
+import { getGymSavedMembersSummaryApi } from "@/features/gym-dashboard/gym-members.api";
 import type { GymCheckInDenyReason } from "@/features/gym-dashboard/gym-checkins.model";
 import type { GymMembersWindow } from "@/features/gym-dashboard/gym-members.model";
 import { getApiErrorMessage } from "@/shared/api/client";
@@ -222,6 +223,20 @@ const ServiceUnavailable = () => (
   </div>
 );
 
+const QueryErrorState = ({ error, fallback }: { error: unknown; fallback: string }) => {
+  if (is503(error)) {
+    return <ServiceUnavailable />;
+  }
+
+  return (
+    <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-2 text-center">
+      <AlertTriangle className="h-5 w-5 text-zinc-600" />
+      <p className="text-[11px] font-bold text-zinc-500">Request failed</p>
+      <p className="max-w-[260px] text-[10px] text-zinc-600">{getApiErrorMessage(error, fallback)}</p>
+    </div>
+  );
+};
+
 const EmptyState = ({ message }: { message: string }) => (
   <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-1 text-center">
     <p className="text-[11px] font-medium text-zinc-500">{message}</p>
@@ -349,7 +364,7 @@ export default function GymDashboardHome() {
   const [trendRange, setTrendRange] = useState<CheckInTrendRange>("WEEK");
   const [peakRange, setPeakRange] = useState<PeakActivityRange>("ALL_TIME");
   const [revenueRange, setRevenueRange] = useState<RevenueTrendRange>("WEEKLY");
-  const [membersWindow] = useState<GymMembersWindow>("WEEK");
+  const membersWindow: GymMembersWindow = "WEEK";
   const [batchDetail, setBatchDetail] = useState<PayoutSettlementResponse | null>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [reviewTarget, setReviewTarget] = useState<{ batch: PayoutSettlementResponse; approved: boolean } | null>(null);
@@ -372,6 +387,13 @@ export default function GymDashboardHome() {
   const revenueTrendQ = useQuery({
     queryKey: ["gym-home", "revenue-trend", revenueRange],
     queryFn: () => getGymDashboardRevenueTrendApi(revenueRange),
+    staleTime: 60_000,
+    retry: (count, err) => !is503(err) && count < 3,
+  });
+
+  const savedSummaryQ = useQuery({
+    queryKey: ["gym-home", "saved-summary"],
+    queryFn: getGymSavedMembersSummaryApi,
     staleTime: 60_000,
     retry: (count, err) => !is503(err) && count < 3,
   });
@@ -546,20 +568,21 @@ export default function GymDashboardHome() {
       <div>
         <SectionLabel>Gym snapshot</SectionLabel>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {settlementQ.isLoading || checkInQ.isLoading || reviewQ.isLoading || deviceQ.isLoading ? (
+          {overviewQ.isError ? (
+            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5">
+              <CardShell className="min-h-[112px]">
+                <QueryErrorState error={overviewQ.error} fallback="Failed to load gym snapshot" />
+              </CardShell>
+            </div>
+          ) : settlementQ.isLoading || checkInQ.isLoading || reviewQ.isLoading || membersQ.isLoading || deviceQ.isLoading ? (
             Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-28" />)
           ) : (
             <>
               <KPICard
-                label="Today's scans"
-                value={ci ? ci.totalScans.toLocaleString() : "—"}
+                label="Active customers"
+                value={mm ? mm.activeCustomers.toLocaleString() : "—"}
                 theme="orange"
                 icon={Activity}
-                meta={
-                  ci && ci.totalScans > 0 ? (
-                    <Badge c="green">{ci.successfulScans} success</Badge>
-                  ) : undefined
-                }
               />
               <KPICard
                 label="Success rate"
@@ -615,9 +638,9 @@ export default function GymDashboardHome() {
       {/* ── SECTION 2: REVENUE & PAYOUTS ──────────────────────── */}
       <div>
         <SectionLabel>Revenue &amp; payouts</SectionLabel>
-        {settlementQ.isError && is503(settlementQ.error) ? (
+        {settlementQ.isError ? (
           <CardShell className={CHART_MIN_H}>
-            <ServiceUnavailable />
+            <QueryErrorState error={settlementQ.error} fallback="Failed to load settlement analytics" />
           </CardShell>
         ) : settlementQ.isLoading ? (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -702,10 +725,8 @@ export default function GymDashboardHome() {
                 <div className={cn(CHART_MIN_H, "w-full")}>
                   {revenueTrendQ.isLoading ? (
                     <Skeleton className="h-full w-full" />
-                  ) : revenueTrendQ.isError && is503(revenueTrendQ.error) ? (
-                    <ServiceUnavailable />
                   ) : revenueTrendQ.isError ? (
-                    <EmptyState message="Failed to load revenue trend" />
+                    <QueryErrorState error={revenueTrendQ.error} fallback="Failed to load revenue trend" />
                   ) : revenueTrendData.length === 0 ? (
                     <EmptyState message="No revenue trend data yet" />
                   ) : (
@@ -767,8 +788,8 @@ export default function GymDashboardHome() {
                 <div className={cn(CHART_MIN_H, "w-full")}>
                   {dueTimelineQ.isLoading ? (
                     <Skeleton className="h-full w-full" />
-                  ) : dueTimelineQ.isError && is503(dueTimelineQ.error) ? (
-                    <ServiceUnavailable />
+                  ) : dueTimelineQ.isError ? (
+                    <QueryErrorState error={dueTimelineQ.error} fallback="Failed to load due timeline" />
                   ) : dueTimelineData.length === 0 ? (
                     <EmptyState message="No pending settlements." />
                   ) : (
@@ -867,10 +888,8 @@ export default function GymDashboardHome() {
                 <div className={cn(CHART_MIN_H, "w-full")}>
                   {trendQ.isLoading ? (
                     <Skeleton className="h-full w-full" />
-                  ) : trendQ.isError && is503(trendQ.error) ? (
-                    <ServiceUnavailable />
                   ) : trendQ.isError ? (
-                    <EmptyState message="Failed to load check-in trend" />
+                    <QueryErrorState error={trendQ.error} fallback="Failed to load check-in trend" />
                   ) : trendData.length === 0 ? (
                     <EmptyState message="No check-in data" />
                   ) : (
@@ -895,15 +914,19 @@ export default function GymDashboardHome() {
               </CardShell>
             </div>
           </>
-        ) : null}
+        ) : (
+          <CardShell className={CHART_MIN_H}>
+            <EmptyState message="No settlement data yet" />
+          </CardShell>
+        )}
       </div>
 
       {/* ── SECTION 3: ACCESS & ACTIVITY ──────────────────────── */}
       <div>
         <SectionLabel>Access &amp; activity</SectionLabel>
-        {checkInQ.isError && is503(checkInQ.error) ? (
+        {checkInQ.isError ? (
           <CardShell className={CHART_MIN_H}>
-            <ServiceUnavailable />
+            <QueryErrorState error={checkInQ.error} fallback="Failed to load check-in analytics" />
           </CardShell>
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr_1fr]">
@@ -1054,15 +1077,18 @@ export default function GymDashboardHome() {
                 <Users className="h-4 w-4 text-orange-400" />
               <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Member pulse</p>
             </div>
-            {membersQ.isError && is503(membersQ.error) ? (
-              <ServiceUnavailable />
-            ) : membersQ.isLoading ? (
+            {membersQ.isError ? (
+              <QueryErrorState error={membersQ.error} fallback="Failed to load member metrics" />
+            ) : membersQ.isLoading || savedSummaryQ.isLoading ? (
               <Skeleton className="h-36" />
             ) : mm ? (
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                  <MiniStat label="Active customers" value={mm.activeCustomers.toLocaleString()} />
-                  <MiniStat label="Unique visitors" value={mm.uniqueCustomers.toLocaleString()} />
+                  <MiniStat label="Total members" value={mm.uniqueCustomers.toLocaleString()} />
+                  <MiniStat
+                    label="Saved members"
+                    value={savedSummaryQ.isError ? "—" : String(savedSummaryQ.data?.totalSavedMembers ?? 0)}
+                  />
                   <MiniStat label="Repeat customers" value={mm.repeatCustomers.toLocaleString()} />
                   <MiniStat label="Repeat rate" value={`${mm.repeatRatePct.toFixed(1)}%`}>
                     <Badge c={mm.repeatRatePct >= 50 ? "green" : mm.repeatRatePct >= 30 ? "amber" : "red"}>
@@ -1096,7 +1122,9 @@ export default function GymDashboardHome() {
                   </div>
                 )}
               </div>
-            ) : null}
+            ) : (
+              <EmptyState message="No member data yet" />
+            )}
           </CardShell>
 
           {/* Review quality */}
@@ -1105,8 +1133,8 @@ export default function GymDashboardHome() {
               <Star className="h-4 w-4 text-amber-400" />
               <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Review quality</p>
             </div>
-            {reviewQ.isError && is503(reviewQ.error) ? (
-              <ServiceUnavailable />
+            {reviewQ.isError ? (
+              <QueryErrorState error={reviewQ.error} fallback="Failed to load review analytics" />
             ) : reviewQ.isLoading ? (
               <Skeleton className="h-36" />
             ) : rv ? (
@@ -1150,7 +1178,9 @@ export default function GymDashboardHome() {
                   </div>
                 )}
               </div>
-            ) : null}
+            ) : (
+              <EmptyState message="No review data yet" />
+            )}
           </CardShell>
         </div>
       </div>
@@ -1165,8 +1195,8 @@ export default function GymDashboardHome() {
               <Wallet className="h-4 w-4 text-amber-400" />
               <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Recent payout batches</p>
             </div>
-            {payoutBatchesQ.isError && is503(payoutBatchesQ.error) ? (
-              <ServiceUnavailable />
+            {payoutBatchesQ.isError ? (
+              <QueryErrorState error={payoutBatchesQ.error} fallback="Failed to load payout batches" />
             ) : payoutBatchesQ.isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12" />)}
@@ -1262,65 +1292,71 @@ export default function GymDashboardHome() {
                 <AlertTriangle className="h-4 w-4 text-amber-400" />
                 <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">Alerts</p>
               </div>
-              <div className="space-y-2">
-                {/* Device alert */}
-                {deviceStatus && deviceStatus.tone !== "green" && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-amber-400/15 bg-amber-400/5 p-3">
-                    <MonitorSmartphone className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                    <div>
-                      <p className="text-xs font-bold text-amber-400">Door device {deviceStatus.label.toLowerCase()}</p>
-                      <p className="text-[10px] text-zinc-500">Check device connectivity</p>
+              {overviewQ.isError ? (
+                <QueryErrorState error={overviewQ.error} fallback="Failed to load alerts" />
+              ) : overviewQ.isLoading ? (
+                <Skeleton className="h-28" />
+              ) : (
+                <div className="space-y-2">
+                  {/* Device alert */}
+                  {deviceStatus && deviceStatus.tone !== "green" && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-amber-400/15 bg-amber-400/5 p-3">
+                      <MonitorSmartphone className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-400">Door device {deviceStatus.label.toLowerCase()}</p>
+                        <p className="text-[10px] text-zinc-500">Check device connectivity</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Unreplied reviews alert */}
-                {rv && rv.unrepliedCount > 0 && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-orange-400/15 bg-orange-400/5 p-3">
-                    <MessageSquare className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
-                    <div>
-                      <p className="text-xs font-bold text-orange-400">{rv.unrepliedCount} unreplied reviews</p>
-                      <p className="text-[10px] text-zinc-500">Respond to improve engagement</p>
+                  {/* Unreplied reviews alert */}
+                  {rv && rv.unrepliedCount > 0 && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-orange-400/15 bg-orange-400/5 p-3">
+                      <MessageSquare className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
+                      <div>
+                        <p className="text-xs font-bold text-orange-400">{rv.unrepliedCount} unreplied reviews</p>
+                        <p className="text-[10px] text-zinc-500">Respond to improve engagement</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Gym review pending payouts */}
-                {sa && sa.gymReviewPendingCount > 0 && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-purple-400/15 bg-purple-400/5 p-3">
-                    <Wallet className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-purple-400" />
-                    <div>
-                      <p className="text-xs font-bold text-purple-400">{sa.gymReviewPendingCount} payouts need review</p>
-                      <p className="text-[10px] text-zinc-500">{formatMoneyFull(sa.gymReviewPendingAmount, currency)} awaiting your review</p>
+                  {/* Gym review pending payouts */}
+                  {sa && sa.gymReviewPendingCount > 0 && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-purple-400/15 bg-purple-400/5 p-3">
+                      <Wallet className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-purple-400" />
+                      <div>
+                        <p className="text-xs font-bold text-purple-400">{sa.gymReviewPendingCount} payouts need review</p>
+                        <p className="text-[10px] text-zinc-500">{formatMoneyFull(sa.gymReviewPendingAmount, currency)} awaiting your review</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Profile readiness */}
-                {profileQ.data && !profileQ.data.readyForReviewSubmission && profileQ.data.approvalStatus === "DRAFT" && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-orange-400/15 bg-orange-400/5 p-3">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
-                    <div>
-                      <p className="text-xs font-bold text-orange-400">Profile incomplete</p>
-                      <p className="text-[10px] text-zinc-500">Complete setup to enable check-ins</p>
+                  {/* Profile readiness */}
+                  {profileQ.data && !profileQ.data.readyForReviewSubmission && profileQ.data.approvalStatus === "DRAFT" && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-orange-400/15 bg-orange-400/5 p-3">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-400" />
+                      <div>
+                        <p className="text-xs font-bold text-orange-400">Profile incomplete</p>
+                        <p className="text-[10px] text-zinc-500">Complete setup to enable check-ins</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* All clear */}
-                {deviceStatus?.tone === "green" &&
-                  (!rv || rv.unrepliedCount === 0) &&
-                  (!sa || sa.gymReviewPendingCount === 0) &&
-                  (profileQ.data?.readyForReviewSubmission || profileQ.data?.approvalStatus !== "DRAFT") && (
-                  <div className="flex items-start gap-2.5 rounded-xl border border-emerald-400/15 bg-emerald-400/5 p-3">
-                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
-                    <div>
-                      <p className="text-xs font-bold text-emerald-400">All clear</p>
-                      <p className="text-[10px] text-zinc-500">No pending actions required</p>
+                  {/* All clear */}
+                  {deviceStatus?.tone === "green" &&
+                    (!rv || rv.unrepliedCount === 0) &&
+                    (!sa || sa.gymReviewPendingCount === 0) &&
+                    (profileQ.data?.readyForReviewSubmission || profileQ.data?.approvalStatus !== "DRAFT") && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-emerald-400/15 bg-emerald-400/5 p-3">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-400" />
+                      <div>
+                        <p className="text-xs font-bold text-emerald-400">All clear</p>
+                        <p className="text-[10px] text-zinc-500">No pending actions required</p>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </CardShell>
 
             <CardShell>

@@ -83,7 +83,7 @@ const fireStyle = {
   backgroundClip: "text" as const,
 };
 
-/** Pill button constants – identical to GymQRPage */
+/** Pill button constants â€“ identical to GymQRPage */
 const TB_BASE =
   "flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform";
 const TB_IDLE =
@@ -108,8 +108,8 @@ const SORT_OPTIONS: { value: AdminAnnouncementSortMode; label: string }[] = [
   { value: "NEWEST", label: "Newest first" },
   { value: "OLDEST", label: "Oldest first" },
   { value: "UPDATED", label: "Recently updated" },
-  { value: "TITLE_A_Z", label: "Title A–Z" },
-  { value: "TITLE_Z_A", label: "Title Z–A" },
+  { value: "TITLE_A_Z", label: "Title A-Z" },
+  { value: "TITLE_Z_A", label: "Title Z-A" },
 ];
 
 const toSortParams = (sort: AdminAnnouncementSortMode) => {
@@ -414,7 +414,7 @@ export default function AdminAnnouncementsPage() {
 
   return (
     <div className="space-y-5 font-['Outfit',system-ui,sans-serif]">
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-[32px] font-black tracking-tight text-white">
@@ -446,7 +446,7 @@ export default function AdminAnnouncementsPage() {
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
+      {/* â”€â”€ Stat cards â”€â”€ */}
       <div className="grid grid-cols-2 items-stretch gap-3 lg:grid-cols-4">
         {statsQuery.isLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
@@ -496,7 +496,7 @@ export default function AdminAnnouncementsPage() {
         )}
       </div>
 
-      {/* ── Toolbar ── */}
+      {/* â”€â”€ Toolbar â”€â”€ */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b table-border pb-4">
         {/* Search */}
         <div className="relative max-w-[300px] flex-1">
@@ -513,7 +513,7 @@ export default function AdminAnnouncementsPage() {
         </div>
 
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-          {/* ── Filter panel ── */}
+          {/* â”€â”€ Filter panel â”€â”€ */}
           <div ref={filterRef} className="relative">
             <button
               type="button"
@@ -608,7 +608,7 @@ export default function AdminAnnouncementsPage() {
             )}
           </div>
 
-          {/* ── Sort panel ── */}
+          {/* â”€â”€ Sort panel â”€â”€ */}
           <div ref={sortRef} className="relative">
             <button
               type="button"
@@ -659,7 +659,7 @@ export default function AdminAnnouncementsPage() {
         </div>
       </div>
 
-      {/* ── Table ── */}
+      {/* â”€â”€ Table â”€â”€ */}
       <div className="overflow-hidden rounded-[18px] border table-border table-bg">
         <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
           <thead>
@@ -733,14 +733,14 @@ export default function AdminAnnouncementsPage() {
                   </td>
                   <td className="px-3.5 py-3.5" style={{ width: COL_W[4] }}>
                     <div className="truncate text-[12px] font-semibold text-white/80">
-                      {ann.creatorName ?? "—"}
+                      {ann.creatorName ?? "-"}
                     </div>
                   </td>
                   <td className="px-3.5 py-3.5 text-[12px] table-text" style={{ width: COL_W[5] }}>
-                    {formatDate(ann.scheduledAt) ?? <span className="table-text-muted">—</span>}
+                    {formatDate(ann.scheduledAt) ?? <span className="table-text-muted">-</span>}
                   </td>
                   <td className="px-3.5 py-3.5 text-[12px] table-text" style={{ width: COL_W[6] }}>
-                    {formatDate(ann.publishedAt) ?? <span className="table-text-muted">—</span>}
+                    {formatDate(ann.publishedAt) ?? <span className="table-text-muted">-</span>}
                   </td>
                   <td className="px-2 py-3.5 text-right" style={{ width: COL_W[7] }}>
                     <DropdownMenu>
@@ -827,7 +827,7 @@ export default function AdminAnnouncementsPage() {
         </table>
       </div>
 
-      {/* ── Pagination ── */}
+      {/* â”€â”€ Pagination â”€â”€ */}
       <div className="flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[11px] table-text-muted">
           {query ? `Search: "${query}"` : "Filter by source, review, or publish status above"}
@@ -855,7 +855,7 @@ export default function AdminAnnouncementsPage() {
         </div>
       </div>
 
-      {/* ── Dialogs ── */}
+      {/* â”€â”€ Dialogs â”€â”€ */}
       <AnnouncementEditorDialog
         mode="admin"
         open={editorOpen}

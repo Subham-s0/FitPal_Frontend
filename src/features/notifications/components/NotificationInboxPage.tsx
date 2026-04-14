@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Bell, CheckCheck, ChevronLeft, ChevronRight, Inbox, Megaphone } from "lucide-react";
+import { Bell, CheckCheck, Inbox, Megaphone } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
-import { getApiErrorMessage, queryClient } from "@/shared/api";
+import { queryClient } from "@/shared/api";
 import {
   getNotificationUnreadCountApi,
   getNotificationsApi,
@@ -13,27 +12,20 @@ import {
 } from "@/features/notifications/api";
 import { notificationQueryKeys } from "@/features/notifications/queryKeys";
 import type { AccountNotificationResponse } from "@/features/notifications/model";
+import { showApiErrorToast, showApiSuccessToast } from "@/shared/lib/toast-helpers";
+import { getNotificationNavigationState } from "@/shared/navigation/dashboard-navigation";
+import { EmptyState } from "@/shared/ui/state";
 import { cn } from "@/shared/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 const PAGE_SIZE = 12;
 
-const statCardClass =
-  "rounded-[24px] border border-white/8 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-5 shadow-[0_18px_50px_-30px_rgba(0,0,0,0.9)]";
+const TB_BASE =
+  "inline-flex items-center justify-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[11px] font-bold uppercase tracking-[0.14em] transition-colors duration-200";
+const TB_IDLE =
+  "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/20 hover:text-white";
 
-function getNavigationState(notification: AccountNotificationResponse) {
-  const payload = notification.payload ?? {};
-  if (typeof payload.activeSection === "string") {
-    const state: { activeSection: string; checkInView?: string } = {
-      activeSection: payload.activeSection,
-    };
-    if (typeof payload.checkInView === "string") {
-      state.checkInView = payload.checkInView;
-    }
-    return state;
-  }
-  return undefined;
-}
+const statCardClass = "rounded-2xl border table-border table-bg p-4";
 
 function formatPublishedAt(value: string) {
   const date = new Date(value);
@@ -100,7 +92,7 @@ export default function NotificationInboxPage() {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all });
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "Failed to mark notification as read"));
+      showApiErrorToast(error, "Failed to mark notification as read");
     },
   });
 
@@ -108,10 +100,10 @@ export default function NotificationInboxPage() {
     mutationFn: markAllNotificationsReadApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all });
-      toast.success("All notifications marked as read");
+      showApiSuccessToast("All notifications marked as read");
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "Failed to mark all notifications as read"));
+      showApiErrorToast(error, "Failed to mark all notifications as read");
     },
   });
 
@@ -132,15 +124,18 @@ export default function NotificationInboxPage() {
     }
 
     if (notification.deepLink) {
-      const state = getNavigationState(notification);
+      const state = getNotificationNavigationState(notification.payload);
       navigate(notification.deepLink, state ? { state } : undefined);
     }
   };
 
   return (
     <UserSectionShell
-      eyebrow="Inbox"
-      title="Notifications"
+      title={
+        <>
+          Notifications <span className="text-gradient-fire">Inbox</span>
+        </>
+      }
       description="All announcements, review decisions, and system alerts in one place."
       width="wide"
       actions={
@@ -148,10 +143,10 @@ export default function NotificationInboxPage() {
           type="button"
           onClick={() => markAllReadMutation.mutate()}
           disabled={markAllReadMutation.isPending || unreadCount === 0}
-          className="inline-flex items-center justify-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/[0.10] px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-orange-100 transition hover:border-orange-500 hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className={`${TB_BASE} border-orange-500/30 bg-orange-500/[0.10] text-orange-200 hover:border-orange-500 hover:bg-orange-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-45`}
         >
-          <CheckCheck className="h-4 w-4" />
-          Mark all read
+          <CheckCheck className="h-3.5 w-3.5" />
+          Mark all
         </button>
       }
     >
@@ -161,11 +156,11 @@ export default function NotificationInboxPage() {
         <StatsCard icon={Megaphone} label="Read coverage" value={unreadShare} tone="blue" />
       </div>
 
-      <div className="rounded-[28px] border border-white/8 bg-[#0d0d0d] p-5">
+      <div className="rounded-[18px] border table-border table-bg p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-400">Activity feed</p>
-            <p className="mt-2 text-sm text-white/55">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] table-text-muted">Activity feed</p>
+            <p className="mt-2 text-sm table-text-muted">
               {unreadCount > 0
                 ? `${unreadCount} unread, ${readCount} already opened.`
                 : "Everything here has been opened."}
@@ -180,7 +175,7 @@ export default function NotificationInboxPage() {
             ))}
           </div>
         ) : notifications.length ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {notifications.map((notification) => {
               const actorLabel = notification.actorGymName ?? notification.actorDisplayName;
               return (
@@ -189,16 +184,16 @@ export default function NotificationInboxPage() {
                   type="button"
                   onClick={() => void openNotification(notification)}
                   className={cn(
-                    "w-full rounded-[24px] border px-5 py-4 text-left transition hover:border-orange-500/25 hover:bg-orange-500/[0.04]",
+                    "w-full rounded-2xl border px-4 py-3.5 text-left transition hover:border-orange-500/25 hover:bg-orange-500/[0.04]",
                     notification.unread
                       ? "border-orange-500/18 bg-orange-500/[0.08]"
-                      : "border-white/8 bg-white/[0.02]"
+                      : "border-white/10 bg-white/[0.02]"
                   )}
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-base font-black text-white">{notification.title}</p>
+                        <p className="text-[15px] font-black text-white">{notification.title}</p>
                         {notification.unread ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
                             <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
@@ -207,13 +202,13 @@ export default function NotificationInboxPage() {
                         ) : null}
                       </div>
                       {actorLabel ? (
-                        <p className="mt-2 text-[11px] font-black uppercase tracking-[0.16em] text-orange-400">
+                        <p className="mt-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">
                           {actorLabel}
                         </p>
                       ) : null}
-                      <p className="mt-3 text-sm leading-7 text-white/65">{notification.body}</p>
+                      <p className="mt-2.5 text-sm leading-6 text-white/65">{notification.body}</p>
                     </div>
-                    <div className="shrink-0 text-[11px] font-bold uppercase tracking-[0.14em] text-white/35">
+                    <div className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
                       {formatPublishedAt(notification.publishedAt)}
                     </div>
                   </div>
@@ -222,37 +217,37 @@ export default function NotificationInboxPage() {
             })}
           </div>
         ) : (
-          <div className="rounded-[24px] border border-dashed border-white/10 px-6 py-16 text-center">
-            <p className="text-lg font-black text-white">No notifications yet</p>
-            <p className="mt-3 text-sm leading-7 text-white/55">
-              New announcements, payment alerts, and review updates will appear here once they are sent.
-            </p>
-          </div>
+          <EmptyState
+            title="No notifications yet"
+            description="New announcements, payment alerts, and review updates will appear here once they are sent."
+            className="border-dashed table-border bg-transparent"
+          />
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-[24px] border border-white/8 bg-[#0d0d0d] px-5 py-4 text-sm text-white/55">
-        <p>
+      <div className="flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[11px] table-text-muted">
           Showing page {(notificationsQuery.data?.page ?? 0) + 1} of {Math.max(notificationsQuery.data?.totalPages ?? 1, 1)}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setPage((current) => Math.max(0, current - 1))}
             disabled={!notificationsQuery.data?.hasPrevious}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+            className={`${TB_BASE} ${TB_IDLE} disabled:cursor-not-allowed disabled:opacity-35`}
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Newer
+            Prev
           </button>
+          <span className="rounded-full border table-border table-bg-alt px-3.5 py-1.5 text-[11px] font-semibold text-white">
+            Page {(notificationsQuery.data?.page ?? 0) + 1}
+          </span>
           <button
             type="button"
             onClick={() => setPage((current) => current + 1)}
             disabled={!notificationsQuery.data?.hasNext}
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+            className={`${TB_BASE} ${TB_IDLE} disabled:cursor-not-allowed disabled:opacity-35`}
           >
-            Older
-            <ChevronRight className="h-3.5 w-3.5" />
+            Next
           </button>
         </div>
       </div>

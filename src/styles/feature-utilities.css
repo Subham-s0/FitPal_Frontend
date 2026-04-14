@@ -1,0 +1,138 @@
+/*    GYM DASHBOARD ENHANCEMENTS
+   ══════════════════════════════════════════════════ */
+
+@layer utilities {
+
+  /* ── Enhanced Table Styles ── */
+  .table-card {
+    @apply rounded-2xl border border-white/[0.07] bg-[#0c0c0c];
+  }
+
+  .table-header {
+    @apply border-b border-white/[0.05] pb-3 text-left text-[9px] font-black uppercase tracking-[0.09em] text-zinc-600;
+  }
+
+  .table-row {
+    @apply transition-all duration-200 hover:bg-white/[0.02];
+  }
+
+  .table-cell {
+    @apply border-t border-white/[0.03] py-3;
+  }
+
+  /* ── Button Variants ── */
+  .btn-fire {
+    @apply bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 text-white font-black uppercase tracking-wider shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply rounded-lg border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 transition-colors hover:text-white hover:bg-white/[0.08];
+  }
+
+  .btn-primary {
+    @apply rounded-lg bg-orange-500 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-[0_3px_14px_rgba(249,115,22,0.22)] transition-all hover:bg-orange-600 active:scale-95;
+  }
+
+  /* ── Input Styles ── */
+  .input-search {
+    @apply w-full rounded-lg border border-white/[0.07] bg-white/[0.04] py-2 px-3 text-xs text-white placeholder:text-zinc-600 focus:border-orange-500/30 focus:outline-none focus:ring-1 focus:ring-orange-500/20 transition-all;
+  }
+
+  /* ── Card Variants ── */
+  .card-dark {
+    @apply rounded-2xl border border-white/[0.07] bg-[#0c0c0c] p-5;
+  }
+
+  .user-surface {
+    background: var(--user-surface);
+  }
+
+  .user-surface-soft {
+    background: var(--user-surface-soft);
+  }
+
+  .user-surface-muted {
+    background: var(--user-surface-muted);
+  }
+
+  .user-surface-strong {
+    background: var(--user-surface-strong);
+  }
+
+  .user-surface-overlay {
+    background: var(--user-surface-overlay);
+  }
+
+  .flow-shell {
+    position: relative;
+    background: #050505;
+  }
+
+  .flow-grid {
+    background-image:
+      linear-gradient(rgba(234, 88, 12, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(234, 88, 12, 0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .flow-panel {
+    background: var(--user-surface-overlay);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: 0 24px 50px -26px rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .flow-panel-subtle {
+    background: var(--user-surface-muted);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .flow-panel-interactive {
+    transition:
+      border-color 0.2s ease,
+      background 0.2s ease,
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  .flow-panel-interactive:hover {
+    background: var(--user-surface-hover);
+    border-color: rgba(249, 115, 22, 0.26);
+    box-shadow: 0 28px 55px -30px rgba(249, 115, 22, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .flow-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] hover:-translate-y-0.5 border-none disabled:opacity-50;
+  }
+
+  .flow-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-white transition-all hover:bg-white/[0.08];
+  }
+
+  .flow-button-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-red-300 transition-all hover:bg-red-500/[0.14];
+  }
+
+  .flow-input {
+    @apply rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white placeholder:text-slate-500 outline-none transition-all hover:border-orange-600/30 focus:border-orange-600/40 focus:ring-0;
+  }
+
+  .flow-label {
+    @apply text-[10px] font-black uppercase tracking-[0.18em] text-slate-500;
+  }
+
+
+  /* ── Section Labels ── */
+  .section-label {
+    @apply text-[9px] font-black uppercase tracking-[0.13em] text-orange-500;
+  }
+
+  .page-title {
+    @apply text-4xl font-black uppercase tracking-tighter leading-none;
+  }
+
+  .page-subtitle {
+    @apply mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500;
+  }
+}

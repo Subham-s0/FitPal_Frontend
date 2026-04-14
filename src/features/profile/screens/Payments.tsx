@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import ProfilePaymentHistory from "@/features/profile/components/ProfilePaymentHistory";
@@ -7,9 +7,12 @@ import { getMyProfileApi } from "@/features/profile/api";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
+import { navigateToUserDashboardSection } from "@/shared/navigation/dashboard-navigation";
+import { InlineLoadingState } from "@/shared/ui/state";
 
 const PaymentsScreen = () => {
   const navigate = useNavigate();
+  const handleSectionChange = (section: string) => navigateToUserDashboardSection(navigate, section);
   const profileQuery = useQuery({
     queryKey: profileQueryKeys.user(),
     queryFn: getMyProfileApi,
@@ -17,9 +20,13 @@ const PaymentsScreen = () => {
   const profile = profileQuery.data ?? null;
 
   return (
-    <UserLayout activeSection="settings" onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}>
+    <UserLayout activeSection="settings" onSectionChange={handleSectionChange}>
       <UserSectionShell
-        title={<>Payment <span className="text-orange-500">History</span></>}
+        title={
+          <>
+            Payment <span className="text-orange-500">History</span>
+          </>
+        }
         description="Review membership payments, billing details, and wallet transaction status."
       >
         <div className="mb-5 flex flex-col gap-3 rounded-2xl border table-border table-bg p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
@@ -30,11 +37,13 @@ const PaymentsScreen = () => {
             <div className="min-w-0">
               <p className="text-sm font-black uppercase tracking-[0.12em] text-white">Payments</p>
               {profileQuery.isLoading ? (
-                <Loader2 className="mt-2 h-4 w-4 animate-spin text-orange-500" />
+                <div className="mt-2">
+                  <InlineLoadingState label="Loading account..." />
+                </div>
               ) : (
                 <>
                   <p className="mt-1 truncate text-sm font-bold text-white">
-                    {profile?.userName?.trim() || "—"}
+                    {profile?.userName?.trim() || "-"}
                   </p>
                   <p className="mt-0.5 break-all text-xs font-medium text-slate-400">
                     {profile?.email ?? ""}

@@ -44,7 +44,6 @@ import {
   type PaymentFailureFeedback,
   type PaymentGateway,
   type PaymentMethodDefinition,
-  sanitizePaymentPhoneInput,
   seedPaymentBilling,
   submitEsewaPaymentForm,
   validatePaymentBilling,
@@ -52,11 +51,10 @@ import {
 import { getMyProfileApi } from "@/features/profile/api";
 import { CustomDatePicker } from "@/shared/ui/CustomDatePicker";
 import {
-  Field,
-  FieldError,
-  SectionLabel,
-  TextInput,
-} from "@/features/profile/components/ProfileSetupShell";
+  KhaltiBillingFields,
+  PaymentFailureAlert,
+} from "@/features/subscription/components/CheckoutSharedBlocks";
+import { Field, FieldError, SectionLabel, TextInput } from "@/shared/ui/form-kit";
 import {
   getMySubscriptionHistoryApi,
   getMySubscriptionApi,
@@ -2150,85 +2148,24 @@ const MembershipUpgrade = () => {
 
               <FieldError message={paymentMethodError} />
               {paymentFeedback ? (
-                <div className="mt-4 rounded-[18px] border border-amber-500/20 bg-amber-500/[0.08] p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-amber-500/20 bg-amber-500/10 text-amber-200">
-                      <AlertTriangle size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-amber-200">
-                          {paymentFeedback.status === "cancelled"
-                            ? "Payment cancelled"
-                            : "Payment failed"}
-                        </p>
-                        <span className="rounded-full border border-amber-500/20 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-amber-100">
-                          {paymentFeedback.gateway === "khalti" ? "Khalti" : "eSewa"}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm leading-relaxed text-amber-100">
-                        {paymentFeedback.message}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={handleUpgrade}
-                          disabled={continueActionDisabled}
-                          className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-amber-100 transition-colors hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <RefreshCw size={13} className={isBusy ? "animate-spin" : ""} />
-                          Retry payment
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate("/profile?tab=membership")}
-                          className="inline-flex items-center rounded-full border border-white/10 user-surface-muted px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-200 transition-colors hover:bg-white/[0.07]"
-                        >
-                          Return to profile
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <PaymentFailureAlert
+                  paymentFeedback={paymentFeedback}
+                  retryLabel="Retry payment"
+                  onRetry={handleUpgrade}
+                  onSecondaryAction={() => navigate("/profile?tab=membership")}
+                  secondaryActionLabel="Return to profile"
+                  busy={continueActionDisabled}
+                  variant="membership"
+                />
               ) : null}
 
               {selectedPaymentMethod === "khalti" ? (
-                <div className="mt-5 rounded-[18px] border table-border user-surface-soft p-4">
-                  <SectionLabel className="!mb-3">Khalti Billing Info</SectionLabel>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <Field label="Full Name" error={khaltiBillingErrors.name} className="sm:col-span-2">
-                      <TextInput
-                        type="text"
-                        placeholder="Full name"
-                        value={khaltiBilling.name}
-                        onChange={(event) => setKhaltiBillingField("name", event.target.value)}
-                      />
-                    </Field>
-                    <Field label="Email" error={khaltiBillingErrors.email}>
-                      <TextInput
-                        type="email"
-                        placeholder="you@example.com"
-                        value={khaltiBilling.email}
-                        onChange={(event) => setKhaltiBillingField("email", event.target.value)}
-                      />
-                    </Field>
-                    <Field label="Phone (98/97 + 8 digits)" error={khaltiBillingErrors.phone}>
-                      <TextInput
-                        type="tel"
-                        inputMode="numeric"
-                        maxLength={10}
-                        placeholder="98xxxxxxxx"
-                        value={khaltiBilling.phone}
-                        onChange={(event) =>
-                          setKhaltiBillingField(
-                            "phone",
-                            sanitizePaymentPhoneInput(event.target.value)
-                          )
-                        }
-                      />
-                    </Field>
-                  </div>
-                </div>
+                <KhaltiBillingFields
+                  values={khaltiBilling}
+                  errors={khaltiBillingErrors}
+                  onFieldChange={setKhaltiBillingField}
+                  variant="membership"
+                />
               ) : null}
 
               <div className="mt-5 rounded-[18px] border table-border user-surface-soft p-4">

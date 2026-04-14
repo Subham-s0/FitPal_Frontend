@@ -1,0 +1,208 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 25 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 40 100% 50%;
+    --accent-foreground: 0 0% 5%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 15%;
+    --ring: 25 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* ── Surface hierarchy (darkest → lightest) ── */
+    --surface-navbar: #161616;
+    --surface-sidebar: #0a0a0a;
+    --surface-base: #0a0a0a;
+    --surface-raised: #1a1a1a;
+    --surface-elevated: #1e1e1e;
+    --surface-overlay: #252525;
+    --user-surface: #111111;
+    --user-surface-soft: #151515;
+    --user-surface-muted: #171717;
+    --user-surface-strong: #101010;
+    --user-surface-overlay: rgba(17, 17, 17, 0.88);
+    --user-surface-hover: #161616;
+
+    /* ── Border variants ── */
+    --border-subtle: #1a1a1a;
+    --border-default: #2a2a2a;
+    --border-strong: #3a3a3a;
+    --border-accent: hsl(25 100% 50% / 0.3);
+
+    /* ── Orange palette ── */
+    --orange-50: #fff7ed;
+    --orange-100: #ffedd5;
+    --orange-200: #fed7aa;
+    --orange-300: #fdba74;
+    --orange-400: #fb923c;
+    --orange-500: #f97316;
+    --orange-600: #ea580c;
+    --orange-700: #c2410c;
+    --orange-800: #9a3412;
+    --orange-900: #7c2d12;
+
+    /* ── Semantic status colors ── */
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 142 76% 46% / 0.15;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 5%;
+    --warning-muted: 38 92% 50% / 0.15;
+
+    --info: 210 100% 56%;
+    --info-foreground: 0 0% 100%;
+    --info-muted: 210 100% 56% / 0.15;
+
+    /* ── Text colors ── */
+    --text-primary: #f5f5f5;
+    --text-sidebar: #e5e7eb;
+    --text-secondary: #a3a3a3;
+    --text-tertiary: #737373;
+    --text-disabled: #525252;
+    --text-accent: #fb923c;
+
+    /* ── Gradients ── */
+    --gradient-fire: linear-gradient(135deg, #FACC15 0%, #FF9900 25%, #FF6A00 100%);
+    --gradient-fire-vertical: linear-gradient(180deg, hsl(25 100% 50%) 0%, hsl(40 100% 50%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(0 0% 4%) 0%, hsl(0 0% 8%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 10%) 0%, hsl(0 0% 6%) 100%);
+    --gradient-ember: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+    --gradient-sunset: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+    --gradient-surface: linear-gradient(180deg, #161616 0%, #0f0f0f 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+
+    /* ── Admin Table Colors ── */
+    --table-bg: hsl(0 0% 7%);
+    --table-bg-alt: hsl(0 0% 9%);
+    --table-bg-hover: hsl(0 0% 6%);
+    --table-bg-expanded: hsl(0 0% 6%);
+    --table-border: hsl(0 0% 18%);
+    --table-border-row: hsl(0 0% 10%);
+    --table-border-cell: hsl(0 0% 13%);
+    --table-text: hsl(0 0% 65%);
+    --table-text-muted: hsl(0 0% 48%);
+    --table-header-bg: hsl(0 0% 9%);
+    --table-input-bg: hsl(0 0% 9%);
+    --table-input-border: hsl(0 0% 18%);
+
+    /* ── Glows & shadows ── */
+    --glow-primary: 0 0 60px hsl(25 100% 50% / 0.4);
+    --glow-accent: 0 0 40px hsl(40 100% 50% / 0.3);
+    --glow-success: 0 0 40px hsl(142 76% 46% / 0.3);
+    --glow-soft: 0 0 30px hsl(25 100% 50% / 0.15);
+
+    --shadow-elevated: 0 25px 50px -12px hsl(0 0% 0% / 0.5);
+    --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
+    --shadow-glow-sm: 0 4px 20px -4px hsl(25 100% 50% / 0.25);
+    --shadow-glow-lg: 0 8px 40px -8px hsl(25 100% 50% / 0.35);
+
+    --font-display: 'Outfit', sans-serif;
+  }
+
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  /* Hide default number input spinners - use custom NumberInput component instead */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Keep browser autofill consistent with dark theme */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover {
+    -webkit-box-shadow: 0 0 0 1000px hsl(var(--input)) inset !important;
+    -webkit-text-fill-color: hsl(var(--foreground)) !important;
+    caret-color: hsl(var(--foreground)) !important;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill:focus {
+    -webkit-box-shadow:
+      0 0 0 1000px hsl(var(--input)) inset,
+      0 0 0 1px hsl(var(--ring)) inset !important;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #111;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #ea580c;
+    /* Orange-600 */
+  }
+}
+

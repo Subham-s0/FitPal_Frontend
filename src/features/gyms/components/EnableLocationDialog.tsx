@@ -40,8 +40,8 @@ const EnableLocationDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-32px)] max-w-[420px] rounded-[28px] border border-white/10 bg-[#101012] p-0 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-        <div className="overflow-hidden rounded-[28px]">
+      <DialogContent className="w-[calc(100vw-32px)] max-w-[420px] overflow-hidden rounded-[28px] sm:rounded-[28px] border border-white/10 bg-[#101012] p-0 text-white shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+        <div className="flex flex-col">
           <div className="border-b border-white/5 bg-[radial-gradient(circle_at_top,rgba(234,88,12,0.18),transparent_60%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent)] px-6 pb-4 pt-6">
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-500/20 bg-orange-500/10">
               <ModeIcon size={22} className="text-orange-500" />
@@ -82,18 +82,18 @@ const EnableLocationDialog = ({
             )}
           </div>
 
-          <DialogFooter className="gap-3 border-t border-white/5 px-6 py-5 sm:flex-row sm:justify-end">
+          <DialogFooter className="gap-3 border-t border-white/5 px-6 py-5">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition-colors hover:bg-white/10 sm:w-auto"
+              className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-slate-200 transition-colors hover:bg-white/10 sm:flex-none"
             >
               Not Now
             </button>
             <button
               type="button"
               onClick={() => void onEnableLocation()}
-              className="w-full rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-black transition-opacity hover:opacity-90 sm:w-auto"
+              className="flex-1 rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-black transition-opacity hover:opacity-90 sm:flex-none"
               style={{ background: "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)" }}
             >
               Enable Location

@@ -51,6 +51,10 @@ export interface ForgotPasswordResetRequest {
   newPassword: string;
 }
 
+export interface OtpDispatchResponse {
+  expiresInSeconds: number;
+}
+
 export interface AuthResponse {
   message: string;
   accessToken: string;

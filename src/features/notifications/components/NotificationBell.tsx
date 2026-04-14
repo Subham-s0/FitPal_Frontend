@@ -1,14 +1,17 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
-import { Bell, CheckCheck, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/shared/lib/utils";
 import { useAuthState } from "@/features/auth/hooks";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { queryClient } from "@/shared/api";
-import { getApiErrorMessage } from "@/shared/api/client";
-import { toast } from "sonner";
+import { showApiErrorToast, showApiSuccessToast } from "@/shared/lib/toast-helpers";
+import {
+  getNotificationNavigationState,
+  navigateToUserDashboardSection,
+} from "@/shared/navigation/dashboard-navigation";
 import {
   getNotificationUnreadCountApi,
   getNotificationsApi,
@@ -26,20 +29,6 @@ interface NotificationBellProps {
 }
 
 const PAGE_SIZE = 8;
-
-function getNavigationState(notification: AccountNotificationResponse) {
-  const payload = notification.payload ?? {};
-  if (typeof payload.activeSection === "string") {
-    const state: { activeSection: string; checkInView?: string } = {
-      activeSection: payload.activeSection,
-    };
-    if (typeof payload.checkInView === "string") {
-      state.checkInView = payload.checkInView;
-    }
-    return state;
-  }
-  return undefined;
-}
 
 export function NotificationBell({
   buttonClassName,
@@ -74,7 +63,7 @@ export function NotificationBell({
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all });
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "Failed to mark notification as read"));
+      showApiErrorToast(error, "Failed to mark notification as read");
     },
   });
 
@@ -82,10 +71,10 @@ export function NotificationBell({
     mutationFn: markAllNotificationsReadApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationQueryKeys.all });
-      toast.success("All notifications marked as read");
+      showApiSuccessToast("All notifications marked as read");
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error, "Failed to mark all notifications as read"));
+      showApiErrorToast(error, "Failed to mark all notifications as read");
     },
   });
 
@@ -107,7 +96,7 @@ export function NotificationBell({
     }
 
     if (notification.deepLink) {
-      const state = getNavigationState(notification);
+      const state = getNotificationNavigationState(notification.payload);
       navigate(notification.deepLink, state ? { state } : undefined);
       setIsOpen(false);
     }
@@ -149,32 +138,30 @@ export function NotificationBell({
         sideOffset={10}
         collisionPadding={16}
         className={cn(
-          "z-[120] flex w-[min(92vw,420px)] max-h-[min(85dvh,520px)] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111111] p-0 text-white shadow-[0_24px_64px_rgba(0,0,0,0.65)] outline-none",
+          "z-[120] flex w-[min(92vw,392px)] max-h-[min(82dvh,500px)] flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111111] p-0 text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] outline-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2"
         )}
       >
-        <div className="shrink-0 border-b border-white/[0.07] bg-[#111111] px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="shrink-0 border-b border-white/[0.07] bg-[#111111] px-4 py-3 sm:px-4.5 sm:py-3.5">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-500">Notifications</p>
-              <h3 className="mt-1 text-lg font-black text-white">
-                Unread inbox {unreadCount > 0 ? <span className="text-white/50">({unreadCount})</span> : null}
-              </h3>
-            </div>
+            <h3 className="text-base font-black tracking-tight text-white">
+              Unread{" "}
+              <span className="text-gradient-fire">Notifications</span>
+              {unreadCount > 0 ? <span className="text-white/50"> ({unreadCount})</span> : null}
+            </h3>
             <button
               type="button"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending || unreadCount === 0}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-white/75 transition hover:border-orange-500/35 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex shrink-0 items-center rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-white/75 transition hover:border-orange-500/35 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <CheckCheck className="h-3.5 w-3.5" />
               Mark all
             </button>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-2 [scrollbar-gutter:stable]">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 py-1.5 [scrollbar-gutter:stable]">
           {notificationsQuery.isLoading ? (
             <div className="space-y-2 px-3 py-4">
               {Array.from({ length: 4 }).map((_, index) => (
@@ -190,7 +177,7 @@ export function NotificationBell({
                   type="button"
                   onClick={() => void handleNotificationClick(notification)}
                   className={cn(
-                    "mb-2 flex w-full flex-col gap-2 rounded-xl border px-3.5 py-3 text-left transition last:mb-0 hover:border-orange-500/[0.22] hover:bg-orange-500/[0.05]",
+                    "mb-1.5 flex w-full flex-col gap-1.5 rounded-xl border px-3 py-2.5 text-left transition last:mb-0 hover:border-orange-500/[0.22] hover:bg-orange-500/[0.05]",
                     notification.unread
                       ? "border-orange-500/25 bg-orange-500/[0.07]"
                       : "border-white/[0.07] bg-white/[0.025]"
@@ -198,23 +185,23 @@ export function NotificationBell({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-white">{notification.title}</p>
+                      <p className="truncate text-[13px] font-black text-white">{notification.title}</p>
                       {actorLabel ? (
-                        <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-orange-400">
+                        <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-orange-400">
                           {actorLabel}
                         </p>
                       ) : null}
                     </div>
-                    <div className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
+                    <div className="shrink-0 text-[9px] font-bold uppercase tracking-[0.1em] text-white/40">
                       {formatDistanceToNow(new Date(notification.publishedAt), { addSuffix: true })}
                     </div>
                   </div>
-                  <p className="line-clamp-3 text-sm leading-6 text-white/70">{notification.body}</p>
-                  <div className="flex items-center justify-between text-[11px] font-semibold text-white/45">
-                    <span>{notification.category.replaceAll("_", " ").toLowerCase()}</span>
+                  <p className="line-clamp-2 text-[12px] leading-5 text-white/70">{notification.body}</p>
+                  <div className="flex items-center justify-between text-[10px] font-semibold text-white/45">
+                    <span>{String(notification.category).replace(/_/g, " ").toLowerCase()}</span>
                     {notification.unread ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
-                        <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+                      <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-300">
+                        <span className="h-1 w-1 rounded-full bg-orange-400" />
                         Unread
                       </span>
                     ) : (
@@ -225,28 +212,27 @@ export function NotificationBell({
               );
             })
           ) : (
-            <div className="px-5 py-10 text-center">
+            <div className="px-5 py-9 text-center">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-white/35">All caught up</p>
-              <p className="mt-3 text-sm leading-6 text-white/55">
-                New unread announcements, review decisions, and system alerts will appear here.
+              <p className="mt-2.5 text-sm leading-6 text-white/55">
+                New announcements, review decisions, and system alerts will appear here.
               </p>
             </div>
           )}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] bg-[#111111] px-3 py-2.5 sm:px-5 sm:py-3">
-          <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-white/[0.07] bg-[#111111] px-3 py-2 sm:px-4 sm:py-2.5">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setPage((current) => Math.max(0, current - 1))}
               disabled={!pageData?.hasPrevious}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex items-center rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
               Newer
             </button>
 
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/35">
+            <span className="text-[10px] font-bold uppercase tracking-[0.11em] text-white/35">
               Page {(pageData?.page ?? 0) + 1}
             </span>
 
@@ -254,10 +240,9 @@ export function NotificationBell({
               type="button"
               onClick={() => setPage((current) => current + 1)}
               disabled={!pageData?.hasNext}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex items-center rounded-full border border-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.11em] text-white/60 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
             >
               Older
-              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
@@ -265,10 +250,10 @@ export function NotificationBell({
             <button
               type="button"
               onClick={() => {
-                navigate("/dashboard", { state: { activeSection: "notifications" } });
+                navigateToUserDashboardSection(navigate, "notifications");
                 setIsOpen(false);
               }}
-              className="rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-orange-200 transition hover:border-orange-500 hover:bg-orange-500 hover:text-white"
+              className="rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-orange-200 transition hover:border-orange-500 hover:bg-orange-500 hover:text-white"
             >
               View all
             </button>

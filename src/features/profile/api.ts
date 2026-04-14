@@ -1,4 +1,5 @@
 import apiClient from "@/shared/api/client";
+import type { OtpDispatchResponse } from "@/features/auth/model";
 import type {
   ChangePasswordRequest,
   ConfirmEmailVerificationRequest,
@@ -107,8 +108,9 @@ export async function patchMyProfileDetailsApi(
 }
 
 /** POST /api/users/me/email-verification/request */
-export async function requestMyEmailVerificationApi(): Promise<void> {
-  await apiClient.post("/users/me/email-verification/request");
+export async function requestMyEmailVerificationApi(): Promise<OtpDispatchResponse> {
+  const response = await apiClient.post<OtpDispatchResponse>("/users/me/email-verification/request");
+  return response.data;
 }
 
 /** POST /api/users/me/email-verification/confirm */

@@ -12,15 +12,23 @@ import {
   LogOut,
   Menu,
   QrCode,
-  Search,
   Settings,
   User,
+  Wallet,
   X,
 } from "lucide-react";
 import { useAuthState } from "@/features/auth/hooks";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
-import { getDisplayNameFromEmail } from "@/shared/layout/dashboard-shell";
 import { ActiveSessionBar } from "@/features/workout-sessions/components/ActiveSessionBar";
+import NavbarPageSearch from "@/shared/components/NavbarPageSearch";
+import { resolveDisplayName } from "@/shared/lib/avatar";
+import {
+  DashboardBrandLink,
+  DashboardGridBackdrop,
+  DashboardIdentityButton,
+  DashboardSidebarNavButton,
+} from "@/shared/layout/dashboard-shell";
+import { navigateToCheckInView } from "@/shared/navigation/dashboard-navigation";
 
 export interface UserLayoutSection {
   id: string;
@@ -109,8 +117,7 @@ const UserLayout = ({
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const displayName = getDisplayNameFromEmail(auth.email, "USER");
-  const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
+  const displayName = resolveDisplayName({ email: auth.email, role: "USER" });
   const activeMobileBottomSection = resolveMobileBottomNavActiveSection(activeSection);
   const isCompactBottomDock = COMPACT_MOBILE_BOTTOM_DOCK_SECTIONS.has(activeSection);
   const bottomDockBottom = isCompactBottomDock
@@ -150,6 +157,105 @@ const UserLayout = ({
     setIsMobileMenuOpen(false);
   };
 
+  const userPageSearchItems = [
+    {
+      id: "home",
+      label: "Dashboard",
+      description: "Open your overview, progress, and membership snapshot.",
+      keywords: ["home", "overview", "progress"],
+      icon: LayoutDashboard,
+      onSelect: () => handleNavigation("home"),
+    },
+    {
+      id: "checkin",
+      label: "Check-In",
+      description: "Open the scanner and recent visit tools.",
+      keywords: ["scan", "scanner", "qr", "check in"],
+      icon: CheckCircle2,
+      onSelect: () => navigateToCheckInView(navigate, "scanner"),
+    },
+    {
+      id: "checkin-logs",
+      label: "Check-In Logs",
+      description: "Open your visit history and previous scan results.",
+      keywords: ["logs", "history", "check in logs", "visits"],
+      icon: ClipboardList,
+      onSelect: () => navigateToCheckInView(navigate, "logs"),
+    },
+    {
+      id: "gyms",
+      label: "Gyms",
+      description: "Browse gyms, saved clubs, and nearby options.",
+      keywords: ["gym", "fitness clubs", "discover"],
+      icon: Building2,
+      onSelect: () => handleNavigation("gyms"),
+    },
+    {
+      id: "routines",
+      label: "Routines",
+      description: "View workout plans and routine builder screens.",
+      keywords: ["routine", "plans", "programs"],
+      icon: ClipboardList,
+      onSelect: () => handleNavigation("routines"),
+    },
+    {
+      id: "exercises",
+      label: "Exercises",
+      description: "Search the exercise library and custom movements.",
+      keywords: ["exercise", "library", "movements"],
+      icon: Dumbbell,
+      onSelect: () => handleNavigation("exercises"),
+    },
+    {
+      id: "workouts",
+      label: "Workouts",
+      description: "Review workout sessions and training history.",
+      keywords: ["workouts", "sessions", "history"],
+      icon: Activity,
+      onSelect: () => handleNavigation("workouts"),
+    },
+    {
+      id: "notifications",
+      label: "Notifications",
+      description: "Review alerts, reminders, and inbox activity.",
+      keywords: ["alerts", "inbox", "messages"],
+      icon: Bell,
+      onSelect: () => handleNavigation("notifications"),
+    },
+    {
+      id: "membership",
+      label: "Membership",
+      description: "Manage plan details, upgrades, and billing state.",
+      keywords: ["subscription", "plan", "billing", "upgrade"],
+      icon: Gem,
+      onSelect: () => navigate("/membership"),
+    },
+    {
+      id: "payments",
+      label: "Payments",
+      description: "Open payment history and transaction records.",
+      keywords: ["billing", "transactions", "history"],
+      icon: Wallet,
+      onSelect: () => navigate("/payments"),
+    },
+    {
+      id: "profile",
+      label: "Profile",
+      description: "View your account details and profile setup data.",
+      keywords: ["account", "me", "profile"],
+      icon: User,
+      onSelect: () => navigate("/profile"),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      description: "Open preferences, security, and connected account settings.",
+      keywords: ["preferences", "security", "settings"],
+      icon: Settings,
+      onSelect: () => navigate("/settings"),
+    },
+  ];
+
   return (
     <div className="user-app flex h-screen flex-col overflow-hidden bg-[#050505] font-sans text-white">
       {/* TOPBAR */}
@@ -163,27 +269,20 @@ const UserLayout = ({
           >
             <Menu size={20} />
           </button>
-          <a
+          <DashboardBrandLink
             href="/dashboard"
-            className="flex cursor-pointer items-center gap-2 no-underline transition-opacity hover:opacity-90"
-          >
-            <img src="/logo.svg" alt="FitPal Logo" className="h-8 w-8 shrink-0 md:h-10 md:w-10" />
-            <span className="text-xl font-bold text-white md:text-2xl">
-              <span className="text-gradient-fire">Fit</span>Pal
-            </span>
-          </a>
+            logoClassName="h-8 w-8 md:h-10 md:w-10"
+            className="gap-2"
+          />
         </div>
 
         {/* Desktop search */}
         <div className="desktop-only mx-12 hidden w-full max-w-[420px] md:block">
-          <div className="relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search routines..."
-              className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] px-4 py-2.5 pl-11 text-sm font-sans text-white outline-none transition-colors focus:border-orange-600"
-            />
-          </div>
+          <NavbarPageSearch
+            items={userPageSearchItems}
+            placeholder="Jump to pages..."
+            emptyLabel="No member pages match that search."
+          />
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
@@ -206,37 +305,25 @@ const UserLayout = ({
           <div className="desktop-only hidden h-10 w-px bg-[#252525] md:block" />
 
           {/* Desktop profile */}
-          <button
-            type="button"
+          <DashboardIdentityButton
+            displayName={displayName}
+            email={auth.email}
+            role="USER"
+            metaLabel="Pro Member"
             onClick={() => handleNavigation("profile")}
-            className="desktop-only hidden items-center gap-3 border-none bg-transparent text-white md:flex"
-          >
-            <div className="text-right">
-              <p className="text-sm font-black leading-none">{displayName}</p>
-              <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.12em] text-orange-600">
-                Pro Member
-              </p>
-            </div>
-            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-orange-600 p-0.5">
-              <img
-                src={avatarUrl}
-                alt={displayName}
-                className="h-full w-full rounded-full object-cover"
-              />
-            </div>
-          </button>
+            className="desktop-only hidden md:flex"
+          />
 
           {/* Mobile avatar */}
-          <div
-            className="h-9 w-9 shrink-0 overflow-hidden rounded-full border-2 border-orange-600 p-0.5 md:hidden"
+          <DashboardIdentityButton
+            displayName={displayName}
+            email={auth.email}
+            role="USER"
             onClick={() => handleNavigation("profile")}
-          >
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="h-full w-full rounded-full object-cover"
-            />
-          </div>
+            showText={false}
+            avatarClassName="h-9 w-9 md:hidden"
+            className="md:hidden"
+          />
         </div>
       </header>
 
@@ -259,13 +346,14 @@ const UserLayout = ({
       >
         {/* Drawer header with profile */}
         <div className="flex shrink-0 items-center gap-3 border-b border-white/[0.06] px-5 pb-4 pt-5">
-          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-orange-600 p-0.5">
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="h-full w-full rounded-full object-cover"
-            />
-          </div>
+          <DashboardIdentityButton
+            displayName={displayName}
+            email={auth.email}
+            role="USER"
+            onClick={() => undefined}
+            showText={false}
+            className="pointer-events-none cursor-default"
+          />
           <div className="min-w-0 flex-1">
             <p className="overflow-hidden text-ellipsis text-sm font-black leading-none text-white">
               {displayName}
@@ -344,94 +432,44 @@ const UserLayout = ({
             {DESKTOP_NAV_ITEMS.map(({ id, label, icon: Icon }) => {
               const isActive = activeSection === id;
               return (
-                <button
+                <DashboardSidebarNavButton
                   key={id}
-                  type="button"
                   onClick={() => handleNavigation(id)}
-                  className={`nav-item flex w-full items-center p-3 transition-all hover:bg-orange-600 ${
-                    isSidebarExpanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
-                  } ${isActive ? "bg-orange-600" : ""}`}
-                >
-                  <Icon
-                    size={24}
-                    className={`min-w-[24px] ${isActive ? "text-white" : "text-[var(--text-sidebar)]"}`}
-                  />
-                  <span
-                    className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
-                      isSidebarExpanded ? "block opacity-100" : "hidden opacity-0"
-                    } ${isActive ? "text-white" : "text-[var(--text-sidebar)]"}`}
-                  >
-                    {label}
-                  </span>
-                </button>
+                  icon={Icon}
+                  label={label}
+                  active={isActive}
+                  expanded={isSidebarExpanded}
+                />
               );
             })}
           </nav>
 
           <div className="mt-auto flex flex-col gap-4 border-t border-white/10 pt-4">
-            <button
-              type="button"
+            <DashboardSidebarNavButton
               onClick={() => navigate("/settings")}
-              className={`group/link flex w-full items-center p-3 transition-all ${
-                isSidebarExpanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
-              } ${activeSection === "settings" ? "bg-orange-600" : "hover:bg-orange-600"}`}
-            >
-              <Settings
-                size={24}
-                className={`min-w-[24px] ${activeSection === "settings" ? "text-white" : "text-[var(--text-sidebar)]"}`}
-              />
-              <span
-                className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none transition-opacity ${
-                  isSidebarExpanded ? "block opacity-100" : "hidden opacity-0"
-                } ${activeSection === "settings" ? "text-white" : "text-[var(--text-sidebar)]"}`}
-              >
-                Settings
-              </span>
-            </button>
-            <button
-              type="button"
+              icon={Settings}
+              label="Settings"
+              active={activeSection === "settings"}
+              expanded={isSidebarExpanded}
+            />
+            <DashboardSidebarNavButton
               onClick={() => navigate("/logout")}
-              className={`group/link flex w-full items-center p-3 transition-all hover:bg-red-500/25 ${
-                isSidebarExpanded ? "justify-start rounded-2xl" : "justify-center rounded-full"
-              }`}
-            >
-              <LogOut size={24} className="min-w-[24px] text-red-400 transition-colors group-hover/link:text-white" />
-              <span
-                className={`ml-4 whitespace-nowrap text-[13px] font-bold leading-none text-[var(--text-sidebar)] transition-all group-hover/link:text-white ${
-                  isSidebarExpanded ? "block opacity-100" : "hidden opacity-0"
-                }`}
-              >
-                Logout
-              </span>
-            </button>
+              icon={LogOut}
+              label="Logout"
+              expanded={isSidebarExpanded}
+              danger
+            />
           </div>
         </aside>
 
         {/* MAIN CONTENT */}
-        <main
+        <DashboardGridBackdrop
           className={`main-content relative flex-1 min-w-0 overflow-x-hidden ${
             contentMode === "immersive" ? "overflow-y-hidden" : "overflow-y-auto scroll-smooth"
           }`}
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(234,88,12,0.05) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 15%, rgba(234,88,12,0.04) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 50% 85%, rgba(234,88,12,0.04) 0%, transparent 60%), #050505",
-            ...({
-              "--mobile-bottom-dock-height": isCompactBottomDock ? "68px" : "80px",
-              "--mobile-safe-bottom": "env(safe-area-inset-bottom)",
-            } as CSSProperties),
-          }}
+          contentClassName="h-full"
+          showGrid={contentMode !== "immersive"}
         >
-          {contentMode !== "immersive" && (
-            <div
-              className="pointer-events-none fixed inset-0 z-0"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(234,88,12,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(234,88,12,0.06) 1px, transparent 1px)",
-                backgroundSize: "48px 48px",
-              }}
-            />
-          )}
-
           <div
             className={`main-content-inner relative z-10 ${
               contentMode === "immersive"
@@ -439,6 +477,10 @@ const UserLayout = ({
                 : "mx-auto max-w-[1400px] px-4 py-5 md:px-8 md:py-9 md:pb-20"
             } ${contentClassName}`}
             style={{
+              ...({
+                "--mobile-bottom-dock-height": isCompactBottomDock ? "68px" : "80px",
+                "--mobile-safe-bottom": "env(safe-area-inset-bottom)",
+              } as CSSProperties),
               paddingBottom:
                 contentMode === "immersive"
                   ? undefined
@@ -447,7 +489,7 @@ const UserLayout = ({
           >
             {children}
           </div>
-        </main>
+        </DashboardGridBackdrop>
       </div>
 
       {/* MOBILE BOTTOM NAV */}

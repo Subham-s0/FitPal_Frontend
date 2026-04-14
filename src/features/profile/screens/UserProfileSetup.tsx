@@ -1,7 +1,7 @@
 import axios from "axios";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, RefreshCw, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
@@ -17,7 +17,6 @@ import {
   type PaymentFailureFeedback,
   type PaymentGateway,
   type PaymentMethodDefinition,
-  sanitizePaymentPhoneInput,
   seedPaymentBilling,
   submitEsewaPaymentForm,
   validatePaymentBilling,
@@ -45,8 +44,15 @@ import { CustomSelect } from "@/shared/ui/CustomSelect";
 import { NumberInput } from "@/shared/ui/number-input";
 import Pricing from "@/features/plans/components/Pricing";
 import {
-  Field, FieldError, Pill, ProfileSetupShell, SectionLabel, SetupActions,
-  TextInput, type StepDefinition,
+  KhaltiBillingFields,
+  PaymentFailureAlert,
+} from "@/features/subscription/components/CheckoutSharedBlocks";
+import { resolveAvatarUrl } from "@/shared/lib/avatar";
+import { Field, FieldError, Pill, SectionLabel, TextInput } from "@/shared/ui/form-kit";
+import {
+  ProfileSetupShell,
+  SetupActions,
+  type StepDefinition,
 } from "@/features/profile/components/ProfileSetupShell";
 
 type StepId = "profile" | "demographics" | "goals" | "subscription" | "payment";
@@ -179,7 +185,10 @@ const ProfileSetup = () => {
   const displayName = auth.email?.split("@")[0] || "FitPal Member";
   const firstNameLocked = isGoogle && Boolean(userData.firstName.trim());
   const lastNameLocked = isGoogle && Boolean(userData.lastName.trim());
-  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`;
+  const fallbackAvatar = resolveAvatarUrl({
+    displayName,
+    fallbackName: "FitPal Member",
+  });
 
   const transformedProfileImageUrl = useMemo(() => {
     const raw = userData.profileImageUrl?.trim();
@@ -809,83 +818,26 @@ const ProfileSetup = () => {
               })}
             </div>
             <FieldError message={paymentMethodError} />
-            {paymentFeedback && (
-              <div className="mt-4 rounded-[1.35rem] border border-amber-500/20 bg-[linear-gradient(135deg,rgba(120,63,23,0.16)_0%,rgba(15,15,15,0.82)_100%)] p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/[0.08] text-amber-300">
-                    <AlertTriangle size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[12px] font-black uppercase tracking-[0.08em] text-amber-300">
-                        {paymentFeedback.status === "cancelled" ? "Payment cancelled" : "Payment failed"}
-                      </p>
-                      <span className="rounded-full border border-amber-500/20 bg-black/20 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-amber-200">
-                        {paymentFeedback.gateway === "khalti" ? "Khalti" : "eSewa"}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-[12px] leading-relaxed text-amber-100">
-                      {paymentFeedback.message}
-                    </p>
-                    <p className="mt-2 text-[11px] leading-relaxed text-amber-200/80">
-                      Your payment step is still open. Retry with the same gateway now, or go back and adjust your plan first.
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={nextStep}
-                        disabled={busy}
-                        className="inline-flex items-center gap-2 rounded-full border border-amber-400/25 bg-amber-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 transition-colors hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <RefreshCw size={13} className={busy ? "animate-spin" : ""} />
-                        Retry {selectedPaymentMethodDetails?.name ?? (paymentFeedback.gateway === "khalti" ? "Khalti" : "eSewa")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={jumpToSubscriptionStep}
-                        className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-slate-200 transition-colors hover:bg-white/[0.07]"
-                      >
-                        Change plan
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            {selectedPaymentMethod === "khalti" && (
-              <div className="mt-4 rounded-2xl border border-white/8 bg-black/20 p-4">
-                <SectionLabel className="!mb-3">Khalti Billing Info</SectionLabel>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Field label="Full Name" error={khaltiBillingErrors.name} className="sm:col-span-2">
-                    <TextInput
-                      type="text"
-                      placeholder="Full name"
-                      value={khaltiBilling.name}
-                      onChange={(e) => setKhaltiBillingField("name", e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Email" error={khaltiBillingErrors.email}>
-                    <TextInput
-                      type="email"
-                      placeholder="you@example.com"
-                      value={khaltiBilling.email}
-                      onChange={(e) => setKhaltiBillingField("email", e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Phone (98/97 + 8 digits)" error={khaltiBillingErrors.phone}>
-                    <TextInput
-                      type="tel"
-                      inputMode="numeric"
-                      pattern="(98|97)[0-9]{8}"
-                      maxLength={10}
-                      placeholder="98xxxxxxxx"
-                      value={khaltiBilling.phone}
-                      onChange={(e) => setKhaltiBillingField("phone", sanitizePaymentPhoneInput(e.target.value))}
-                    />
-                  </Field>
-                </div>
-              </div>
-            )}
+            {paymentFeedback ? (
+              <PaymentFailureAlert
+                paymentFeedback={paymentFeedback}
+                retryLabel={`Retry ${selectedPaymentMethodDetails?.name ?? (paymentFeedback.gateway === "khalti" ? "Khalti" : "eSewa")}`}
+                onRetry={nextStep}
+                onSecondaryAction={jumpToSubscriptionStep}
+                secondaryActionLabel="Change plan"
+                helperText="Your payment step is still open. Retry with the same gateway now, or go back and adjust your plan first."
+                busy={busy}
+                variant="setup"
+              />
+            ) : null}
+            {selectedPaymentMethod === "khalti" ? (
+              <KhaltiBillingFields
+                values={khaltiBilling}
+                errors={khaltiBillingErrors}
+                onFieldChange={setKhaltiBillingField}
+                variant="setup"
+              />
+            ) : null}
             <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
               Choose either eSewa or Khalti. FitPal activates the membership only after backend verification succeeds.
             </p>

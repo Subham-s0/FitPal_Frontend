@@ -12,6 +12,7 @@ import { authStore } from "@/features/auth/store";
 import { getPostAuthRoute } from "@/features/auth/auth-routing";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import ProfileSecurityModal from "@/features/profile/components/ProfileSecurityModal";
 
 type Mode = "login" | "register";
 type UserType = "user" | "gym";
@@ -24,6 +25,7 @@ interface Props {
 const LoginRegister = ({ initialMode = "login" }: Props) => {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [userType, setUserType] = useState<UserType>("user");
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const navigate = useNavigate();
   const auth = useAuthState();
   const previousAccessTokenRef = useRef(auth.accessToken);
@@ -122,6 +124,7 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
     resolver: zodResolver(registerGymSchema),
     defaultValues: { email: "", password: "", confirmPassword: "", gymName: "" },
   });
+  const loginEmail = loginForm.watch("email");
 
   const onLoginSubmit = (data: LoginRequest) => {
     login(data, {
@@ -564,7 +567,13 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                           <input type="checkbox" className="w-4 h-4 rounded border-border bg-input" />
                           <span className="text-muted-foreground">Remember me</span>
                         </label>
-                        <button type="button" className="text-primary hover:underline">Forgot password?</button>
+                        <button
+                          type="button"
+                          onClick={() => setIsForgotPasswordOpen(true)}
+                          className="text-primary hover:underline"
+                        >
+                          Forgot password?
+                        </button>
                       </div>
                       
                       <button 
@@ -626,6 +635,14 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
           </div>
         </div>
       </div>
+      <ProfileSecurityModal
+        open={isForgotPasswordOpen}
+        mode="forgot"
+        email={loginEmail ?? ""}
+        supportsLocalPassword
+        allowForgotEmailEditing
+        onClose={() => setIsForgotPasswordOpen(false)}
+      />
     </main>
   );
 };

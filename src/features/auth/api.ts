@@ -6,6 +6,7 @@ import type {
   AuthResponse,
   ForgotPasswordRequestOtpRequest,
   ForgotPasswordResetRequest,
+  OtpDispatchResponse,
 } from "@/features/auth/model";
 
 /** POST /api/auth/login — members and gyms only (SUPERADMIN must use adminLoginApi) */
@@ -45,8 +46,9 @@ export async function registerGymApi(
 /** POST /api/auth/password/forgot/request-otp */
 export async function requestForgotPasswordOtpApi(
   data: ForgotPasswordRequestOtpRequest
-): Promise<void> {
-  await apiClient.post("/auth/password/forgot/request-otp", data);
+): Promise<OtpDispatchResponse> {
+  const response = await apiClient.post<OtpDispatchResponse>("/auth/password/forgot/request-otp", data);
+  return response.data;
 }
 
 /** POST /api/auth/password/forgot/reset */

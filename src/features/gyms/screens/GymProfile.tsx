@@ -1,16 +1,29 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { toast } from "sonner";
-import { ArrowUpDown, Bookmark, ChevronDown, ChevronLeft, ChevronRight, Loader2, MapPin, MessageSquareReply, MoreVertical, Pencil, RefreshCw, Search, Send, ShieldCheck, SlidersHorizontal, Star, Trash2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-import icon from "leaflet/dist/images/marker-icon.png";
-import iconRetina from "leaflet/dist/images/marker-icon-2x.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
-import { DefaultLayout, getDashboardRole } from "@/shared/layout/dashboard-shell";
-import UserLayout from "@/features/user-dashboard/components/UserLayout";
+import {
+  ArrowUpDown,
+  Bookmark,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MapPin,
+  MessageSquareReply,
+  MoreVertical,
+  Pencil,
+  RefreshCw,
+  Search,
+  Send,
+  ShieldCheck,
+  SlidersHorizontal,
+  Star,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 import { useAuthState } from "@/features/auth/hooks";
 import {
   createGymReviewApi,
@@ -23,8 +36,19 @@ import {
   unsaveMyGymApi,
   updateMyGymReviewApi,
 } from "@/features/gyms/api";
+import type {
+  PublicGymPhotoResponse,
+  PublicGymProfileResponse,
+  ReviewSortDirection,
+  UserGymProfileViewResponse,
+} from "@/features/gyms/model";
+import { gymsQueryKeys } from "@/features/gyms/queryKeys";
 import { formatGymDistance } from "@/features/gyms/utils";
+import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import { getApiErrorMessage } from "@/shared/api/client";
+import { DefaultLayout, getDashboardRole } from "@/shared/layout/dashboard-shell";
+import { resolveAvatarUrl, resolveDisplayName } from "@/shared/lib/avatar";
+import { cn } from "@/shared/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,60 +65,43 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import type {
-  PublicGymPhotoResponse,
-  PublicGymProfileResponse,
-  PublicGymReviewResponse,
-  ReviewSortDirection,
-  UserGymProfileViewResponse,
-} from "@/features/gyms/model";
-import { cn } from "@/shared/lib/utils";
 
-const defaultMarkerIcon = L.icon({
-  iconUrl: icon,
-  iconRetinaUrl: iconRetina,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-});
-L.Marker.prototype.options.icon = defaultMarkerIcon;
+type ViewerCoordinates = {
+  lat: number;
+  lng: number;
+};
 
+const REVIEW_PAGE_SIZE = 8;
 const THEME_GALLERY_PHOTOS: PublicGymPhotoResponse[] = [
   {
     photoId: -1001,
-    photoUrl: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1600&q=80",
-    caption: "Strength floor",
-    displayOrder: 0,
-    cover: true,
+    photoUrl:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&h=900&fit=crop",
+    caption: "FitPal training floor",
+    displayOrder: -3,
+    cover: false,
   },
   {
     photoId: -1002,
-    photoUrl: "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?auto=format&fit=crop&w=1600&q=80",
-    caption: "Premium training zone",
-    displayOrder: 1,
+    photoUrl:
+      "https://images.unsplash.com/photo-1540497077202-7c8a3999166f?w=1200&h=900&fit=crop",
+    caption: "Strength and conditioning zone",
+    displayOrder: -2,
     cover: false,
   },
   {
     photoId: -1003,
-    photoUrl: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1600&q=80",
-    caption: "Performance setup",
-    displayOrder: 2,
+    photoUrl:
+      "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=1200&h=900&fit=crop",
+    caption: "Cardio and free weights",
+    displayOrder: -1,
     cover: false,
   },
 ];
 
-const REVIEW_PAGE_SIZE = 5;
-interface ViewerCoordinates {
-  lat: number;
-  lng: number;
-}
-
-function getCurrentCoordinates(): Promise<ViewerCoordinates | null> {
-  if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return Promise.resolve(null);
+const getCurrentCoordinates = async (): Promise<ViewerCoordinates | null> => {
+  if (!navigator.geolocation) {
+    return null;
   }
 
   return new Promise((resolve) => {
@@ -113,7 +120,7 @@ function getCurrentCoordinates(): Promise<ViewerCoordinates | null> {
       }
     );
   });
-}
+};
 
 const formatTimeLabel = (time: string | null) => {
   if (!time) return "-";
@@ -195,26 +202,19 @@ const GymProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const auth = useAuthState();
+  const queryClient = useQueryClient();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.CircleMarker | null>(null);
-  const distanceRefreshAttemptRef = useRef<string | null>(null);
   const roleValue = auth.role ?? "USER";
   const dashboardRole = getDashboardRole(roleValue);
   const activeSection = dashboardRole === "GYM" ? "home" : "gyms";
   const gymId = Number(id);
 
-  const [profileView, setProfileView] = useState<UserGymProfileViewResponse | null>(null);
-  const [myReview, setMyReview] = useState<PublicGymReviewResponse | null>(null);
-  const [communityReviews, setCommunityReviews] = useState<PublicGymReviewResponse[]>([]);
   const [reviewsPage, setReviewsPage] = useState(0);
-  const [reviewsTotalPages, setReviewsTotalPages] = useState(0);
   const [reviewsSortDirection, setReviewsSortDirection] = useState<ReviewSortDirection>("DESC");
-  const [isReviewsLoading, setIsReviewsLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [viewerCoords, setViewerCoords] = useState<ViewerCoordinates | null>(null);
 
@@ -236,7 +236,7 @@ const GymProfile = () => {
   
   // Gallery navigation state
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const slideIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Review form state
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -244,8 +244,6 @@ const GymProfile = () => {
   const [isDeleteReviewDialogOpen, setDeleteReviewDialogOpen] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [isDeletingReview, setIsDeletingReview] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [expandedReplyIds, setExpandedReplyIds] = useState<Set<number>>(new Set());
   const toggleReply = useCallback((id: number) => {
@@ -260,7 +258,106 @@ const GymProfile = () => {
     return window.matchMedia("(min-width: 768px)").matches;
   });
 
+  const trimmedReviewsQuery = reviewsQuery.trim();
+  const reviewFilterRating =
+    reviewsFilter === "5_STAR" ? 5 : reviewsFilter === "4_STAR" ? 4 : undefined;
+
+  const profileQuery = useQuery({
+    queryKey: gymsQueryKeys.profileView(gymId, viewerCoords?.lat, viewerCoords?.lng),
+    enabled: Number.isFinite(gymId) && gymId > 0,
+    queryFn: async () => {
+      if (dashboardRole === "USER") {
+        try {
+          return await getUserGymProfileViewApi(
+            gymId,
+            viewerCoords ? { lat: viewerCoords.lat, lng: viewerCoords.lng } : undefined
+          );
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response?.status === 404) {
+            throw error;
+          }
+
+          const publicProfile = await getPublicGymProfileApi(gymId);
+          return buildFallbackProfileView(publicProfile);
+        }
+      }
+
+      const publicProfile = await getPublicGymProfileApi(gymId);
+      return buildFallbackProfileView(publicProfile);
+    },
+    retry: false,
+  });
+
+  const communityReviewsQuery = useQuery({
+    queryKey: gymsQueryKeys.reviews(gymId, {
+      page: reviewsPage,
+      size: REVIEW_PAGE_SIZE,
+      sortDirection: reviewsSortDirection,
+      query: trimmedReviewsQuery || undefined,
+      rating: reviewFilterRating,
+    }),
+    enabled: Number.isFinite(gymId) && gymId > 0,
+    queryFn: () =>
+      getPublicGymReviewsApi(gymId, {
+        page: reviewsPage,
+        size: REVIEW_PAGE_SIZE,
+        sortDirection: reviewsSortDirection,
+        query: trimmedReviewsQuery || undefined,
+        rating: reviewFilterRating,
+      }),
+    placeholderData: (previousData) => previousData,
+  });
+
+  const myReviewQuery = useQuery({
+    queryKey: gymsQueryKeys.myReview(gymId),
+    enabled: dashboardRole === "USER" && Number.isFinite(gymId) && gymId > 0,
+    queryFn: () => getMyGymReviewApi(gymId),
+    retry: false,
+  });
+
+  const createReviewMutation = useMutation({
+    mutationFn: (payload: { rating: number; comments?: string }) => createGymReviewApi(gymId, payload),
+  });
+
+  const updateReviewMutation = useMutation({
+    mutationFn: (payload: { rating: number; comments?: string }) => updateMyGymReviewApi(gymId, payload),
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: () => deleteMyGymReviewApi(gymId),
+  });
+
+  const toggleSaveMutation = useMutation({
+    mutationFn: async ({ nextSaved }: { nextSaved: boolean }) => {
+      if (!profileQuery.data?.profile?.gymId) {
+        throw new Error("Gym profile is unavailable.");
+      }
+
+      if (nextSaved) {
+        await saveMyGymApi(profileQuery.data.profile.gymId);
+        return;
+      }
+
+      await unsaveMyGymApi(profileQuery.data.profile.gymId);
+    },
+  });
+
+  const profileView = profileQuery.data ?? null;
   const profile = profileView?.profile ?? null;
+  const myReview = myReviewQuery.data ?? null;
+  const communityReviews = useMemo(
+    () => communityReviewsQuery.data?.items ?? [],
+    [communityReviewsQuery.data?.items]
+  );
+  const reviewsTotalPages = communityReviewsQuery.data?.totalPages ?? 0;
+  const isLoading = profileQuery.isLoading;
+  const isSaving = toggleSaveMutation.isPending;
+  const isSubmittingReview = createReviewMutation.isPending || updateReviewMutation.isPending;
+  const isDeletingReview = deleteReviewMutation.isPending;
+  const isReviewsLoading =
+    communityReviewsQuery.isFetching ||
+    (dashboardRole === "USER" && myReviewQuery.isFetching && myReviewQuery.data === undefined);
+
   const canCheckIn = Boolean(profile?.checkInEnabled && profileView?.accessibleByCurrentUser);
   const gallery = useMemo(
     () => (profile ? buildGallery(profile) : []),
@@ -274,11 +371,6 @@ const GymProfile = () => {
     () => visibleCommunityReviews,
     [visibleCommunityReviews]
   );
-  const getReviewerAvatar = (name: string | null, reviewerAvatarUrl?: string | null) =>
-    reviewerAvatarUrl && reviewerAvatarUrl.trim().length > 0
-      ? reviewerAvatarUrl
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(name ?? "FitPal Member")}&background=111827&color=fb923c`;
-
   const visibleGalleryCount = isDesktopGallery ? 3 : 1;
   const maxGalleryIndex = Math.max(0, gallery.length - visibleGalleryCount);
   
@@ -302,75 +394,46 @@ const GymProfile = () => {
     }
   }, []);
 
-  const loadReviews = async (page: number, sortDirection: ReviewSortDirection) => {
-    if (!Number.isFinite(gymId) || gymId <= 0) {
-      return;
-    }
-
-    setIsReviewsLoading(true);
-    try {
-      const [communityPageResult, myReviewResult] = await Promise.allSettled([
-        getPublicGymReviewsApi(gymId, {
-          page,
-          size: REVIEW_PAGE_SIZE,
-          sortDirection,
-          query: reviewsQuery.trim() || undefined,
-          rating:
-            reviewsFilter === "5_STAR" ? 5 :
-            reviewsFilter === "4_STAR" ? 4 :
-            undefined,
-        }),
-        dashboardRole === "USER" ? getMyGymReviewApi(gymId) : Promise.resolve(null),
-      ]);
-
-      if (communityPageResult.status === "fulfilled") {
-        setCommunityReviews(communityPageResult.value.items);
-        setReviewsPage(communityPageResult.value.page);
-        setReviewsTotalPages(communityPageResult.value.totalPages);
-      } else {
-        console.error("Failed to load community gym reviews", communityPageResult.reason);
-        setCommunityReviews([]);
-        setReviewsPage(0);
-        setReviewsTotalPages(0);
-      }
-
-      if (myReviewResult.status === "fulfilled") {
-        setMyReview(myReviewResult.value);
-      } else {
-        console.error("Failed to load my gym review", myReviewResult.reason);
-        setMyReview(null);
-      }
-    } catch (error) {
-      console.error("Failed to load gym reviews", error);
-      setCommunityReviews([]);
-      setReviewsPage(0);
-      setReviewsTotalPages(0);
-      setMyReview(null);
-    } finally {
-      setIsReviewsLoading(false);
-    }
-  };
-
-  const handleReviewSortChange = async (nextSortDirection: ReviewSortDirection) => {
+  const handleReviewSortChange = (nextSortDirection: ReviewSortDirection) => {
     if (nextSortDirection === reviewsSortDirection) {
       return;
     }
     setReviewsSortDirection(nextSortDirection);
-    await loadReviews(0, nextSortDirection);
+    setReviewsPage(0);
   };
 
-  const handleReviewPageChange = async (nextPage: number) => {
+  const handleReviewPageChange = (nextPage: number) => {
     if (nextPage < 0 || nextPage >= reviewsTotalPages || nextPage === reviewsPage) {
       return;
     }
-    await loadReviews(nextPage, reviewsSortDirection);
+    setReviewsPage(nextPage);
   };
 
   useEffect(() => {
-    if (!Number.isFinite(gymId) || gymId <= 0) return;
-    void loadReviews(0, reviewsSortDirection);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reviewsFilter, reviewsQuery]);
+    setReviewsPage(0);
+  }, [reviewsFilter, trimmedReviewsQuery]);
+
+  useEffect(() => {
+    if (profileView) {
+      setIsSaved(profileView.isSaved);
+      setErrorMessage(null);
+      setIsNotFound(false);
+    }
+  }, [profileView]);
+
+  useEffect(() => {
+    const error = profileQuery.error;
+    if (!error) {
+      return;
+    }
+
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      setIsNotFound(true);
+      return;
+    }
+
+    setErrorMessage(getApiErrorMessage(error, "Failed to load gym profile"));
+  }, [profileQuery.error]);
 
   const resetReviewComposer = () => {
     setShowReviewForm(false);
@@ -406,8 +469,6 @@ const GymProfile = () => {
       setReviewError("Please select a rating");
       return;
     }
-
-    setIsSubmittingReview(true);
     setReviewError(null);
 
     try {
@@ -417,20 +478,26 @@ const GymProfile = () => {
       };
 
       if (isEditingReview && myReview) {
-        await updateMyGymReviewApi(gymId, payload);
+        await updateReviewMutation.mutateAsync(payload);
         toast.success("Review updated");
       } else {
-        await createGymReviewApi(gymId, payload);
+        await createReviewMutation.mutateAsync(payload);
         toast.success("Review submitted");
       }
 
       resetReviewComposer();
-      const targetPage = reviewsSortDirection === "DESC" ? 0 : reviewsPage;
-      await loadReviews(targetPage, reviewsSortDirection);
+      if (reviewsSortDirection === "DESC") {
+        setReviewsPage(0);
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.reviewsLists(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.myReview(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.profileViews(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.publicProfiles(gymId) }),
+      ]);
     } catch (error) {
       setReviewError(getApiErrorMessage(error, "Failed to submit review"));
-    } finally {
-      setIsSubmittingReview(false);
     }
   };
 
@@ -439,21 +506,24 @@ const GymProfile = () => {
       return;
     }
 
-    setIsDeletingReview(true);
-
     try {
-      await deleteMyGymReviewApi(gymId);
+      await deleteReviewMutation.mutateAsync();
       setDeleteReviewDialogOpen(false);
       resetReviewComposer();
       if (reviewsFilter === "ME") {
         setReviewsFilter("ALL");
       }
-      await loadReviews(0, reviewsSortDirection);
+
+      setReviewsPage(0);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.reviewsLists(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.myReview(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.profileViews(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.publicProfiles(gymId) }),
+      ]);
       toast.success("Review deleted");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to delete review"));
-    } finally {
-      setIsDeletingReview(false);
     }
   };
 
@@ -494,104 +564,6 @@ const GymProfile = () => {
       cancelled = true;
     };
   }, []);
-
-  const loadGymProfile = async () => {
-    if (!Number.isFinite(gymId) || gymId <= 0) {
-      setIsNotFound(true);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setIsNotFound(false);
-    setErrorMessage(null);
-
-    try {
-      if (dashboardRole === "USER") {
-        try {
-          const gymProfileView = await getUserGymProfileViewApi(
-            gymId,
-            viewerCoords ? { lat: viewerCoords.lat, lng: viewerCoords.lng } : undefined
-          );
-          setProfileView(gymProfileView);
-          setIsSaved(gymProfileView.isSaved);
-        } catch (error) {
-          if (axios.isAxiosError(error) && error.response?.status === 404) {
-            setIsNotFound(true);
-            return;
-          }
-
-          const publicProfile = await getPublicGymProfileApi(gymId);
-          const fallbackProfileView = buildFallbackProfileView(publicProfile);
-          setProfileView(fallbackProfileView);
-          setIsSaved(fallbackProfileView.isSaved);
-        }
-      } else {
-        const publicProfile = await getPublicGymProfileApi(gymId);
-        const fallbackProfileView = buildFallbackProfileView(publicProfile);
-        setProfileView(fallbackProfileView);
-        setIsSaved(fallbackProfileView.isSaved);
-      }
-
-      void loadReviews(0, reviewsSortDirection);
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        setIsNotFound(true);
-      } else {
-        setErrorMessage(getApiErrorMessage(error, "Failed to load gym profile"));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadGymProfile();
-  }, [gymId]);
-
-  useEffect(() => {
-    if (
-      dashboardRole !== "USER" ||
-      !viewerCoords ||
-      !profileView ||
-      profileView.profile.gymId !== gymId ||
-      profileView.distanceMeters != null
-    ) {
-      return;
-    }
-
-    const refreshKey = `${gymId}:${viewerCoords.lat.toFixed(6)}:${viewerCoords.lng.toFixed(6)}`;
-    if (distanceRefreshAttemptRef.current === refreshKey) {
-      return;
-    }
-    distanceRefreshAttemptRef.current = refreshKey;
-
-    let cancelled = false;
-
-    const refreshDistance = async () => {
-      try {
-        const gymProfileView = await getUserGymProfileViewApi(gymId, {
-          lat: viewerCoords.lat,
-          lng: viewerCoords.lng,
-        });
-        if (cancelled) {
-          return;
-        }
-        setProfileView(gymProfileView);
-        setIsSaved(gymProfileView.isSaved);
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to refresh gym distance", error);
-        }
-      }
-    };
-
-    void refreshDistance();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [dashboardRole, gymId, profileView, viewerCoords]);
 
   useEffect(() => {
     if (isLoading || !mapRef.current || profile?.latitude == null || profile.longitude == null) {
@@ -657,21 +629,17 @@ const GymProfile = () => {
 
     const nextSaved = !isSaved;
     setIsSaved(nextSaved);
-    setIsSaving(true);
+    setErrorMessage(null);
 
     try {
-      if (nextSaved) {
-        await saveMyGymApi(profile.gymId);
-      } else {
-        await unsaveMyGymApi(profile.gymId);
-      }
-
-      setProfileView((current) => (current ? { ...current, isSaved: nextSaved } : current));
+      await toggleSaveMutation.mutateAsync({ nextSaved });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.profileViews(gymId) }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.publicProfiles(gymId) }),
+      ]);
     } catch (error) {
       setIsSaved(!nextSaved);
       setErrorMessage(getApiErrorMessage(error, "Failed to update saved gym"));
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -718,7 +686,7 @@ const GymProfile = () => {
         {retry ? (
           <button
             type="button"
-            onClick={() => void loadGymProfile()}
+            onClick={() => void profileQuery.refetch()}
             className="inline-flex items-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-orange-200 hover:bg-orange-500/15"
           >
             <RefreshCw className="h-3.5 w-3.5" />
@@ -1136,8 +1104,16 @@ const GymProfile = () => {
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 items-center gap-3">
                                 <img
-                                  src={getReviewerAvatar(review.reviewerName, review.reviewerAvatarUrl)}
-                                  alt={review.reviewerName ?? "FitPal Member"}
+                                  src={resolveAvatarUrl({
+                                    primaryUrl: review.reviewerAvatarUrl,
+                                    displayName: review.reviewerName,
+                                    fallbackName: "FitPal Member",
+                                    background: "111827",
+                                  })}
+                                  alt={resolveDisplayName({
+                                    displayName: review.reviewerName,
+                                    fallbackName: "FitPal Member",
+                                  })}
                                   className="h-8 w-8 rounded-full border border-white/15 object-cover"
                                   loading="lazy"
                                 />

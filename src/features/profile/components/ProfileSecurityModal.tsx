@@ -22,14 +22,20 @@ import {
 
 type ModalMode = "change" | "forgot";
 type ForgotStep = "requestOtp" | "verifyOtp" | "success";
+const OTP_VALIDITY_MESSAGE = "OTP is valid for 5 minutes.";
+const FORGOT_PASSWORD_REQUEST_MESSAGE =
+  "If this email belongs to an active account with password sign-in, a reset code has been sent.";
 
 interface ProfileSecurityModalProps {
   open: boolean;
   mode: ModalMode;
   email: string;
   supportsLocalPassword: boolean;
+  allowForgotEmailEditing?: boolean;
   onClose: () => void;
 }
+
+const emailSchema = z.string().trim().email("Enter a valid email address");
 
 const changePasswordSchema = z
   .object({
@@ -70,10 +76,13 @@ export default function ProfileSecurityModal({
   mode,
   email,
   supportsLocalPassword,
+  allowForgotEmailEditing = false,
   onClose,
 }: ProfileSecurityModalProps) {
   const [forgotStep, setForgotStep] = useState<ForgotStep>("requestOtp");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState(email);
+  const [forgotEmailError, setForgotEmailError] = useState("");
 
   const changeForm = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
@@ -99,15 +108,19 @@ export default function ProfileSecurityModal({
       forgotForm.reset();
       setForgotStep("requestOtp");
       setIsSubmitting(false);
+      setForgotEmail(email);
+      setForgotEmailError("");
     }
-  }, [changeForm, forgotForm, open]);
+  }, [changeForm, email, forgotForm, open]);
 
   useEffect(() => {
     changeForm.reset();
     forgotForm.reset();
     setForgotStep("requestOtp");
     setIsSubmitting(false);
-  }, [changeForm, forgotForm, mode]);
+    setForgotEmail(email);
+    setForgotEmailError("");
+  }, [changeForm, email, forgotForm, mode]);
 
   const inputClass =
     "w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-6 py-4 text-sm font-bold text-slate-200 outline-none transition-all placeholder:text-slate-500 focus:border-orange-600";
@@ -118,6 +131,18 @@ export default function ProfileSecurityModal({
     "w-full rounded-2xl bg-button-gradient px-8 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:shadow-[0_0_30px_rgba(234,88,12,0.3)] disabled:cursor-not-allowed disabled:opacity-60";
   const secondaryBtnClass =
     "rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 transition-all hover:bg-white/10 hover:text-white";
+
+  const resolveForgotEmail = () => {
+    const result = emailSchema.safeParse(allowForgotEmailEditing ? forgotEmail : email);
+    if (!result.success) {
+      setForgotEmailError(result.error.issues[0]?.message ?? "Enter a valid email address");
+      return null;
+    }
+
+    setForgotEmail(result.data);
+    setForgotEmailError("");
+    return result.data;
+  };
 
   const handleChangePasswordSubmit = async (data: ChangePasswordFormData) => {
     try {
@@ -136,10 +161,15 @@ export default function ProfileSecurityModal({
   };
 
   const handleSendOtp = async () => {
+    const targetEmail = resolveForgotEmail();
+    if (!targetEmail) {
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await requestForgotPasswordOtpApi({ email });
-      toast.success("OTP sent. Use 123456 for the current dummy flow.");
+      await requestForgotPasswordOtpApi({ email: targetEmail });
+      toast.success(FORGOT_PASSWORD_REQUEST_MESSAGE);
       setForgotStep("verifyOtp");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to send OTP"));
@@ -149,10 +179,15 @@ export default function ProfileSecurityModal({
   };
 
   const handleResendOtp = async () => {
+    const targetEmail = resolveForgotEmail();
+    if (!targetEmail) {
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await requestForgotPasswordOtpApi({ email });
-      toast.success("OTP resent. Use 123456 for the current dummy flow.");
+      await requestForgotPasswordOtpApi({ email: targetEmail });
+      toast.success(FORGOT_PASSWORD_REQUEST_MESSAGE);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to resend OTP"));
     } finally {
@@ -161,10 +196,16 @@ export default function ProfileSecurityModal({
   };
 
   const handleForgotPasswordSubmit = async (data: ForgotPasswordFormData) => {
+    const targetEmail = resolveForgotEmail();
+    if (!targetEmail) {
+      setForgotStep("requestOtp");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       await resetForgotPasswordApi({
-        email,
+        email: targetEmail,
         otp: data.otp,
         newPassword: data.newPassword,
       });
@@ -249,13 +290,33 @@ export default function ProfileSecurityModal({
       return (
         <div className="space-y-6">
           <p className="text-sm text-slate-400">
-            We will send a one-time password to your registered email address.
+            We will send a one-time password to your email address if it is tied to an active password-based account.
           </p>
-          <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] px-6 py-4">
-            <p className="text-sm font-bold text-orange-500">{email}</p>
-          </div>
+          {allowForgotEmailEditing ? (
+            <div className="space-y-2">
+              <label className={labelClass}>Email Address</label>
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(event) => {
+                  setForgotEmail(event.target.value);
+                  setForgotEmailError("");
+                }}
+                className={inputClass}
+                placeholder="Enter your account email"
+              />
+              {forgotEmailError ? <p className={errorClass}>{forgotEmailError}</p> : null}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] px-6 py-4">
+              <p className="text-sm font-bold text-orange-500">{email}</p>
+            </div>
+          )}
           <p className="rounded-2xl border border-orange-500/20 bg-orange-500/5 px-4 py-3 text-xs text-orange-200">
-            Dummy flow: the current OTP is always `123456`.
+            Check your inbox and spam folder for the 6-digit code. {OTP_VALIDITY_MESSAGE}
+          </p>
+          <p className="text-[11px] leading-relaxed text-slate-500">
+            For security, we do not confirm whether an email is registered.
           </p>
           <button
             type="button"
@@ -275,6 +336,11 @@ export default function ProfileSecurityModal({
           onSubmit={forgotForm.handleSubmit(handleForgotPasswordSubmit)}
           className="space-y-6"
         >
+          <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] px-6 py-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Email</p>
+            <p className="mt-1 text-sm font-bold text-orange-500">{forgotEmail}</p>
+          </div>
+
           <div className="space-y-2">
             <label className={labelClass}>Enter OTP</label>
             <div className="flex justify-center">
@@ -298,6 +364,9 @@ export default function ProfileSecurityModal({
                 {forgotForm.formState.errors.otp.message}
               </p>
             )}
+            <p className="text-center text-[11px] text-slate-400">
+              {OTP_VALIDITY_MESSAGE} If it expires, request a new OTP.
+            </p>
           </div>
 
           <div className="flex justify-center">
@@ -341,7 +410,11 @@ export default function ProfileSecurityModal({
             )}
           </div>
 
-          <button type="submit" disabled={isSubmitting} className={primaryBtnClass}>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={primaryBtnClass}
+          >
             {isSubmitting ? "Resetting..." : "Reset Password"}
           </button>
         </form>
@@ -388,7 +461,7 @@ export default function ProfileSecurityModal({
       return "Reset your password via email verification.";
     }
     if (forgotStep === "verifyOtp") {
-      return "Enter the 6-digit code sent to your email.";
+      return "Enter the 6-digit code sent to your email before it expires.";
     }
     return "";
   };

@@ -20,15 +20,16 @@ import { ProfileMembershipTab } from "@/features/profile/components/ProfileMembe
 import { QuickStats } from "@/features/profile/components/QuickStats";
 import type { UserProfileResponse } from "@/features/profile/model";
 import "@/shared/lib/animations.css";
+import { navigateToUserDashboardSection } from "@/shared/navigation/dashboard-navigation";
+import { readEnumSearchParam, writeSearchParam } from "@/shared/navigation/search-params";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/ui/tabs";
+import { PageErrorState, PageLoadingState } from "@/shared/ui/state";
 
 type ProfileTab = "profile" | "membership" | "goals";
+const PROFILE_TABS = ["profile", "membership", "goals"] as const;
 
-const resolveTab = (search: string): ProfileTab => {
-  const tab = new URLSearchParams(search).get("tab");
-  if (tab === "membership" || tab === "goals") return tab;
-  return "profile";
-};
+const resolveTab = (search: string): ProfileTab =>
+  readEnumSearchParam(search, "tab", PROFILE_TABS, "profile");
 
 const syncAuthStatus = (
   profile: Pick<
@@ -57,6 +58,7 @@ const ProfileContainer = () => {
   const navigate = useNavigate();
 
   const activeTab = resolveTab(location.search);
+  const handleSectionChange = (section: string) => navigateToUserDashboardSection(navigate, section);
 
   const profileQuery = useQuery({
     queryKey: profileQueryKeys.user(),
@@ -83,13 +85,10 @@ const ProfileContainer = () => {
   }, [profile]);
 
   const setTab = (tab: ProfileTab) => {
-    const params = new URLSearchParams(location.search);
-    if (tab === "profile") params.delete("tab");
-    else params.set("tab", tab);
     navigate(
       {
         pathname: location.pathname,
-        search: params.toString() ? `?${params.toString()}` : "",
+        search: writeSearchParam(location.search, "tab", tab === "profile" ? null : tab),
       },
       { replace: true }
     );
@@ -102,40 +101,26 @@ const ProfileContainer = () => {
 
   if (profileQuery.isLoading) {
     return (
-      <UserLayout
-        activeSection="profile"
-        onSectionChange={(s) => navigate("/dashboard", { state: { activeSection: s } })}
-      >
-        <div className="flex flex-1 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500/20 border-t-orange-500" />
-        </div>
+      <UserLayout activeSection="profile" onSectionChange={handleSectionChange}>
+        <PageLoadingState label="Loading profile..." />
       </UserLayout>
     );
   }
 
   if (profileQuery.isError || !profile) {
     return (
-      <UserLayout
-        activeSection="profile"
-        onSectionChange={(s) => navigate("/dashboard", { state: { activeSection: s } })}
-      >
-        <div className="flex flex-1 items-center justify-center px-6">
-          <div className="animate-fade-in max-w-md rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center">
-            <p className="text-sm font-bold text-red-200">Profile could not be loaded.</p>
-            <p className="mt-2 text-xs text-slate-400">
-              {getApiErrorMessage(profileQuery.error, "Try refreshing the page.")}
-            </p>
-          </div>
-        </div>
+      <UserLayout activeSection="profile" onSectionChange={handleSectionChange}>
+        <PageErrorState
+          title="Profile could not be loaded."
+          message={getApiErrorMessage(profileQuery.error, "Try refreshing the page.")}
+          className="animate-fade-in"
+        />
       </UserLayout>
     );
   }
 
   return (
-    <UserLayout
-      activeSection="profile"
-      onSectionChange={(s) => navigate("/dashboard", { state: { activeSection: s } })}
-    >
+    <UserLayout activeSection="profile" onSectionChange={handleSectionChange}>
       <UserSectionShell
         title={
           <>

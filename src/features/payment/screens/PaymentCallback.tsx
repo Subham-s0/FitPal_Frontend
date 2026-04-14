@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -10,8 +11,9 @@ import type {
   PaymentFailureFeedback,
   PaymentGateway,
 } from "@/features/payment/checkout";
-import { PROFILE_SETUP_ROUTE } from "@/features/auth/auth-routing";
-import { authStore } from "@/features/auth/store";
+import type { PaymentAttemptStatusResponse } from "@/features/payment/model";
+import { PROFILE_SETUP_ROUTE, getPostAuthRoute } from "@/features/auth/auth-routing";
+import { authStore, type AuthState } from "@/features/auth/store";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { getMyProfileApi } from "@/features/profile/api";
 
@@ -41,6 +43,85 @@ const XIcon = () => (
   </svg>
 );
 
+const PAYMENT_STATUS_POLL_ATTEMPTS = 3;
+const PAYMENT_STATUS_POLL_DELAY_MS = 2_000;
+const PROFILE_REFRESH_DEADLINE_MS = 4_000;
+const PAYMENT_CONFIRMATION_DELAYED_MESSAGE =
+  "Payment confirmation is taking longer than expected. Please check your membership before trying again.";
+const PAYMENT_CONFIRMATION_PENDING_MESSAGE =
+  "Payment confirmation is still pending. Please wait a moment and check your membership before trying again.";
+const LIVE_SUBSCRIPTION_STATUSES = new Set(["ACTIVE", "PAUSED"]);
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number) => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("Request timed out.")), ms);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
+const isTimeoutError = (error: unknown) =>
+  axios.isAxiosError(error)
+    ? error.code === "ECONNABORTED" || error.message.toLowerCase().includes("timeout")
+    : error instanceof Error && error.message.toLowerCase().includes("timeout");
+
+const getRedirectTargetFromAuth = (
+  auth: Pick<AuthState, "role" | "profileCompleted" | "hasSubscription" | "hasActiveSubscription" | "hasDashboardAccess">
+) =>
+  getPostAuthRoute({
+    role: auth.role,
+    profileCompleted: auth.profileCompleted,
+    hasSubscription: auth.hasSubscription,
+    hasActiveSubscription: auth.hasActiveSubscription,
+    hasDashboardAccess: auth.hasDashboardAccess,
+  });
+
+const getRedirectTargetFromProfile = (profile: {
+  profileCompleted: boolean;
+  hasSubscription: boolean;
+  hasActiveSubscription: boolean;
+  hasDashboardAccess: boolean;
+}) =>
+  getRedirectTargetFromAuth({
+    role: authStore.getSnapshot().role,
+    profileCompleted: profile.profileCompleted,
+    hasSubscription: profile.hasSubscription,
+    hasActiveSubscription: profile.hasActiveSubscription,
+    hasDashboardAccess: profile.hasDashboardAccess,
+  });
+
+const syncAuthFromSuccessfulPayment = (paymentStatus: PaymentAttemptStatusResponse) => {
+  const authSnapshot = authStore.getSnapshot();
+  const hasLiveSubscription = LIVE_SUBSCRIPTION_STATUSES.has(paymentStatus.subscriptionStatus);
+  const nextAuthState = {
+    role: authSnapshot.role,
+    profileCompleted: authSnapshot.profileCompleted,
+    hasSubscription: true,
+    hasActiveSubscription: hasLiveSubscription || authSnapshot.hasActiveSubscription,
+    hasDashboardAccess: hasLiveSubscription || authSnapshot.hasDashboardAccess,
+  };
+
+  authStore.updateOnboardingStatus({
+    profileCompleted: nextAuthState.profileCompleted,
+    hasSubscription: nextAuthState.hasSubscription,
+    hasActiveSubscription: nextAuthState.hasActiveSubscription,
+    hasDashboardAccess: nextAuthState.hasDashboardAccess,
+  });
+
+  return getRedirectTargetFromAuth(nextAuthState);
+};
+
 const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -49,6 +130,7 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState("Payment could not be verified.");
   const [failureFeedback, setFailureFeedback] = useState<PaymentFailureFeedback | null>(null);
+  const [isVerificationPending, setIsVerificationPending] = useState(false);
 
   const isEsewa = gateway === "esewa";
   const flow = searchParams.get("flow");
@@ -60,7 +142,7 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
   const navigateToRecoveryFlow = () => {
     navigate(isMembershipFlow ? "/membership" : PROFILE_SETUP_ROUTE, {
       replace: true,
-      state: failureFeedback ? { paymentFeedback: failureFeedback, openPaymentStep: true } : undefined,
+      state: failureFeedback && !isVerificationPending ? { paymentFeedback: failureFeedback } : undefined,
     });
   };
 
@@ -70,11 +152,13 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
 
   useEffect(() => {
     let redirectTimeout: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
 
     const process = async () => {
       const paymentAttemptId = paymentAttemptIdParam ?? searchParams.get("paymentAttemptId");
 
       if (!paymentAttemptId) {
+        setIsVerificationPending(false);
         setErrorMessage("Missing payment information.");
         setStatus("failure");
         return;
@@ -82,43 +166,88 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
 
       const parsed = Number(paymentAttemptId);
       if (!Number.isFinite(parsed)) {
+        setIsVerificationPending(false);
         setErrorMessage("Invalid payment information.");
         setStatus("failure");
         return;
       }
 
+      const settlePaymentStatus = async (
+        initialStatus: PaymentAttemptStatusResponse,
+        lookupStatus: () => Promise<PaymentAttemptStatusResponse>
+      ) => {
+        let currentStatus = initialStatus;
+
+        for (
+          let attempt = 0;
+          attempt < PAYMENT_STATUS_POLL_ATTEMPTS && currentStatus.paymentStatus === "PENDING";
+          attempt += 1
+        ) {
+          await sleep(PAYMENT_STATUS_POLL_DELAY_MS);
+          currentStatus = await lookupStatus();
+        }
+
+        return currentStatus;
+      };
+
+      const confirmCompletedPayment = async (
+        loadInitialStatus: () => Promise<PaymentAttemptStatusResponse>,
+        lookupStatus: () => Promise<PaymentAttemptStatusResponse>
+      ) => {
+        try {
+          const initialStatus = await loadInitialStatus();
+          return await settlePaymentStatus(initialStatus, lookupStatus);
+        } catch (error) {
+          if (!isTimeoutError(error)) {
+            throw error;
+          }
+
+          let lastError: unknown = error;
+          for (let attempt = 0; attempt < PAYMENT_STATUS_POLL_ATTEMPTS; attempt += 1) {
+            await sleep(PAYMENT_STATUS_POLL_DELAY_MS);
+            try {
+              const lookupResult = await lookupStatus();
+              return await settlePaymentStatus(lookupResult, lookupStatus);
+            } catch (lookupError) {
+              lastError = lookupError;
+              if (!isTimeoutError(lookupError)) {
+                throw lookupError;
+              }
+            }
+          }
+
+          throw lastError;
+        }
+      };
+
       try {
+        let paymentStatus: PaymentAttemptStatusResponse;
+
         if (isEsewa) {
           const isSuccessPath = location.pathname.includes("/payments/esewa/success");
 
           if (isSuccessPath) {
             const data = searchParams.get("data");
-            const paymentStatus = data
-              ? await confirmEsewaPaymentApi({ paymentAttemptId: parsed, data })
-              : await lookupEsewaPaymentApi({ paymentAttemptId: parsed });
-            if (paymentStatus.paymentStatus !== "COMPLETED") {
-              const message = paymentStatus.gatewayResponseMessage
-                ?? (data
-                  ? "Payment was not completed in eSewa."
-                  : "eSewa did not return callback data, so payment status was checked directly.");
-              setFailureFeedback({
-                gateway: "esewa",
-                status: paymentStatus.paymentStatus === "CANCELLED" ? "cancelled" : "failed",
-                message,
-                paymentAttemptId: parsed,
-              });
-              setErrorMessage(message);
-              setStatus("failure");
-              return;
-            }
+            const lookupStatus = () => lookupEsewaPaymentApi({ paymentAttemptId: parsed });
+            paymentStatus = await confirmCompletedPayment(
+              () =>
+                data
+                  ? confirmEsewaPaymentApi({ paymentAttemptId: parsed, data })
+                  : lookupStatus(),
+              lookupStatus
+            );
           } else {
             const failureReason = searchParams.get("reason") ?? searchParams.get("status") ?? undefined;
-            const paymentStatus = await markEsewaPaymentFailureApi({
+            const failureStatus = await markEsewaPaymentFailureApi({
               paymentAttemptId: parsed,
               reason: failureReason,
             });
-            const message = paymentStatus.gatewayResponseMessage ?? "Payment was cancelled or failed in eSewa.";
+            const message = failureStatus.gatewayResponseMessage ?? "Payment was cancelled or failed in eSewa.";
             const normalizedFailure = `${failureReason ?? ""} ${message}`.toLowerCase();
+            if (cancelled) {
+              return;
+            }
+            setIsVerificationPending(false);
             setFailureFeedback({
               gateway: "esewa",
               status: normalizedFailure.includes("cancel") ? "cancelled" : "failed",
@@ -131,47 +260,85 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
           }
         } else {
           const pidx = searchParams.get("pidx") ?? undefined;
-          const paymentStatus = await lookupKhaltiPaymentApi({ paymentAttemptId: parsed, pidx });
-
-          if (paymentStatus.paymentStatus !== "COMPLETED") {
-            const message = paymentStatus.gatewayResponseMessage ?? "Payment was not completed in Khalti.";
-            setFailureFeedback({
-              gateway: "khalti",
-              status: paymentStatus.paymentStatus === "CANCELLED" ? "cancelled" : "failed",
-              message,
-              paymentAttemptId: parsed,
-            });
-            setErrorMessage(message);
-            setStatus("failure");
-            return;
-          }
+          const lookupStatus = () => lookupKhaltiPaymentApi({ paymentAttemptId: parsed, pidx });
+          paymentStatus = await confirmCompletedPayment(lookupStatus, lookupStatus);
         }
 
-        const profile = await getMyProfileApi();
-        authStore.updateOnboardingStatus({
-          profileCompleted: profile.profileCompleted,
-          hasSubscription: profile.hasSubscription,
-          hasActiveSubscription: profile.hasActiveSubscription,
-          hasDashboardAccess: profile.hasDashboardAccess,
-        });
+        if (paymentStatus.paymentStatus !== "COMPLETED") {
+          const isPending = paymentStatus.paymentStatus === "PENDING";
+          const message = paymentStatus.gatewayResponseMessage
+            ?? (isPending
+              ? PAYMENT_CONFIRMATION_PENDING_MESSAGE
+              : isEsewa
+              ? "Payment was not completed in eSewa."
+              : "Payment was not completed in Khalti.");
+          if (cancelled) {
+            return;
+          }
+          setIsVerificationPending(isPending);
+          setFailureFeedback(
+            isPending
+              ? null
+              : {
+                  gateway,
+                  status: paymentStatus.paymentStatus === "CANCELLED" ? "cancelled" : "failed",
+                  message,
+                  paymentAttemptId: parsed,
+                }
+          );
+          setErrorMessage(message);
+          setStatus("failure");
+          return;
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setIsVerificationPending(false);
+        setFailureFeedback(null);
         setStatus("success");
 
+        let redirectTarget: string;
+        try {
+          const profile = await withTimeout(getMyProfileApi(), PROFILE_REFRESH_DEADLINE_MS);
+          authStore.updateOnboardingStatus({
+            profileCompleted: profile.profileCompleted,
+            hasSubscription: profile.hasSubscription,
+            hasActiveSubscription: profile.hasActiveSubscription,
+            hasDashboardAccess: profile.hasDashboardAccess,
+          });
+          redirectTarget = getRedirectTargetFromProfile(profile);
+        } catch {
+          redirectTarget = syncAuthFromSuccessfulPayment(paymentStatus);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
         redirectTimeout = setTimeout(() => {
-          navigate(
-            profile.profileCompleted
-              ? (profile.hasDashboardAccess ? "/dashboard" : PROFILE_SETUP_ROUTE)
-              : PROFILE_SETUP_ROUTE,
-            { replace: true }
-          );
+          navigate(redirectTarget, { replace: true });
         }, 2000);
       } catch (err: unknown) {
-        const message = getApiErrorMessage(err, "Payment verification failed.");
-        setFailureFeedback({
-          gateway,
-          status: "failed",
-          message,
-          paymentAttemptId: parsed,
-        });
+        const verificationDelayed = isTimeoutError(err);
+        const message = verificationDelayed
+          ? PAYMENT_CONFIRMATION_DELAYED_MESSAGE
+          : getApiErrorMessage(err, "Payment verification failed.");
+        if (cancelled) {
+          return;
+        }
+        setIsVerificationPending(verificationDelayed);
+        setFailureFeedback(
+          verificationDelayed
+            ? null
+            : {
+                gateway,
+                status: "failed",
+                message,
+                paymentAttemptId: parsed,
+              }
+        );
         setErrorMessage(message);
         setStatus("failure");
       }
@@ -180,6 +347,7 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
     void process();
 
     return () => {
+      cancelled = true;
       if (redirectTimeout) {
         clearTimeout(redirectTimeout);
       }
@@ -255,6 +423,8 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
                   : "Khalti payment"
                 : status === "success"
                 ? "Payment confirmed"
+                : isVerificationPending
+                ? "Verification delayed"
                 : "Payment failed"}
             </div>
           </div>
@@ -264,6 +434,8 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
               ? "Verifying your payment"
               : status === "success"
               ? "Membership activated!"
+              : isVerificationPending
+              ? "Payment confirmation pending"
               : "Payment unsuccessful"}
           </p>
 
@@ -271,7 +443,9 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
             {status === "loading"
               ? "Please wait, do not close or refresh this page."
               : status === "success"
-              ? "Your FitPal subscription is now active. Redirecting to your dashboard shortly."
+              ? "Your FitPal subscription is now active. Redirecting you shortly."
+              : isVerificationPending
+              ? "Your payment may still complete. Check your membership before trying again."
               : isEsewa
               ? "Your payment could not be verified. No charge has been made."
               : "Your payment could not be verified. No service has been activated."}
@@ -337,18 +511,20 @@ const PaymentCallback = ({ gateway }: PaymentCallbackProps) => {
                 onClick={navigateToRecoveryFlow}
                 className="w-full rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-6 py-3 text-[0.78rem] font-black uppercase tracking-[0.08em] text-white shadow-[0_8px_24px_-6px_rgba(249,115,22,0.35)] transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_12px_28px_-6px_rgba(249,115,22,0.4)]"
               >
-                Return to {isMembershipFlow ? "Membership" : "Payment"} {"->"}
+                {isVerificationPending ? "Check" : "Return to"} {isMembershipFlow ? "Membership" : "Payment"} {"->"}
               </button>
-              <button
-                onClick={navigateToPlanSelection}
-                className="group flex w-full items-center justify-center rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.05)] px-6 py-3 backdrop-blur-xl transition-all duration-300 hover:bg-[hsla(30,100%,50%,0.1)]"
-              >
-                <span
-                  className="text-xs font-black uppercase leading-none tracking-widest text-white transition-colors group-hover:text-orange-500"
+              {!isVerificationPending && (
+                <button
+                  onClick={navigateToPlanSelection}
+                  className="group flex w-full items-center justify-center rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.05)] px-6 py-3 backdrop-blur-xl transition-all duration-300 hover:bg-[hsla(30,100%,50%,0.1)]"
                 >
-                  Choose Another Plan
-                </span>
-              </button>
+                  <span
+                    className="text-xs font-black uppercase leading-none tracking-widest text-white transition-colors group-hover:text-orange-500"
+                  >
+                    Choose Another Plan
+                  </span>
+                </button>
+              )}
             </div>
           )}
         </div>

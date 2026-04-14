@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import DashboardNavbar from "./DashboardNavbar";
 import DashboardSidebar from "./DashboardSidebar";
+import { DashboardGridBackdrop } from "./DashboardShellPrimitives";
 
 interface DefaultLayoutProps {
   role: string;
@@ -43,25 +44,9 @@ const DefaultLayout = ({
           onExpandedChange={setIsSidebarExpanded}
         />
 
-        <main
-          className={`relative min-w-0 overflow-y-auto overflow-x-hidden transition-all duration-300 ${contentClassName}`}
-          style={{
-            background:
-              "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(234,88,12,0.05) 0%, transparent 70%), radial-gradient(ellipse 60% 40% at 50% 15%, rgba(234,88,12,0.04) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 50% 85%, rgba(234,88,12,0.04) 0%, transparent 60%), #050505",
-          }}
-        >{/* Diagonal crosshatch */}
-          {/* Square grid lines */}
-          <div
-            className="pointer-events-none fixed inset-0 z-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(234,88,12,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(234,88,12,0.06) 1px, transparent 1px)",
-              backgroundSize: "48px 48px",
-            }}
-          />
-
-          <div className="relative z-10">{children}</div>
-        </main>
+        <DashboardGridBackdrop className={`transition-all duration-300 ${contentClassName}`}>
+          {children}
+        </DashboardGridBackdrop>
       </div>
     </div>
   );

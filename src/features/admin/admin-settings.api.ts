@@ -12,6 +12,8 @@ import type {
   CmsFaqUpsertRequest,
   CmsStatResponse,
   CmsStatUpsertRequest,
+  ExerciseEmbeddingIndexingResult,
+  ExerciseEmbeddingStatusResponse,
 } from "./admin-settings.model";
 
 export async function getApplicationRulesApi(): Promise<ApplicationRuleSummaryResponse> {
@@ -117,4 +119,18 @@ export async function updateCmsStatApi(id: string, payload: CmsStatUpsertRequest
 
 export async function deleteCmsStatApi(id: string): Promise<void> {
   await apiClient.delete(`/admin/cms/stats/${id}`);
+}
+
+export async function reindexAllExerciseEmbeddingsApi(): Promise<ExerciseEmbeddingIndexingResult> {
+  const response = await apiClient.post<ExerciseEmbeddingIndexingResult>(
+    "/admin/embeddings/reindex",
+    undefined,
+    { timeout: 300_000 }
+  );
+  return response.data;
+}
+
+export async function getExerciseEmbeddingStatusApi(): Promise<ExerciseEmbeddingStatusResponse> {
+  const response = await apiClient.get<ExerciseEmbeddingStatusResponse>("/admin/embeddings/status");
+  return response.data;
 }

@@ -40,6 +40,7 @@ import ManagePlans from "@/features/admin/components/ManagePlans";
 import ManageSettlements from "@/features/admin/components/ManageSettlements";
 import ManageUsers from "@/features/admin/components/ManageUsers";
 import AdminSettings from "@/features/admin/components/AdminSettings";
+import AdminCmsView from "@/features/admin/components/AdminCmsView";
 import AdminAnnouncementsPage from "@/features/announcements/components/AdminAnnouncementsPage";
 import {
   getDashboardSnapshotApi,
@@ -70,7 +71,18 @@ type AdminSection =
   | "payments"
   | "settlements"
   | "announcements"
+  | "cms"
   | "settings";
+
+type AdminCmsTab = "features" | "testimonials" | "how-to" | "stats" | "faqs";
+
+const resolveCmsTab = (value: string | undefined): AdminCmsTab =>
+  value === "testimonials" ||
+  value === "how-to" ||
+  value === "stats" ||
+  value === "faqs"
+    ? value
+    : "features";
 
 type RevenueWindow = "THIS_MONTH" | "ALL_TIME";
 
@@ -1100,7 +1112,9 @@ function MiniStat({ label, value, children }: { label: string; value: string; ch
 
 const AdminDashboard = () => {
   const location = useLocation();
-  const requestedSection = (location.state as { activeSection?: string } | null)?.activeSection;
+  const locationState = (location.state as { activeSection?: string; cmsTab?: string } | null) ?? null;
+  const requestedSection = locationState?.activeSection;
+  const requestedCmsTab = locationState?.cmsTab;
   const resolveSection = (value: string | undefined): AdminSection =>
     value === "users" ||
     value === "gyms" ||
@@ -1108,16 +1122,21 @@ const AdminDashboard = () => {
     value === "payments" ||
     value === "settlements" ||
     value === "announcements" ||
+    value === "cms" ||
     value === "settings"
       ? value
       : "home";
 
   const [activeSection, setActiveSection] = useState<AdminSection>(() => resolveSection(requestedSection));
+  const [activeCmsTab, setActiveCmsTab] = useState<AdminCmsTab>(() => resolveCmsTab(requestedCmsTab));
 
   useEffect(() => {
     if (!requestedSection) return;
+    if (requestedSection === "cms") {
+      setActiveCmsTab(resolveCmsTab(requestedCmsTab));
+    }
     setActiveSection(resolveSection(requestedSection));
-  }, [requestedSection]);
+  }, [requestedCmsTab, requestedSection]);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -1135,6 +1154,15 @@ const AdminDashboard = () => {
         return <ManageSettlements />;
       case "announcements":
         return <AdminAnnouncementsPage />;
+      case "cms":
+        return (
+          <div className="mx-auto max-w-[1400px]">
+            <AdminCmsView
+              onBack={() => setActiveSection("settings")}
+              initialTab={activeCmsTab}
+            />
+          </div>
+        );
       case "settings":
         return (
           <div className="mx-auto max-w-[1400px]">

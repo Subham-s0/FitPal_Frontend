@@ -1,6 +1,8 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMySavedGymCountApi, getUserGymDiscoverApi, saveMyGymApi, unsaveMyGymApi } from "@/features/gyms/api";
 import type { UserGymDiscoverRequest } from "@/features/gyms/model";
+import { gymsQueryKeys } from "@/features/gyms/queryKeys";
 import type {
   GymRecommendationItem,
   GymSortMode,
@@ -151,9 +153,60 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [statusFilter, setStatusFilter] = useState<GymStatusFilter>("all");
   const [sortMode, setSortMode] = useState<GymSortMode>("recommended");
+  const queryClient = useQueryClient();
   const watchIdRef = useRef<number | null>(null);
-  const discoverRequestIdRef = useRef(0);
   const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const discoverRequest = useMemo<UserGymDiscoverRequest>(() => {
+    const query = deferredSearchQuery.trim();
+    return {
+      query: query || undefined,
+      mode,
+      status: statusFilter,
+      savedOnly: showSavedOnly || undefined,
+      sort: sortMode,
+      lat: userCoords?.lat,
+      lng: userCoords?.lng,
+    };
+  }, [deferredSearchQuery, mode, showSavedOnly, sortMode, statusFilter, userCoords?.lat, userCoords?.lng]);
+
+  const savedCountQuery = useQuery({
+    queryKey: gymsQueryKeys.savedCount(),
+    queryFn: getMySavedGymCountApi,
+    staleTime: 30_000,
+  });
+
+  const discoverQuery = useQuery({
+    queryKey: gymsQueryKeys.discover({
+      query: discoverRequest.query,
+      mode: discoverRequest.mode,
+      status: discoverRequest.status,
+      savedOnly: discoverRequest.savedOnly,
+      sort: discoverRequest.sort,
+      lat: discoverRequest.lat,
+      lng: discoverRequest.lng,
+    }),
+    queryFn: () => fetchAllDiscoverGyms(discoverRequest),
+    enabled: mode === "show-all" || Boolean(userCoords),
+    staleTime: 30_000,
+  });
+
+  const toggleSavedMutation = useMutation({
+    mutationFn: async ({ gymId, nextIsSaved }: { gymId: number; nextIsSaved: boolean }) => {
+      if (nextIsSaved) {
+        await saveMyGymApi(gymId);
+        return;
+      }
+
+      await unsaveMyGymApi(gymId);
+    },
+    onSettled: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.savedCount() }),
+        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.discoverLists() }),
+      ]);
+    },
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -250,71 +303,22 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
   }, [locationPermission, mode, userCoords]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadSavedGymCount = async () => {
-      try {
-        const response = await getMySavedGymCountApi();
-        if (!cancelled) {
-          setSavedGymCount(response.count);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Failed to load saved gym count", error);
-        }
-      }
-    };
-
-    void loadSavedGymCount();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (typeof savedCountQuery.data?.count === "number") {
+      setSavedGymCount(savedCountQuery.data.count);
+    }
+  }, [savedCountQuery.data?.count]);
 
   useEffect(() => {
-    if (mode !== "show-all" && !userCoords) {
+    if (discoverQuery.data) {
+      setGyms(discoverQuery.data);
       return;
     }
 
-    const requestId = discoverRequestIdRef.current + 1;
-    discoverRequestIdRef.current = requestId;
-    const query = deferredSearchQuery.trim();
-
-    const request: UserGymDiscoverRequest = {
-      query: query || undefined,
-      mode,
-      status: statusFilter,
-      savedOnly: showSavedOnly || undefined,
-      sort: sortMode,
-      lat: userCoords?.lat,
-      lng: userCoords?.lng,
-    };
-
-    let cancelled = false;
-
-    const loadGyms = async () => {
-      try {
-        const responseGyms = await fetchAllDiscoverGyms(request);
-        if (cancelled || discoverRequestIdRef.current !== requestId) {
-          return;
-        }
-        setGyms(responseGyms);
-      } catch (error) {
-        if (cancelled || discoverRequestIdRef.current !== requestId) {
-          return;
-        }
-        console.error("Failed to load discover gyms", error);
-        setGyms([]);
-      }
-    };
-
-    void loadGyms();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [deferredSearchQuery, mode, showSavedOnly, sortMode, statusFilter, userCoords]);
+    if (discoverQuery.isError) {
+      console.error("Failed to load discover gyms", discoverQuery.error);
+      setGyms([]);
+    }
+  }, [discoverQuery.data, discoverQuery.error, discoverQuery.isError]);
 
   useEffect(() => {
     if (mode === "show-all") return;
@@ -444,23 +448,18 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
       setGyms(nextGyms);
       setSavedGymCount(Math.max(0, previousSavedGymCount + (nextIsSaved ? 1 : -1)));
 
-      const persistToggle = async () => {
-        try {
-          if (nextIsSaved) {
-            await saveMyGymApi(gymId);
-          } else {
-            await unsaveMyGymApi(gymId);
-          }
-        } catch (error) {
-          console.error("Failed to update saved gym", error);
-          setGyms(previousGyms);
-          setSavedGymCount(previousSavedGymCount);
+      toggleSavedMutation.mutate(
+        { gymId, nextIsSaved },
+        {
+          onError: (error) => {
+            console.error("Failed to update saved gym", error);
+            setGyms(previousGyms);
+            setSavedGymCount(previousSavedGymCount);
+          },
         }
-      };
-
-      void persistToggle();
+      );
     },
-    [gyms, savedGymCount, showSavedOnly]
+    [gyms, savedGymCount, showSavedOnly, toggleSavedMutation]
   );
 
   const toggleSavedOnly = useCallback(() => {

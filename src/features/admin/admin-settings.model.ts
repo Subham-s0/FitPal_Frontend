@@ -138,3 +138,16 @@ export interface CmsStatUpsertRequest {
   active?: boolean;
   order?: number;
 }
+
+export interface ExerciseEmbeddingIndexingResult {
+  success: number;
+  failed: number;
+  errors: string[];
+}
+
+export interface ExerciseEmbeddingStatusResponse {
+  totalExercises: number;
+  totalEmbeddings: number;
+  missing: number;
+  fullyIndexed: boolean;
+}

@@ -1,21 +1,45 @@
-import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, Search, Wallet } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  Building2,
+  ClipboardList,
+  Dumbbell,
+  FileText,
+  Gem,
+  MessageSquare,
+  QrCode,
+  Settings,
+  Star,
+  User,
+  Wallet,
+  Zap,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthState } from "@/features/auth/hooks";
-import { getMyProfileApi } from "@/features/profile/api";
-import { profileQueryKeys } from "@/features/profile/queryKeys";
 import { getAdminGymStatusCountsApi } from "@/features/admin/admin-gym.api";
 import { getGymPayoutBatchesApi } from "@/features/admin/admin-settlement.api";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
+import { getMyProfileApi } from "@/features/profile/api";
+import { profileQueryKeys } from "@/features/profile/queryKeys";
+import NavbarPageSearch from "@/shared/components/NavbarPageSearch";
 import {
+  navigateToAdminCms,
+  navigateToAdminDashboardSection,
+  navigateToCheckInView,
+  navigateToDashboardSectionForRole,
+  navigateToUserDashboardSection,
+} from "@/shared/navigation/dashboard-navigation";
+import {
+  getDashboardNavItems,
   getDashboardPrimaryActionLabel,
-  getDashboardRoleBadgeLabel,
   getDashboardRole,
+  getDashboardRoleBadgeLabel,
   getDashboardRoleLabel,
   getDashboardSearchPlaceholder,
   getDisplayNameFromEmail,
 } from "./dashboard-shell-config";
+import { DashboardBrandLink, DashboardIdentityButton } from "./DashboardShellPrimitives";
 
 interface DashboardNavbarProps {
   role?: string | null;
@@ -24,7 +48,12 @@ interface DashboardNavbarProps {
   onPendingGymsClick?: () => void;
 }
 
-const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsClick }: DashboardNavbarProps) => {
+const DashboardNavbar = ({
+  role,
+  onPrimaryAction,
+  onProfileClick,
+  onPendingGymsClick,
+}: DashboardNavbarProps) => {
   const navigate = useNavigate();
   const auth = useAuthState();
   const roleValue = role ?? auth.role;
@@ -38,10 +67,6 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
   const isAdminDashboard = dashboardRole === "ADMIN";
   const isGymDashboard = dashboardRole === "GYM";
   const showRoleMeta = !isUserDashboard;
-  const fallbackAvatarUrl = useMemo(
-    () => `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=111&color=fb923c`,
-    [displayName]
-  );
 
   const profileQuery = useQuery({
     queryKey: profileQueryKeys.user(),
@@ -72,26 +97,163 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
 
   const pendingGymsCount = pendingGymsQuery.data?.pendingReview ?? 0;
   const pendingPayoutBatchesCount = pendingPayoutBatchesQuery.data?.totalItems ?? 0;
-
   const profilePhotoUrl = profileQuery.data?.profileImageUrl?.trim() || null;
-  const [photoBroken, setPhotoBroken] = useState(false);
-  useEffect(() => {
-    setPhotoBroken(false);
-  }, [profilePhotoUrl]);
-
-  const avatarUrl = profilePhotoUrl && !photoBroken ? profilePhotoUrl : fallbackAvatarUrl;
   const logoHref = dashboardRole === "ADMIN" ? "/admin/dashboard" : "/";
+
+  const dashboardSearchItems = [
+    ...getDashboardNavItems(roleValue).map((item) => ({
+      id: item.id,
+      label: item.label,
+      description: `${item.label} section`,
+      keywords: [item.id, item.label, "page", "dashboard"],
+      icon: item.icon,
+      onSelect: () => navigateToDashboardSectionForRole(navigate, roleValue, item.id),
+    })),
+    ...(dashboardRole === "GYM"
+      ? [
+          {
+            id: "gymProfile",
+            label: "Gym Profile",
+            description: "Manage gym details, branding, and onboarding data.",
+            keywords: ["profile", "gym", "manage"],
+            icon: Building2,
+            onSelect: () => navigateToUserDashboardSection(navigate, "gymProfile"),
+          },
+          {
+            id: "settings",
+            label: "Settings",
+            description: "Open gym configuration and device preferences.",
+            keywords: ["settings", "preferences", "config"],
+            icon: Settings,
+            onSelect: () => navigateToUserDashboardSection(navigate, "settings"),
+          },
+        ]
+      : []),
+    ...(dashboardRole === "ADMIN"
+      ? [
+          {
+            id: "settings",
+            label: "Settings",
+            description: "Open admin platform settings and automation tools.",
+            keywords: ["settings", "preferences", "config", "tools"],
+            icon: Settings,
+            onSelect: () => navigateToAdminDashboardSection(navigate, "settings"),
+          },
+          {
+            id: "cms",
+            label: "CMS Management",
+            description: "Open the website content manager for the marketing pages.",
+            keywords: ["cms", "content", "marketing", "website", "home page"],
+            icon: FileText,
+            onSelect: () => navigateToAdminCms(navigate),
+          },
+          {
+            id: "cms-features",
+            label: "CMS Features",
+            description: "Jump into the feature cards shown on the public home page.",
+            keywords: ["cms", "features", "home features", "marketing sections"],
+            icon: Zap,
+            onSelect: () => navigateToAdminCms(navigate, "features"),
+          },
+          {
+            id: "cms-testimonials",
+            label: "CMS Testimonials",
+            description: "Manage approved testimonials for the public landing page.",
+            keywords: ["cms", "testimonials", "reviews", "social proof"],
+            icon: Star,
+            onSelect: () => navigateToAdminCms(navigate, "testimonials"),
+          },
+          {
+            id: "cms-how-it-works",
+            label: "CMS How It Works",
+            description: "Edit the public walkthrough and onboarding steps.",
+            keywords: ["cms", "how it works", "guide", "steps", "walkthrough"],
+            icon: BookOpen,
+            onSelect: () => navigateToAdminCms(navigate, "how-to"),
+          },
+          {
+            id: "cms-stats",
+            label: "CMS Stats Bar",
+            description: "Update the public stat highlights shown on the marketing page.",
+            keywords: ["cms", "stats", "stats bar", "numbers", "metrics"],
+            icon: Dumbbell,
+            onSelect: () => navigateToAdminCms(navigate, "stats"),
+          },
+          {
+            id: "cms-faqs",
+            label: "CMS FAQs",
+            description: "Open the frequently asked questions content block.",
+            keywords: ["cms", "faqs", "faq", "questions", "answers"],
+            icon: MessageSquare,
+            onSelect: () => navigateToAdminCms(navigate, "faqs"),
+          },
+        ]
+      : []),
+    ...(dashboardRole === "USER"
+      ? [
+          {
+            id: "notifications",
+            label: "Notifications",
+            description: "Review unread alerts and platform activity.",
+            keywords: ["notifications", "alerts", "inbox"],
+            icon: Bell,
+            onSelect: () => navigateToUserDashboardSection(navigate, "notifications"),
+          },
+          {
+            id: "checkin-scanner",
+            label: "Check-In",
+            description: "Open the QR scanner and live check-in flow.",
+            keywords: ["check in", "scanner", "qr", "scan"],
+            icon: QrCode,
+            onSelect: () => navigateToCheckInView(navigate, "scanner"),
+          },
+          {
+            id: "checkin-logs",
+            label: "Check-In Logs",
+            description: "Open your visit history and previous check-in records.",
+            keywords: ["check in logs", "logs", "history", "visits"],
+            icon: ClipboardList,
+            onSelect: () => navigateToCheckInView(navigate, "logs"),
+          },
+          {
+            id: "membership",
+            label: "Membership",
+            description: "Compare plans and manage subscription details.",
+            keywords: ["membership", "subscription", "plan", "billing"],
+            icon: Gem,
+            onSelect: () => navigate("/membership"),
+          },
+          {
+            id: "profile",
+            label: "Profile",
+            description: "View your account and personal profile information.",
+            keywords: ["profile", "account", "me"],
+            icon: User,
+            onSelect: () => navigate("/profile"),
+          },
+          {
+            id: "settings",
+            label: "Settings",
+            description: "Open account settings, security, and preferences.",
+            keywords: ["settings", "security", "preferences"],
+            icon: Settings,
+            onSelect: () => navigate("/settings"),
+          },
+        ]
+      : []),
+  ];
 
   const handlePendingGymsClick = () => {
     if (onPendingGymsClick) {
       onPendingGymsClick();
       return;
     }
-    navigate("/admin/dashboard", { state: { activeSection: "gyms", filterPending: true } });
+
+    navigateToAdminDashboardSection(navigate, "gyms", { filterPending: true });
   };
 
   const handlePendingPayoutBatchesClick = () => {
-    navigate("/dashboard", { state: { activeSection: "revenue" } });
+    navigateToUserDashboardSection(navigate, "revenue");
   };
 
   const handlePrimaryAction = () => {
@@ -101,16 +263,16 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
     }
 
     if (dashboardRole === "GYM") {
-      navigate("/dashboard", { state: { activeSection: "gymProfile" } });
+      navigateToUserDashboardSection(navigate, "gymProfile");
       return;
     }
 
     if (dashboardRole === "ADMIN") {
-      navigate("/admin/dashboard", { state: { activeSection: "users" } });
+      navigateToAdminDashboardSection(navigate, "users");
       return;
     }
 
-    navigate("/dashboard", { state: { activeSection: "gyms" } });
+    navigateToUserDashboardSection(navigate, "gyms");
   };
 
   const handleProfileClick = () => {
@@ -120,7 +282,7 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
     }
 
     if (dashboardRole === "GYM") {
-      navigate("/dashboard", { state: { activeSection: "gymProfile" } });
+      navigateToUserDashboardSection(navigate, "gymProfile");
       return;
     }
 
@@ -135,30 +297,15 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
   return (
     <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-[#1f1f1f] bg-[#0f0f0f] px-8">
       <div className="flex items-center gap-2">
-        <a href={logoHref} className="group flex shrink-0 items-center gap-2">
-          <img src="/logo.svg" alt="FitPal Logo" className="h-10 w-10 shrink-0 md:h-12 md:w-12" />
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-white">
-              <span className="text-gradient-fire">Fit</span>Pal
-            </span>
-            {showRoleMeta && (
-              <span className="hidden rounded-md border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-orange-300/80 sm:inline-flex">
-                {roleBadgeLabel}
-              </span>
-            )}
-          </div>
-        </a>
+        <DashboardBrandLink href={logoHref} badgeLabel={roleBadgeLabel} showBadge={showRoleMeta} />
       </div>
 
       <div className="mx-12 hidden max-w-md flex-grow md:block">
-        <div className="group relative">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 transition-colors group-focus-within:text-orange-600" />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-2.5 pl-11 pr-4 text-sm text-white outline-none transition-colors focus:border-orange-600"
-          />
-        </div>
+        <NavbarPageSearch
+          items={dashboardSearchItems}
+          placeholder={searchPlaceholder}
+          emptyLabel="No dashboard pages match that search."
+        />
       </div>
 
       <div className="flex items-center gap-6">
@@ -204,32 +351,14 @@ const DashboardNavbar = ({ role, onPrimaryAction, onProfileClick, onPendingGymsC
 
         <div className="h-10 w-px bg-[#252525]" />
 
-        <button
-          type="button"
-          className="flex cursor-pointer items-center gap-4 transition-opacity hover:opacity-80"
+        <DashboardIdentityButton
+          displayName={displayName}
+          metaLabel={showRoleMeta ? roleLabel : undefined}
+          primaryImageUrl={profilePhotoUrl}
+          email={auth.email}
+          role={roleValue}
           onClick={handleProfileClick}
-        >
-          <div className="hidden text-right leading-none text-white sm:block">
-            <p className="text-sm font-black tracking-tight">{displayName}</p>
-            {showRoleMeta && (
-              <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-orange-600">
-                {roleLabel}
-              </p>
-            )}
-          </div>
-          <div className="h-12 w-12 rounded-full border-2 border-orange-600 p-0.5">
-            <img
-              src={avatarUrl}
-              className="h-full w-full rounded-full object-cover"
-              alt={displayName}
-              onError={() => {
-                if (profilePhotoUrl && avatarUrl === profilePhotoUrl) {
-                  setPhotoBroken(true);
-                }
-              }}
-            />
-          </div>
-        </button>
+        />
       </div>
     </nav>
   );

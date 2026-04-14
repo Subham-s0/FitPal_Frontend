@@ -23,7 +23,7 @@ export function getGymCityLabel(gym: Pick<GymRecommendationItem, "city">): strin
 export function getGymPreviewImageUrl(
   gym: Pick<GymRecommendationItem, "coverPhotoUrl" | "logoUrl">
 ): string | null {
-  return gym.logoUrl ?? gym.coverPhotoUrl ?? null;
+  return gym.coverPhotoUrl ?? gym.logoUrl ?? null;
 }
 
 export function getGymMonogram(gym: Pick<GymRecommendationItem, "gymName">): string {

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useNavigate, useNavigationType } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { toast } from "sonner";
 import { authStore } from "@/features/auth/store";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
@@ -1469,8 +1469,7 @@ const UserDashboard = () => {
       case "progress":
         return renderHome();
       case "profile":
-        navigate("/profile");
-        return null;
+        return <Navigate to="/profile" replace />;
       case "home":
       default:
         return renderHome();

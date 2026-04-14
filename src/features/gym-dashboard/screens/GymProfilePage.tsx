@@ -498,16 +498,9 @@ const GymProfilePage: FC = () => {
     <div className="max-w-[1600px] animate-fade-in">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="mb-1 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-500">
-            <span className="inline-block h-px w-4 bg-orange-500" />
-            Gym profile
-          </p>
           <h1 className="truncate text-xl font-black uppercase tracking-tight">
             {profile?.gymName ?? "Your gym"} <span className="text-gradient-fire">Profile</span>
           </h1>
-          <p className="mt-1 text-[11px] text-zinc-600">
-            Approved items are locked. You can still update non-critical details like photos and description.
-          </p>
         </div>
         {headerRight}
       </div>
@@ -1224,4 +1217,3 @@ function PhotoCard({
 }
 
 export default GymProfilePage;
-
