@@ -149,7 +149,7 @@ export default function WorkoutSetRow({
       }`}
     >
       {/* Checkbox */}
-      <td className="w-10 px-1 sm:px-2 py-1.5 sm:py-2.5">
+      <td className="w-10 px-1 sm:px-2 py-1 sm:py-2">
         <Checkbox
           checked={set.completed}
           onCheckedChange={(checked) => handleCompletedChange(checked === true)}
@@ -166,7 +166,7 @@ export default function WorkoutSetRow({
 
       {/* Actual inputs */}
       {fields.weight && (
-        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
+        <td className="px-1 sm:px-2 py-1 sm:py-2">
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -175,7 +175,7 @@ export default function WorkoutSetRow({
               onBlur={handleWeightBlur}
               disabled={disabled}
               placeholder={set.targetWeight?.toString() ?? "-"}
-              className={`flow-input w-16 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
+              className={`flow-input w-16 rounded-lg px-2 py-1 text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
@@ -185,7 +185,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.reps && (
-        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
+        <td className="px-1 sm:px-2 py-1 sm:py-2">
           <input
             type="number"
             value={localActualReps}
@@ -193,7 +193,7 @@ export default function WorkoutSetRow({
             onBlur={handleRepsBlur}
             disabled={disabled}
             placeholder={set.targetReps?.toString() ?? "-"}
-            className={`flow-input w-14 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
+            className={`flow-input w-14 rounded-lg px-2 py-1 text-sm font-medium ${
               set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
             }`}
           />
@@ -201,7 +201,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.duration && (
-        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
+        <td className="px-1 sm:px-2 py-1 sm:py-2">
           <div className="flex items-center gap-1">
             <Timer className="h-3.5 w-3.5 text-gray-500" />
             <input
@@ -211,7 +211,7 @@ export default function WorkoutSetRow({
               onBlur={handleDurationBlur}
               disabled={disabled}
               placeholder={formatDuration(set.targetDurationSeconds) || "0:00"}
-              className={`flow-input w-16 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
+              className={`flow-input w-16 rounded-lg px-2 py-1 text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
@@ -220,7 +220,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.distance && (
-        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
+        <td className="px-1 sm:px-2 py-1 sm:py-2">
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -229,7 +229,7 @@ export default function WorkoutSetRow({
               onBlur={handleDistanceBlur}
               disabled={disabled}
               placeholder={set.targetDistance?.toString() ?? "-"}
-              className={`flow-input w-16 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
+              className={`flow-input w-16 rounded-lg px-2 py-1 text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
@@ -239,7 +239,7 @@ export default function WorkoutSetRow({
       )}
 
       {/* Target display */}
-      <td className="px-1 sm:px-2 py-1.5 sm:py-2.5 text-right">
+      <td className="px-1 sm:px-2 py-1 sm:py-2 text-right">
         <span className="text-[10px] sm:text-xs leading-none text-gray-500">
           Target: {formatTarget()}
         </span>
@@ -247,7 +247,7 @@ export default function WorkoutSetRow({
 
       {/* Remove button */}
       {canRemove && onRemoveSet && (
-        <td className="w-10 px-1 sm:px-2 py-1.5 sm:py-2.5">
+        <td className="w-10 px-1 sm:px-2 py-1 sm:py-2">
           <button
             type="button"
             onClick={() => onRemoveSet(set.routineLogSetId)}

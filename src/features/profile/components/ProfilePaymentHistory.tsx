@@ -278,8 +278,8 @@ export default function ProfilePaymentHistory() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="rounded-[12px] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] to-emerald-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
+        <div className="flex w-full gap-2 sm:gap-3">
+          <div className="flex-[3] rounded-[12px] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] to-emerald-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl">
                 <CheckCircle2 className="h-3 w-3 text-emerald-400 sm:h-4 sm:w-4" />
@@ -288,7 +288,7 @@ export default function ProfilePaymentHistory() {
             </div>
             <p className="mt-1.5 text-xl font-black text-white sm:mt-2 sm:text-2xl">{summary.completed}</p>
           </div>
-          <div className="rounded-[12px] border border-red-500/20 bg-gradient-to-br from-red-500/[0.12] to-red-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
+          <div className="flex-[3] rounded-[12px] border border-red-500/20 bg-gradient-to-br from-red-500/[0.12] to-red-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl">
                 <XCircle className="h-3 w-3 text-red-400 sm:h-4 sm:w-4" />
@@ -297,14 +297,14 @@ export default function ProfilePaymentHistory() {
             </div>
             <p className="mt-1.5 text-xl font-black text-white sm:mt-2 sm:text-2xl">{summary.failed}</p>
           </div>
-          <div className="rounded-[12px] border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.12] to-orange-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
+          <div className="flex-[4] rounded-[12px] border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.12] to-orange-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-orange-500/20 bg-orange-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl">
                 <Receipt className="h-3 w-3 text-orange-400 sm:h-4 sm:w-4" />
               </div>
               <p className="text-[9px] font-black uppercase tracking-[0.12em] text-orange-400 sm:text-[10px]">Paid</p>
             </div>
-            <p className="mt-1.5 text-base font-black text-white sm:mt-2 sm:text-xl">{formatMoney(summary.totalPaid)}</p>
+            <p className="mt-1.5 text-[13px] tracking-tight font-black text-white sm:mt-2 sm:text-xl">{formatMoney(summary.totalPaid)}</p>
           </div>
         </div>
 

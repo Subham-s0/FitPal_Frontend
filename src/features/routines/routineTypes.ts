@@ -1,4 +1,5 @@
 import type { ExerciseType, ExerciseLibrarySummaryResponse, CustomExerciseResponse } from "@/features/exercises/model";
+import { createUuid } from "@/shared/lib/uuid";
 
 // ============================================
 // FRONTEND-ONLY TYPES (for localStorage persistence)
@@ -297,7 +298,7 @@ export interface RoutineEditorState {
 
 export function createDefaultSetUI(setOrder: number): RoutineSetUI {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     routineSetTemplateId: null,
     setOrder,
     targetWeight: null,
@@ -310,7 +311,7 @@ export function createDefaultSetUI(setOrder: number): RoutineSetUI {
 
 export function createDefaultDayUI(name: string, dayOrder: number): RoutineDayUI {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     routineDayId: null,
     name,
     dayOrder,
@@ -324,7 +325,7 @@ export function createExerciseFromLibraryUI(
   exercise: ExerciseLibrarySummaryResponse
 ): RoutineExerciseUI {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     routineDayExerciseId: null,
     exerciseOrder: 0,
     notes: "",
@@ -345,7 +346,7 @@ export function createExerciseFromCustomUI(
   exercise: CustomExerciseResponse
 ): RoutineExerciseUI {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     routineDayExerciseId: null,
     exerciseOrder: 0,
     notes: "",
@@ -368,7 +369,7 @@ export function createExerciseFromCustomUI(
 
 export function createDefaultRoutine(): Routine {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     backendId: null,
     name: "New Routine",
     description: "",
@@ -385,7 +386,7 @@ export function createDefaultRoutine(): Routine {
 
 export function createDefaultDay(name: string, dayOrder: number): WorkoutDay {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     backendId: null,
     name,
     dayOrder,
@@ -473,7 +474,7 @@ export function generateUniqueWorkoutDayName(
 
 export function createDefaultSet(setOrder: number, targetRestSeconds: number = 90): RoutineSet {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     backendId: null,
     setOrder,
     targetWeight: null,
@@ -490,7 +491,7 @@ export function createExerciseFromLibrary(
 ): RoutineExercise {
   const isCustom = "customExerciseId" in exercise;
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     backendId: null,
     source: isCustom ? "custom" : "library",
     sourceExerciseId: isCustom ? exercise.customExerciseId : exercise.exerciseId,
@@ -524,7 +525,7 @@ export function createExerciseFromPickerItem(
   exerciseOrder: number = 0
 ): RoutineExercise {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     backendId: null,
     source: exercise.source,
     sourceExerciseId: exercise.id,
@@ -543,10 +544,10 @@ export function createExerciseFromPickerItem(
 export function cloneExercise(exercise: RoutineExercise): RoutineExercise {
   return {
     ...exercise,
-    id: crypto.randomUUID(),
+    id: createUuid(),
     sets: exercise.sets.map((set) => ({
       ...set,
-      id: crypto.randomUUID(),
+      id: createUuid(),
     })),
   };
 }
@@ -931,7 +932,7 @@ export function clearInvalidSetFields(set: RoutineSet, exerciseType: ExerciseTyp
 // Legacy helper (for backward compatibility)
 export function createLegacyDefaultSet(setOrder: number): LegacyRoutineSet {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     setOrder,
     targetWeight: null,
     targetReps: null,
@@ -947,7 +948,7 @@ export function createLegacyDefaultSet(setOrder: number): LegacyRoutineSet {
 // Legacy helper (for backward compatibility)
 export function createLegacyExerciseFromLibrary(exercise: ExerciseLibrarySummaryResponse): LegacyRoutineExercise {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     exerciseId: exercise.exerciseId,
     name: exercise.name,
     equipmentName: exercise.equipmentName,
@@ -963,7 +964,7 @@ export function createLegacyExerciseFromLibrary(exercise: ExerciseLibrarySummary
 // Legacy helper (for backward compatibility)
 export function createLegacyDefaultDay(name: string): LegacyWorkoutDay {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     name,
     exercises: [],
     supersetGroups: [],
@@ -998,13 +999,13 @@ export function routineDetailToEditorState(detail: RoutineDetailResponse): Routi
     structureType: detail.structureType,
     isPublic: detail.isPublic,
     days: detail.days.map((day) => ({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       routineDayId: day.routineDayId,
       name: day.name,
       dayOrder: day.dayOrder,
       weekDay: day.weekDay,
       exercises: day.exercises.map((ex) => ({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         routineDayExerciseId: ex.routineDayExerciseId,
         exerciseOrder: ex.exerciseOrder,
         notes: ex.notes || "",
@@ -1018,7 +1019,7 @@ export function routineDetailToEditorState(detail: RoutineDetailResponse): Routi
         secondaryMuscles: ex.secondaryMuscles,
         supersetGroupId: ex.supersetGroupId,
         sets: ex.sets.map((set) => ({
-          id: crypto.randomUUID(),
+          id: createUuid(),
           routineSetTemplateId: set.routineSetTemplateId,
           setOrder: set.setNo,
           targetWeight: set.targetWeight,
@@ -1029,7 +1030,7 @@ export function routineDetailToEditorState(detail: RoutineDetailResponse): Routi
         })),
       })),
       supersetGroups: day.supersetGroups.map((sg) => ({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         supersetGroupId: sg.supersetGroupId,
         label: sg.label,
         restAfterRoundSec: sg.restAfterRoundSec,

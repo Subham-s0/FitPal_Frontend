@@ -19,6 +19,7 @@ import {
   reconcileWorkoutDaySupersets,
   resolveRoutineTypeForSave,
 } from "@/features/routines/routineTypes";
+import { createUuid } from "@/shared/lib/uuid";
 
 type MutationOptions = {
   sync?: "auto" | "force" | "none";
@@ -219,7 +220,7 @@ function buildSupersetPayload(day: WorkoutDay): {
     }
 
     const existing = existingByLabel.get(tag);
-    const requestId = existing?.backendId ?? existing?.id ?? crypto.randomUUID();
+    const requestId = existing?.backendId ?? existing?.id ?? createUuid();
     groupIdsByTag.set(tag, requestId);
     groups.push({
       supersetGroupId: requestId,
@@ -550,6 +551,59 @@ export async function addRoutine(
   return runQueuedMutation(() => syncRoutineIfNeeded(localRoutine.id, options));
 }
 
+export async function resolveRoutineStartIds(
+  routineId: string,
+  dayId: string
+): Promise<{ routineId: string; routineDayId: string }> {
+  const existingRoutine = getCachedRoutine(routineId);
+  if (!existingRoutine) {
+    throw new Error(`Routine with id ${routineId} not found`);
+  }
+
+  const existingDay = existingRoutine.days.find((day) => day.id === dayId || day.backendId === dayId);
+  if (!existingDay) {
+    throw new Error("Workout day not found in the selected routine.");
+  }
+
+  return runQueuedMutation(async () => {
+    let resolvedRoutine = getCachedRoutine(routineId);
+    if (!resolvedRoutine) {
+      throw new Error(`Routine with id ${routineId} not found`);
+    }
+
+    let resolvedDay =
+      resolvedRoutine.days.find((day) => day.id === existingDay.id)
+      ?? (existingDay.backendId
+        ? resolvedRoutine.days.find((day) => day.backendId === existingDay.backendId)
+        : undefined);
+
+    if (!resolvedRoutine.backendId || !resolvedDay?.backendId || resolvedRoutine.syncState !== "synced") {
+      resolvedRoutine = await syncRoutineIfNeeded(routineId, {
+        sync: "force",
+        throwOnSyncError: true,
+      });
+      resolvedDay =
+        resolvedRoutine.days.find((day) => day.id === existingDay.id)
+        ?? (existingDay.backendId
+          ? resolvedRoutine.days.find((day) => day.backendId === existingDay.backendId)
+          : undefined);
+    }
+
+    if (!resolvedRoutine.backendId) {
+      throw new Error("Routine could not be synced before starting the workout.");
+    }
+
+    if (!resolvedDay?.backendId) {
+      throw new Error("Workout day could not be synced before starting the workout.");
+    }
+
+    return {
+      routineId: resolvedRoutine.backendId,
+      routineDayId: resolvedDay.backendId,
+    };
+  });
+}
+
 export async function updateRoutine(
   routineId: string,
   updates: Routine | Partial<Routine>,
@@ -654,4 +708,3 @@ export function importRoutines(jsonData: string): void {
   const data = JSON.parse(jsonData) as Routine[];
   routineCache = data.map(normalizeRoutine);
 }
-

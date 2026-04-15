@@ -131,7 +131,7 @@ function CompactSessionHeader({
   isSkipping,
   isSyncing,
   canComplete,
-  isRoutineBased,
+  canSyncToRoutine,
 }: {
   routineName: string | null;
   title: string;
@@ -146,7 +146,7 @@ function CompactSessionHeader({
   isSkipping: boolean;
   isSyncing: boolean;
   canComplete: boolean;
-  isRoutineBased: boolean;
+  canSyncToRoutine: boolean;
 }) {
   const percentage = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
   const formatVolume = (volume: number): string => {
@@ -209,8 +209,7 @@ function CompactSessionHeader({
           >
             {isSkipping ? <Loader2 className="h-4 w-4 animate-spin" /> : "Skip"}
           </button>
-          {/* Update Routine button - only for routine-based workouts */}
-          {isRoutineBased && (
+          {canSyncToRoutine && (
             <button
               onClick={onSyncToRoutine}
               disabled={isSyncing}
@@ -228,7 +227,7 @@ function CompactSessionHeader({
           <button
             onClick={onComplete}
             disabled={!canComplete}
-            className="rounded-lg bg-gradient-to-r from-orange-500 to-red-500 px-4 py-1.5 text-xs font-black text-white shadow-lg shadow-orange-500/20 transition-all hover:shadow-orange-500/30 disabled:opacity-50 disabled:shadow-none"
+            className="rounded-lg bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 px-4 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-white shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] disabled:opacity-50 disabled:shadow-none"
           >
             Complete
           </button>
@@ -623,6 +622,7 @@ export default function WorkoutSessionScreen() {
   const [elapsedTime, setElapsedTime] = useState("00:00:00");
   const [showSummary, setShowSummary] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [selectedExerciseDetail, setSelectedExerciseDetail] = useState<ExerciseDetailPreview | null>(null);
   const [isExerciseDetailOpen, setIsExerciseDetailOpen] = useState(false);
   const [addingToRoutineId, setAddingToRoutineId] = useState<string | null>(null);
@@ -646,21 +646,57 @@ export default function WorkoutSessionScreen() {
     enabled: !!session?.routineId,
   });
 
+  const currentRoutineDay = useMemo(
+    () =>
+      routineDetail?.days.find((day) => day.routineDayId === session?.routineDayId) ?? null,
+    [routineDetail, session?.routineDayId]
+  );
+
   // Build template set count map from routine
   const templateSetCounts = useMemo(() => {
     const map = new Map<string, number>();
-    if (routineDetail && session?.routineDayId) {
-      const day = routineDetail.days.find(d => d.backendId === session.routineDayId);
-      if (day) {
-        day.exercises.forEach(ex => {
-          if (ex.backendId) {
-            map.set(ex.backendId, ex.sets.length);
-          }
-        });
-      }
+    if (currentRoutineDay) {
+      currentRoutineDay.exercises.forEach((exercise) => {
+        map.set(exercise.routineDayExerciseId, exercise.sets.length);
+      });
     }
     return map;
-  }, [routineDetail, session?.routineDayId]);
+  }, [currentRoutineDay]);
+
+  const hasPendingRoutineChanges = useMemo(() => {
+    if (!session?.routineId || !currentRoutineDay) {
+      return false;
+    }
+
+    const templateExerciseIds = currentRoutineDay.exercises.map(
+      (exercise) => exercise.routineDayExerciseId
+    );
+    const sessionRoutineExerciseIds = session.exercises
+      .filter(
+        (exercise): exercise is WorkoutSessionExerciseResponse & { routineDayExerciseId: string } =>
+          exercise.routineDayExerciseId !== null
+      )
+      .map((exercise) => exercise.routineDayExerciseId);
+
+    if (session.exercises.some((exercise) => exercise.routineDayExerciseId === null)) {
+      return true;
+    }
+
+    if (templateExerciseIds.length !== sessionRoutineExerciseIds.length) {
+      return true;
+    }
+
+    if (templateExerciseIds.some((exerciseId, index) => sessionRoutineExerciseIds[index] !== exerciseId)) {
+      return true;
+    }
+
+    return session.exercises.some((exercise) => {
+      if (!exercise.routineDayExerciseId) {
+        return false;
+      }
+      return (templateSetCounts.get(exercise.routineDayExerciseId) ?? 0) !== exercise.sets.length;
+    });
+  }, [currentRoutineDay, session, templateSetCounts]);
 
   // Initialize expanded exercises when session loads
   useEffect(() => {
@@ -759,9 +795,15 @@ export default function WorkoutSessionScreen() {
       addWorkoutExerciseApi(routineLogId!, {
         exerciseSource: exercise.source,
         sourceExerciseId: exercise.id,
+        sets: [{ warmup: false, completed: false }],
       }),
-    onSuccess: (_, exercise) => {
+    onSuccess: (createdExercise, exercise) => {
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.detail(routineLogId!) });
+      setExpandedExercises((prev) => {
+        const next = new Set(prev);
+        next.add(createdExercise.routineLogExerciseId);
+        return next;
+      });
       setShowExercisePicker(false);
       toast.success(`${exercise.name} added to workout`);
     },
@@ -1048,14 +1090,23 @@ export default function WorkoutSessionScreen() {
         completedSets={stats.completedSets}
         totalSets={stats.totalSets}
         totalVolume={stats.totalVolume}
-        onBack={() => navigate("/dashboard")}
+        onBack={() => {
+          const hasAnyChanges = session.exercises.some((ex) =>
+            ex.sets.some((s) => s.completed)
+          );
+          if (hasAnyChanges) {
+            setShowBackConfirm(true);
+          } else {
+            navigate("/dashboard");
+          }
+        }}
         onSkip={handleSkip}
         onComplete={() => setShowSummary(true)}
         onSyncToRoutine={() => syncToRoutineMutation.mutate()}
         isSkipping={skipSessionMutation.isPending}
         isSyncing={syncToRoutineMutation.isPending}
         canComplete={stats.completedSets > 0}
-        isRoutineBased={!!session.routineId}
+        canSyncToRoutine={hasPendingRoutineChanges}
       />
 
       {/* ══ MAIN CONTENT AREA ══ */}
@@ -1091,21 +1142,6 @@ export default function WorkoutSessionScreen() {
                     kg
                   </span>
                 </div>
-                {/* Mobile Update Routine button */}
-                {session.routineId && (
-                  <button
-                    onClick={() => syncToRoutineMutation.mutate()}
-                    disabled={syncToRoutineMutation.isPending}
-                    className="flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs font-bold text-blue-400 transition-colors hover:border-blue-500/50 hover:bg-blue-500/20 disabled:opacity-50"
-                    title="Update routine"
-                  >
-                    {syncToRoutineMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3 w-3" />
-                    )}
-                  </button>
-                )}
               </div>
             </div>
 
@@ -1160,19 +1196,37 @@ export default function WorkoutSessionScreen() {
             </div>
 
             {/* ── Add Exercise Button (Mobile) ── */}
-            {session.exercises.length > 0 && (
-              <button
-                onClick={() => setShowExercisePicker(true)}
-                disabled={addExerciseMutation.isPending}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-orange-500/30 bg-orange-500/5 px-6 py-4 text-sm font-black uppercase tracking-[0.16em] text-orange-300 transition-all hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-200 disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
-              >
-                {addExerciseMutation.isPending ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Plus className="h-5 w-5" />
+            {(session.exercises.length > 0 || hasPendingRoutineChanges) && (
+              <div className="space-y-3 lg:hidden">
+                {session.exercises.length > 0 && (
+                  <button
+                    onClick={() => setShowExercisePicker(true)}
+                    disabled={addExerciseMutation.isPending}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-orange-500/30 bg-orange-500/5 px-6 py-4 text-sm font-black uppercase tracking-[0.16em] text-orange-300 transition-all hover:border-orange-500/50 hover:bg-orange-500/10 hover:text-orange-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {addExerciseMutation.isPending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Plus className="h-5 w-5" />
+                    )}
+                    Add Exercise
+                  </button>
                 )}
-                Add Exercise
-              </button>
+                {hasPendingRoutineChanges && (
+                  <button
+                    onClick={() => syncToRoutineMutation.mutate()}
+                    disabled={syncToRoutineMutation.isPending}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-500/30 bg-blue-500/10 px-6 py-4 text-sm font-bold text-blue-300 transition-colors hover:border-blue-500/50 hover:bg-blue-500/20 disabled:opacity-50"
+                  >
+                    {syncToRoutineMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    Update Routine
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Warning when no sets completed */}
@@ -1242,6 +1296,37 @@ export default function WorkoutSessionScreen() {
         open={isExerciseDetailOpen}
         onOpenChange={setIsExerciseDetailOpen}
       />
+
+      {/* Back / Leave Confirmation Dialog */}
+      {showBackConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-[1.5rem] border border-white/10 bg-[#111] p-6 shadow-2xl">
+            <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/10 bg-white/5">
+              <ArrowLeft className="h-5 w-5 text-orange-400" />
+            </div>
+            <h2 className="mt-4 text-[17px] font-black tracking-tight text-white">Leave workout?</h2>
+            <p className="mt-2 text-sm text-gray-400">
+              You have logged sets in this session. Your progress is saved — you can return anytime.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowBackConfirm(false)}
+                className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-gray-300 transition-all hover:bg-white/10 hover:text-white"
+              >
+                Stay
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard")}
+                className="flex-1 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-orange-500/25 transition-all hover:shadow-orange-500/40"
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

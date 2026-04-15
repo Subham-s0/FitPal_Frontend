@@ -264,8 +264,8 @@ export interface ProfileInfoUpdateResponse {
 }
 
 export interface ProfileGoalsUpdateRequest {
-  fitnessLevel: FitnessLevel | null;
-  primaryFitnessFocus: PrimaryFitnessFocus | null;
+  fitnessLevel: FitnessLevel;
+  primaryFitnessFocus: PrimaryFitnessFocus;
 }
 
 export interface ProfileGoalsUpdateResponse {

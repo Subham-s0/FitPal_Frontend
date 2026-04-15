@@ -1,10 +1,11 @@
 import type { AiRoutinePreviewResponse } from "@/features/routines/aiRoutineTypes";
 import type { Routine } from "@/features/routines/routineTypes";
 import { deriveGoalFromRoutineType } from "@/features/routines/routineTypes";
+import { createUuid } from "@/shared/lib/uuid";
 
 export function mapAiRoutinePreviewToRoutine(preview: AiRoutinePreviewResponse): Routine {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     backendId: null,
     name: preview.routineName,
     description: preview.description || preview.selectedSuggestion.description || "",
@@ -16,7 +17,7 @@ export function mapAiRoutinePreviewToRoutine(preview: AiRoutinePreviewResponse):
     syncState: "draft",
     lastSyncError: null,
     days: preview.days.map((day) => ({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       backendId: null,
       name: day.label,
       dayOrder: day.day,
@@ -24,7 +25,7 @@ export function mapAiRoutinePreviewToRoutine(preview: AiRoutinePreviewResponse):
       description: day.summary,
       supersetGroups: [],
       exercises: day.exercises.map((exercise) => ({
-        id: crypto.randomUUID(),
+        id: createUuid(),
         backendId: null,
         source: exercise.exerciseSource,
         sourceExerciseId: exercise.sourceExerciseId,
@@ -37,7 +38,7 @@ export function mapAiRoutinePreviewToRoutine(preview: AiRoutinePreviewResponse):
         notes: exercise.notes || "",
         supersetGroupId: null,
         sets: exercise.sets.map((set, setIndex) => ({
-          id: crypto.randomUUID(),
+          id: createUuid(),
           backendId: null,
           setOrder: set.setNo ?? setIndex + 1,
           targetWeight: set.targetWeight,

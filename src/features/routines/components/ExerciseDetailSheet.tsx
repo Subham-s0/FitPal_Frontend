@@ -196,15 +196,17 @@ export default function ExerciseDetailSheet({
                 ) : howToSections.length > 0 ? (
                   <div className="space-y-4">
                     {howToSections.map((section, index) => (
-                      <div key={section.howToSectionId} className="flex items-start gap-4">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-orange-500/10 text-sm font-black text-orange-400">
+                      <div key={section.howToSectionId} className="flex items-start gap-2.5 sm:gap-4">
+                        <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-orange-500/20 bg-orange-500/10 text-xs sm:text-sm font-black text-orange-400">
                           {String(section.displayOrder ?? index + 1).padStart(2, "0")}
                         </div>
-                        <div className="space-y-1 pt-0.5">
+                        <div className="space-y-1 pt-0.5 sm:pt-1">
                           {section.title && (
                             <p className="text-sm font-semibold text-white">{section.title}</p>
                           )}
-                          <p className="text-sm leading-7 text-gray-300">{section.content}</p>
+                          <p className="text-[13px] sm:text-sm leading-6 sm:leading-7 text-gray-300">
+                            {section.content}
+                          </p>
                         </div>
                       </div>
                     ))}

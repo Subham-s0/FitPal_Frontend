@@ -182,6 +182,23 @@ function formatMissingProfileField(field: string): string {
   }
 }
 
+function resolveProfileTabForMissingFields(
+  missingFields: string[] | undefined
+): "profile" | "goals" {
+  const firstMissingField = missingFields?.[0];
+
+  switch (firstMissingField) {
+    case "gender":
+      return "profile";
+    case "weight":
+    case "height":
+    case "fitnessLevel":
+    case "primaryFitnessFocus":
+    default:
+      return "goals";
+  }
+}
+
 function getLiftSnapshot(
   bootstrap: AiRoutineBootstrapResponse | undefined,
   lift: AiCanonicalLift
@@ -495,7 +512,8 @@ export default function AiRoutineGenerationDialog({
 
   const handleOpenProfile = () => {
     onOpenChange(false);
-    navigate("/profile");
+    const targetTab = resolveProfileTabForMissingFields(bootstrap?.missingProfileFields);
+    navigate(`/profile?tab=${targetTab}`);
   };
 
   const profileGoalLabel = formatGoal(bootstrap?.profileSummary.primaryFitnessFocus);

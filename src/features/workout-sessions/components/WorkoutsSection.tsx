@@ -774,7 +774,7 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
             <AlertDialogAction
               onClick={confirmDelete}
               disabled={deleteMutation.isPending}
-              className="bg-red-500 hover:bg-red-600"
+              className="btn-fire"
             >
               {deleteMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

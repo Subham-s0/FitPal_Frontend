@@ -64,12 +64,14 @@ import {
   generateDefaultWorkoutDayName,
   generateUniqueWorkoutDayName,
 } from "@/features/routines/routineTypes";
+import { createUuid } from "@/shared/lib/uuid";
 import {
   loadRoutines,
   deleteRoutine,
   updateRoutine,
   setActiveRoutine,
   addRoutine,
+  resolveRoutineStartIds,
   refreshRoutineStore,
 } from "@/features/routines/routineStore";
 import {
@@ -489,12 +491,14 @@ const RoutinesSection = ({
 
   // Start workout session mutation
   const startWorkoutMutation = useMutation({
-    mutationFn: ({ routineId, dayId }: { routineId: string; dayId: string }) =>
-      startWorkoutSessionApi({
+    mutationFn: async ({ routineId, dayId }: { routineId: string; dayId: string }) => {
+      const resolvedIds = await resolveRoutineStartIds(routineId, dayId);
+      return startWorkoutSessionApi({
         mode: "ROUTINE",
-        routineId,
-        routineDayId: dayId,
-      }),
+        routineId: resolvedIds.routineId,
+        routineDayId: resolvedIds.routineDayId,
+      });
+    },
     onSuccess: (session) => {
       queryClient.invalidateQueries({ queryKey: workoutSessionQueryKeys.today() });
       toast.success("Workout started! 💪");
@@ -553,8 +557,21 @@ const RoutinesSection = ({
         throwOnSyncError: true,
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (importedRoutine) => {
       await refreshRoutinesFromBackend();
+      setGeneratedPreviewResult(null);
+      setGeneratedPreviewRoutine(null);
+      setGeneratedPreviewError(null);
+      setGeneratedRoutineResult(null);
+      setGeneratedRoutineRequest(null);
+      setGeneratedRoutineError(null);
+      setRejectedGeneratedSuggestionIds([]);
+      setActiveGeneratedSuggestionIndex(0);
+      setExpandedRoutines((prev) => {
+        const next = new Set(prev);
+        next.add(importedRoutine.id);
+        return next;
+      });
       queryClient.invalidateQueries({ queryKey: routineQueryKeys.list() });
       toast.success("Routine imported.");
     },
@@ -902,7 +919,7 @@ const RoutinesSection = ({
       // Create a copy with new ID and updated dayOrder
       const newDay: WorkoutDay = {
         ...dayToCopy,
-        id: crypto.randomUUID(),
+        id: createUuid(),
         backendId: null,
         name: generateUniqueWorkoutDayName(
           targetRoutine.days,
@@ -911,17 +928,17 @@ const RoutinesSection = ({
         dayOrder: targetRoutine.days.length + 1,
         supersetGroups: (dayToCopy.supersetGroups ?? []).map((group) => ({
           ...group,
-          id: crypto.randomUUID(),
+          id: createUuid(),
           backendId: null,
         })),
         exercises: dayToCopy.exercises.map((ex) => ({
           ...ex,
-          id: crypto.randomUUID(),
+          id: createUuid(),
           backendId: null,
           supersetGroupId: null,
           sets: ex.sets.map((s) => ({
             ...s,
-            id: crypto.randomUUID(),
+            id: createUuid(),
             backendId: null,
           })),
         })),

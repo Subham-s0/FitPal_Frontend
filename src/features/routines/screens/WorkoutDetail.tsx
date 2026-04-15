@@ -1006,75 +1006,78 @@ const WorkoutDetail = ({
         <div className="space-y-4 pb-6">
 
           {/* ── Header ── */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="flow-label mb-1">{routine.name}</p>
-              {editMode || isEditingName ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={localDay.name}
-                    onChange={(e) => setLocalDay({ ...localDay, name: e.target.value })}
-                    onBlur={handleCommitNameEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleCommitNameEdit();
-                      if (e.key === "Escape") {
-                        setLocalDay({ ...localDay, name: day.name });
-                        setIsEditingName(false);
-                      }
-                    }}
-                    autoFocus
-                    className="flow-input min-w-0 px-3 py-1 text-xl font-black placeholder:text-gray-500"
-                    placeholder="Day name..."
-                  />
-                  {!editMode && (
-                    <button
-                      onClick={handleCommitNameEdit}
-                      className="flow-button-secondary flex-shrink-0 px-2.5 py-2 text-orange-400"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsEditingName(true)}
-                  className="group/name flex items-center gap-2 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
-                  title="Click to rename"
-                >
-                  <h2 className="text-2xl font-black text-white transition-colors group-hover/name:text-orange-400">
-                    {localDay.name}
-                  </h2>
-                  <Edit3 className="h-4 w-4 text-gray-600 opacity-0 transition-opacity group-hover/name:opacity-100" />
-                </button>
-              )}
-            </div>
+          <div className="space-y-2">
+            <p className="flow-label">{routine.name}</p>
 
-            <div className="flex flex-shrink-0 items-center gap-2">
-              {editMode ? (
-                <>
-                  <button onClick={() => void handleCancel()} className="flow-button-secondary">
-                    Cancel
-                  </button>
-                  <button onClick={handleSave} className="flow-button-primary">
-                    Save
-                  </button>
-                </>
-              ) : (
-                <>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                {editMode || isEditingName ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={localDay.name}
+                      onChange={(e) => setLocalDay({ ...localDay, name: e.target.value })}
+                      onBlur={handleCommitNameEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCommitNameEdit();
+                        if (e.key === "Escape") {
+                          setLocalDay({ ...localDay, name: day.name });
+                          setIsEditingName(false);
+                        }
+                      }}
+                      autoFocus
+                      className="flow-input min-w-0 px-3 py-1 text-xl font-black placeholder:text-gray-500"
+                      placeholder="Day name..."
+                    />
+                    {!editMode && (
+                      <button
+                        onClick={handleCommitNameEdit}
+                        className="flow-button-secondary flex-shrink-0 px-2.5 py-2 text-orange-400"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
                   <button
-                    onClick={() => void handleBack()}
-                    className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300"
+                    onClick={() => setIsEditingName(true)}
+                    className="group/name flex items-center gap-2 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
+                    title="Click to rename"
                   >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back
+                    <h2 className="text-2xl font-black text-white transition-colors group-hover/name:text-orange-400">
+                      {localDay.name}
+                    </h2>
+                    <Edit3 className="h-4 w-4 text-gray-600 opacity-0 transition-opacity group-hover/name:opacity-100" />
                   </button>
-                  <button onClick={() => setEditMode(true)} className="flow-button-primary">
-                    <Edit3 className="h-4 w-4" />
-                    Edit
-                  </button>
-                </>
-              )}
+                )}
+              </div>
+
+              <div className="flex flex-shrink-0 items-center gap-2 pt-1 sm:pt-0">
+                {editMode ? (
+                  <>
+                    <button onClick={() => void handleCancel()} className="flow-button-secondary">
+                      Cancel
+                    </button>
+                    <button onClick={handleSave} className="flow-button-primary">
+                      Save
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => void handleBack()}
+                      className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </button>
+                    <button onClick={() => setEditMode(true)} className="flow-button-primary">
+                      <Edit3 className="h-4 w-4" />
+                      Edit
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

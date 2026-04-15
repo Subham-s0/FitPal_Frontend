@@ -1465,11 +1465,11 @@ const ExercisesScreen = () => {
                     ) : selectedExerciseHowToSections.length ? (
                       <div className="space-y-6">
                         {selectedExerciseHowToSections.map((section, index) => (
-                          <div key={section.howToSectionId} className="flex items-center gap-6">
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-orange-600/20 bg-orange-600/10 font-black text-orange-600">
+                          <div key={section.howToSectionId} className="flex items-start sm:items-center gap-3 sm:gap-6">
+                            <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-lg sm:rounded-xl border border-orange-600/20 bg-orange-600/10 text-xs sm:text-base font-black text-orange-600 mt-0.5 sm:mt-0">
                               {String(section.displayOrder ?? index + 1).padStart(2, "0")}
                             </div>
-                            <p className="flex-1 text-xs font-bold uppercase leading-relaxed text-gray-400">
+                            <p className="flex-1 text-[11px] sm:text-xs font-bold uppercase leading-relaxed text-gray-400">
                               {section.content}
                             </p>
                           </div>

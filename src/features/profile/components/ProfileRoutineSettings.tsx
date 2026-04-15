@@ -55,17 +55,17 @@ export default function ProfileRoutineSettings() {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3 sm:p-4">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-400">Status</p>
-            <p className="mt-1 text-xl font-black text-white">
+            <p className="mt-1 text-[13px] sm:text-xl font-black text-white">
               {data?.activeSetting ? "Active" : "Inactive"}
             </p>
           </div>
-          <div className="rounded-xl border border-orange-500/15 bg-orange-500/5 p-4">
+          <div className="rounded-xl border border-orange-500/15 bg-orange-500/5 p-3 sm:p-4">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-orange-400">Current Focus</p>
-            <p className="mt-1 text-sm font-black text-white">
-              {data?.activeSetting ? formatRoutineType(data.activeSetting.routineType) : "No active routine"}
+            <p className="mt-1 text-[13px] sm:text-sm font-black text-white leading-tight">
+              {data?.activeSetting ? formatRoutineType(data.activeSetting.routineType) : "None"}
             </p>
           </div>
         </div>
@@ -151,18 +151,18 @@ export default function ProfileRoutineSettings() {
             </Badge>
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/5 bg-black/20 p-3 sm:p-4">
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Current Day</p>
-              <p className="mt-1 text-sm font-bold text-white">{data.activeSetting.currentDayName || "Not set"}</p>
+              <p className="mt-1 text-[11px] sm:text-sm font-bold text-white truncate">{data.activeSetting.currentDayName || "Not set"}</p>
             </div>
-            <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+            <div className="rounded-xl border border-white/5 bg-black/20 p-3 sm:p-4">
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Activated</p>
-              <p className="mt-1 text-xs text-slate-200">{formatDateTime(data.activeSetting.activatedAt)}</p>
+              <p className="mt-1 text-[10px] sm:text-xs text-slate-200">{formatDateTime(data.activeSetting.activatedAt)}</p>
             </div>
-            <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+            <div className="col-span-2 sm:col-span-1 rounded-xl border border-white/5 bg-black/20 p-3 sm:p-4">
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Last Session</p>
-              <p className="mt-1 text-xs text-slate-200">{formatDateTime(data.activeSetting.lastSessionAt)}</p>
+              <p className="mt-1 text-[10px] sm:text-xs text-slate-200">{formatDateTime(data.activeSetting.lastSessionAt)}</p>
             </div>
           </div>
         </div>

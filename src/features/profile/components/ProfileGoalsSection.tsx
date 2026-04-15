@@ -77,6 +77,8 @@ const validateGoalsForm = (form: ProfileGoalsFormState): Partial<Record<keyof Pr
 
   if (heightError) errors.height = heightError;
   if (weightError) errors.weight = weightError;
+  if (!form.fitnessLevel) errors.fitnessLevel = "Select your fitness level";
+  if (!form.primaryFocus) errors.primaryFocus = "Select your primary focus";
 
   return errors;
 };
@@ -121,8 +123,8 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
           weight: form.weight ? Number(form.weight) : null,
         }),
         updateProfileGoalsApi({
-          fitnessLevel: (form.fitnessLevel || null) as FitnessLevel | null,
-          primaryFitnessFocus: (form.primaryFocus || null) as PrimaryFitnessFocus | null,
+          fitnessLevel: form.fitnessLevel as FitnessLevel,
+          primaryFitnessFocus: form.primaryFocus as PrimaryFitnessFocus,
         }),
       ]);
       toast.success("Fitness goals updated successfully");
@@ -234,26 +236,26 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-2.5 transition-all hover:border-blue-500/30 sm:p-4">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-blue-400 sm:text-[9px]">Level</p>
-              <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 sm:p-4 transition-all hover:border-blue-500/30">
+              <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-blue-400">Level</p>
+              <p className="mt-1 sm:mt-1 truncate text-xs sm:text-sm font-black text-white leading-tight">
                 {FITNESS_LEVEL_OPTIONS.find((o) => o.value === form.fitnessLevel)?.label ||
                   "Not set"}
               </p>
             </div>
-            <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-2.5 transition-all hover:border-green-500/30 sm:p-4">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-green-400 sm:text-[9px]">Focus</p>
-              <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-lg">
+            <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3 sm:p-4 transition-all hover:border-green-500/30">
+              <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-green-400">Focus</p>
+              <p className="mt-1 sm:mt-1 truncate text-xs sm:text-sm font-black text-white leading-tight">
                 {FITNESS_FOCUS_OPTIONS.find((o) => o.value === form.primaryFocus)?.label ||
                   "Not set"}
               </p>
             </div>
-            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-2.5 transition-all hover:border-orange-500/30 sm:p-4">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-orange-400 sm:text-[9px]">
+            <div className="col-span-2 sm:col-span-1 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3 sm:p-4 transition-all hover:border-orange-500/30">
+              <p className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-orange-400">
                 Status
               </p>
-              <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-lg">
+              <p className="mt-1 sm:mt-1 truncate text-xs sm:text-sm font-black text-white leading-tight">
                 {profile.hasActiveSubscription ? "Gym-ready" : "Profile-ready"}
               </p>
             </div>
