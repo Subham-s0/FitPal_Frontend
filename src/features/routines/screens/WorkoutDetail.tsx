@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, Plus, X, GripVertical, Edit3, Check, MoreVertical, Trash2, Link } from "lucide-react";
+import { ArrowLeft, Plus, X, Edit3, Check, MoreVertical, Trash2, Link } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
+import { DragHandle } from "@/shared/ui/DragHandle";
 
 import {
   ExerciseLibraryPanel,
@@ -100,6 +101,28 @@ function formatRange(
   if (!range) return null;
   if (range.min === range.max) return formatValue(range.min);
   return `${formatValue(range.min)}-${formatValue(range.max)}`;
+}
+
+function clampNumericInput(value: string, maxDigits: number, allowDecimal: boolean): string {
+  const normalized = allowDecimal ? value.replace(/[^\d.]/g, "") : value.replace(/\D/g, "");
+  const decimalIndex = normalized.indexOf(".");
+
+  if (!allowDecimal || decimalIndex === -1) {
+    return normalized.slice(0, maxDigits);
+  }
+
+  const whole = normalized.slice(0, decimalIndex).replace(/\./g, "");
+  const fraction = normalized.slice(decimalIndex + 1).replace(/\./g, "");
+  const digits = `${whole}${fraction}`.slice(0, maxDigits);
+  const cappedWhole = digits.slice(0, whole.length);
+  const cappedFraction = digits.slice(cappedWhole.length);
+
+  return `${cappedWhole}.${cappedFraction}`;
+}
+
+function getInputWidth(value: string, minCh: number, maxCh: number): string {
+  const chars = Math.min(Math.max(value.length + 1, minCh), maxCh);
+  return `${chars}ch`;
 }
 
 function getExerciseSummaryStats(
@@ -245,7 +268,7 @@ const ExerciseCard = ({
   );
 
   return (
-    <div className="flow-panel rounded-[1.75rem] border border-white/10 bg-[rgba(10,10,10,0.88)] p-4 transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)]">
+    <div className="group flow-panel rounded-[1.75rem] border border-white/10 bg-[rgba(10,10,10,0.88)] p-3 transition-colors hover:border-orange-500/30 hover:bg-[rgba(14,14,14,0.92)] sm:p-4">
       {/* Superset tag */}
       {exercise.supersetTag && (
         <div className="mb-2 flex items-center gap-2">
@@ -256,16 +279,13 @@ const ExerciseCard = ({
       )}
 
       {/* Header */}
-      <div className="mb-3 flex items-start gap-3">
-        {/* Drag Handle - inside the card */}
+      <div className="mb-2 flex items-center gap-2 sm:mb-3">
         {editMode && dragHandleProps && (
-          <div
-            {...dragHandleProps.attributes}
-            {...dragHandleProps.listeners}
-          className="mt-2 flex-shrink-0 cursor-grab rounded-lg p-1.5 text-gray-600 transition-colors hover:bg-white/5 hover:text-gray-300 active:cursor-grabbing"
-          >
-            <GripVertical className="h-5 w-5" />
-          </div>
+          <DragHandle
+            attributes={dragHandleProps.attributes}
+            listeners={dragHandleProps.listeners}
+            iconClassName="h-5 w-5"
+          />
         )}
 
         <button
@@ -275,36 +295,36 @@ const ExerciseCard = ({
             e.preventDefault();
             onOpenDetails?.(exercise);
           }}
-          className="flex min-w-0 flex-1 items-start gap-3 rounded-2xl p-1.5 text-left transition-colors hover:bg-white/[0.04]"
+          className="flex min-w-0 flex-1 items-start gap-2 rounded-2xl p-1 text-left transition-colors hover:bg-white/[0.04] sm:gap-3 sm:p-1.5"
         >
           {/* Larger image */}
           {exercise.coverUrl ? (
             <img
               src={exercise.coverUrl}
               alt={exercise.name}
-              className="h-14 w-14 flex-shrink-0 rounded-xl border border-white/10 object-cover"
+              className="h-12 w-12 flex-shrink-0 rounded-xl border border-white/10 object-cover sm:h-14 sm:w-14"
             />
           ) : (
-            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black text-sm font-black text-orange-600">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black text-xs font-black text-orange-600 sm:h-14 sm:w-14 sm:text-sm">
               {getExerciseInitials(exercise.name)}
             </div>
           )}
 
-          <div className="min-w-0 flex-1 py-1">
-            <div className="mb-1 flex items-center gap-2">
-              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-orange-600/20 text-[11px] font-black text-orange-600">
+          <div className="min-w-0 flex-1 py-0.5 sm:py-1">
+            <div className="mb-0.5 flex items-center gap-2 sm:mb-1">
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-lg bg-orange-600/20 text-[10px] font-black text-orange-600 sm:h-6 sm:w-6 sm:text-[11px]">
                 {exerciseNumber}
               </span>
-              <h4 className="text-base font-bold text-white">{exercise.name}</h4>
+              <h4 className="text-sm font-bold text-white sm:text-base">{exercise.name}</h4>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-gray-500 sm:gap-2 sm:text-xs">
               <span>{exercise.equipmentName || exercise.primaryMuscles.join(", ")}</span>
               {editMode && (
                 <>
-              <span className="text-white/20">•</span>
-              <span className="font-bold text-orange-500">
-                {totalSets} set{totalSets !== 1 ? "s" : ""}
-              </span>
+                  <span className="text-white/20">•</span>
+                  <span className="font-bold text-orange-500">
+                    {totalSets} set{totalSets !== 1 ? "s" : ""}
+                  </span>
                 </>
               )}
             </div>
@@ -376,7 +396,7 @@ const ExerciseCard = ({
       {showSupersetPicker && createPortal(
         <div className="fitpal-portal-root">
           <div className="fixed inset-0 z-[9998] bg-black/60" onClick={(e) => { e.stopPropagation(); setShowSupersetPicker(false); }} />
-          <div 
+          <div
             className="fixed inset-x-4 top-1/2 z-[9999] mx-auto max-w-sm -translate-y-1/2 rounded-3xl border border-white/10 bg-[#141414] p-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -453,41 +473,42 @@ const ExerciseCard = ({
           <table className="w-full text-[11px]">
             <thead>
               <tr className="border-b border-white/5">
-                <th className="pb-1.5 pr-2 text-left font-bold text-gray-500">Set</th>
+                <th className="pb-1 pr-1.5 text-left font-bold text-gray-500 sm:pb-1.5 sm:pr-2">Set</th>
                 {fields.weight && (
-                  <th className="px-1.5 pb-1.5 text-left font-bold text-gray-500">
+                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">
                     {fields.weightLabel || "Weight"}
                   </th>
                 )}
                 {fields.reps && (
-                  <th className="px-1.5 pb-1.5 text-left font-bold text-gray-500">Reps</th>
+                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Reps</th>
                 )}
                 {fields.duration && (
-                  <th className="px-1.5 pb-1.5 text-left font-bold text-gray-500">Time</th>
+                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Time</th>
                 )}
                 {fields.distance && (
-                  <th className="px-1.5 pb-1.5 text-left font-bold text-gray-500">Dist</th>
+                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Dist</th>
                 )}
-                {editMode && <th className="w-7 pb-1.5"></th>}
+                {editMode && <th className="w-7 pb-1 sm:pb-1.5"></th>}
               </tr>
             </thead>
             <tbody>
               {exercise.sets.map((set, index) => (
                 <tr key={set.id} className="border-b border-white/[0.02]">
-                  <td className="py-1 pr-2 font-bold text-white">{index + 1}</td>
+                  <td className="py-0.5 pr-1 font-bold text-white sm:py-1 sm:pr-2">{index + 1}</td>
                   {fields.weight && (
-                    <td className="px-1.5 py-1">
+                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
                       {editMode ? (
                         <input
                           type="number"
                           value={set.targetWeight ?? ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const nextValue = clampNumericInput(e.target.value, 5, true);
                             onUpdateSet?.(exercise.id, set.id, {
-                              targetWeight: e.target.value ? parseFloat(e.target.value) : null,
-                            })
-                          }
+                              targetWeight: nextValue ? parseFloat(nextValue) : null,
+                            });
+                          }}
                           placeholder="-"
-                          className="flow-input w-14 rounded-lg px-1.5 py-0.5 text-[11px]"
+                          className="flow-input w-[4.5rem] rounded-lg px-1.5 py-0.5 text-center text-[10px] sm:text-[11px]"
                         />
                       ) : (
                         <span className="text-gray-400">
@@ -497,18 +518,19 @@ const ExerciseCard = ({
                     </td>
                   )}
                   {fields.reps && (
-                    <td className="px-1.5 py-1">
+                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
                       {editMode ? (
                         <input
                           type="number"
                           value={set.targetReps ?? ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const nextValue = clampNumericInput(e.target.value, 3, false);
                             onUpdateSet?.(exercise.id, set.id, {
-                              targetReps: e.target.value ? parseInt(e.target.value, 10) : null,
-                            })
-                          }
+                              targetReps: nextValue ? parseInt(nextValue, 10) : null,
+                            });
+                          }}
                           placeholder="-"
-                          className="flow-input w-12 rounded-lg px-1.5 py-0.5 text-[11px]"
+                          className="flow-input w-16 rounded-lg px-1.5 py-0.5 text-center text-[10px] sm:text-[11px]"
                         />
                       ) : (
                         <span className="text-gray-400">{set.targetReps || "-"}</span>
@@ -516,7 +538,7 @@ const ExerciseCard = ({
                     </td>
                   )}
                   {fields.duration && (
-                    <td className="px-1.5 py-1">
+                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
                       {editMode ? (
                         <input
                           type="number"
@@ -529,23 +551,23 @@ const ExerciseCard = ({
                             })
                           }
                           placeholder="-"
-                          className="flow-input w-14 rounded-lg px-1.5 py-0.5 text-[11px]"
+                          className="flow-input w-14 rounded-lg px-1 py-0.5 text-[10px] sm:w-14 sm:px-1.5 sm:text-[11px]"
                         />
                       ) : (
                         <span className="text-gray-400">
                           {set.targetDurationSeconds
                             ? `${Math.floor(set.targetDurationSeconds / 60)}:${(
-                                set.targetDurationSeconds % 60
-                              )
-                                .toString()
-                                .padStart(2, "0")}`
+                              set.targetDurationSeconds % 60
+                            )
+                              .toString()
+                              .padStart(2, "0")}`
                             : "-"}
                         </span>
                       )}
                     </td>
                   )}
                   {fields.distance && (
-                    <td className="px-1.5 py-1">
+                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
                       {editMode ? (
                         <input
                           type="number"
@@ -556,7 +578,7 @@ const ExerciseCard = ({
                             })
                           }
                           placeholder="-"
-                          className="flow-input w-14 rounded-lg px-1.5 py-0.5 text-[11px]"
+                          className="flow-input w-14 rounded-lg px-1 py-0.5 text-[10px] sm:w-14 sm:px-1.5 sm:text-[11px]"
                         />
                       ) : (
                         <span className="text-gray-400">
@@ -566,13 +588,13 @@ const ExerciseCard = ({
                     </td>
                   )}
                   {editMode && (
-                    <td className="py-1 pl-1.5">
+                    <td className="py-0.5 pl-1 sm:py-1 sm:pl-1.5">
                       <button
                         type="button"
                         onClick={() => onRemoveSet?.(exercise.id, set.id)}
                         className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </td>
                   )}
@@ -582,16 +604,16 @@ const ExerciseCard = ({
           </table>
         </div>
       ) : (
-        <div className="mt-1 flex flex-wrap gap-2">
+        <div className="mt-1 flex flex-wrap gap-1.5 sm:gap-2">
           {summaryStats.map((stat) => (
             <div
               key={stat.label}
-              className="min-w-[112px] flex-1 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5"
+              className="min-w-[80px] flex-1 rounded-xl sm:rounded-2xl border border-white/8 bg-white/[0.03] px-2.5 py-2 sm:px-3 sm:py-2.5"
             >
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
+              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                 {stat.label}
               </p>
-              <p className={`mt-1 text-base font-black ${stat.valueClassName || "text-white"}`}>
+              <p className={`mt-0.5 sm:mt-1 text-sm sm:text-base font-black ${stat.valueClassName || "text-white"}`}>
                 {stat.value}
               </p>
             </div>
@@ -675,13 +697,13 @@ const WorkoutDetail = ({
       setLocalDay((prev) =>
         prev
           ? {
-              ...prev,
-              exercises: prev.exercises.map((ex) =>
-                ex.id === exerciseId
-                  ? { ...ex, sets: ex.sets.map((s) => (s.id === setId ? { ...s, ...updates } : s)) }
-                  : ex
-              ),
-            }
+            ...prev,
+            exercises: prev.exercises.map((ex) =>
+              ex.id === exerciseId
+                ? { ...ex, sets: ex.sets.map((s) => (s.id === setId ? { ...s, ...updates } : s)) }
+                : ex
+            ),
+          }
           : prev
       );
     },
@@ -692,18 +714,18 @@ const WorkoutDetail = ({
     setLocalDay((prev) =>
       prev
         ? (() => {
-            const exercise = prev.exercises.find((ex) => ex.id === exerciseId);
-            if (!exercise) {
-              return prev;
-            }
+          const exercise = prev.exercises.find((ex) => ex.id === exerciseId);
+          if (!exercise) {
+            return prev;
+          }
 
-            return {
-              ...prev,
-              exercises: prev.exercises.map((ex) =>
-                ex.id === exerciseId ? { ...ex, sets: ex.sets.filter((s) => s.id !== setId) } : ex
-              ),
-            };
-          })()
+          return {
+            ...prev,
+            exercises: prev.exercises.map((ex) =>
+              ex.id === exerciseId ? { ...ex, sets: ex.sets.filter((s) => s.id !== setId) } : ex
+            ),
+          };
+        })()
         : prev
     );
   }, []);
@@ -726,13 +748,13 @@ const WorkoutDetail = ({
     setLocalDay((prev) =>
       prev
         ? (() => {
-            const exercise = prev.exercises.find((ex) => ex.id === exerciseId);
-            if (!exercise) {
-              return prev;
-            }
+          const exercise = prev.exercises.find((ex) => ex.id === exerciseId);
+          if (!exercise) {
+            return prev;
+          }
 
-            return removeExerciseAndLinkedSupersetExercises(prev, exerciseId);
-          })()
+          return removeExerciseAndLinkedSupersetExercises(prev, exerciseId);
+        })()
         : prev
     );
   }, []);
@@ -1001,88 +1023,214 @@ const WorkoutDetail = ({
       <div className="pointer-events-none absolute inset-0 z-0 flow-grid" />
       <div className="relative z-10 flex min-h-full flex-col gap-6 px-5 pt-7 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:px-10 md:pt-10 md:pb-9 lg:min-h-0 lg:flex-1 lg:flex-row lg:pb-8">
 
-      {/* ══ LEFT COLUMN — Scrollable, full width ══ */}
-      <div className="min-w-0 lg:flex-1 lg:overflow-y-auto lg:pr-4 xl:pr-6">
-        <div className="space-y-4 pb-6">
+        {/* ══ LEFT COLUMN — Scrollable, full width ══ */}
+        <div className="min-w-0 lg:flex-1 lg:overflow-y-auto lg:pr-4 xl:pr-6">
+          <div className="space-y-4 pb-6">
 
-          {/* ── Header ── */}
-          <div className="space-y-2">
-            <p className="flow-label">{routine.name}</p>
+            {/* ── Header ── */}
+            <div className="space-y-2">
+              <p className="flow-label">{routine.name}</p>
 
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                {editMode || isEditingName ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={localDay.name}
-                      onChange={(e) => setLocalDay({ ...localDay, name: e.target.value })}
-                      onBlur={handleCommitNameEdit}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleCommitNameEdit();
-                        if (e.key === "Escape") {
-                          setLocalDay({ ...localDay, name: day.name });
-                          setIsEditingName(false);
-                        }
-                      }}
-                      autoFocus
-                      className="flow-input min-w-0 px-3 py-1 text-xl font-black placeholder:text-gray-500"
-                      placeholder="Day name..."
-                    />
-                    {!editMode && (
-                      <button
-                        onClick={handleCommitNameEdit}
-                        className="flow-button-secondary flex-shrink-0 px-2.5 py-2 text-orange-400"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setIsEditingName(true)}
-                    className="group/name flex items-center gap-2 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
-                    title="Click to rename"
-                  >
-                    <h2 className="text-2xl font-black text-white transition-colors group-hover/name:text-orange-400">
-                      {localDay.name}
-                    </h2>
-                    <Edit3 className="h-4 w-4 text-gray-600 opacity-0 transition-opacity group-hover/name:opacity-100" />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex flex-shrink-0 items-center gap-2 pt-1 sm:pt-0">
-                {editMode ? (
-                  <>
-                    <button onClick={() => void handleCancel()} className="flow-button-secondary">
-                      Cancel
-                    </button>
-                    <button onClick={handleSave} className="flow-button-primary">
-                      Save
-                    </button>
-                  </>
-                ) : (
-                  <>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  {editMode || isEditingName ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={localDay.name}
+                        onChange={(e) => setLocalDay({ ...localDay, name: e.target.value })}
+                        onBlur={handleCommitNameEdit}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleCommitNameEdit();
+                          if (e.key === "Escape") {
+                            setLocalDay({ ...localDay, name: day.name });
+                            setIsEditingName(false);
+                          }
+                        }}
+                        autoFocus
+                        className="flow-input min-w-0 px-3 py-1 text-xl font-black placeholder:text-gray-500"
+                        placeholder="Day name..."
+                      />
+                      {!editMode && (
+                        <button
+                          onClick={handleCommitNameEdit}
+                          className="flow-button-secondary flex-shrink-0 px-2.5 py-2 text-orange-400"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => void handleBack()}
-                      className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300"
+                      onClick={() => setIsEditingName(true)}
+                      className="group/name flex items-center gap-2 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
+                      title="Click to rename"
                     >
-                      <ArrowLeft className="h-4 w-4" />
-                      Back
+                      <h2 className="text-2xl font-black text-white transition-colors group-hover/name:text-orange-400">
+                        {localDay.name}
+                      </h2>
+                      <Edit3 className="h-4 w-4 text-gray-600 opacity-0 transition-opacity group-hover/name:opacity-100" />
                     </button>
-                    <button onClick={() => setEditMode(true)} className="flow-button-primary">
-                      <Edit3 className="h-4 w-4" />
-                      Edit
+                  )}
+                </div>
+
+                <div className="flex flex-shrink-0 items-center gap-2 pt-1 sm:pt-0">
+                  {editMode ? (
+                    <>
+                      <button onClick={() => void handleCancel()} className="flow-button-secondary">
+                        Cancel
+                      </button>
+                      <button onClick={handleSave} className="flow-button-primary">
+                        Save
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => void handleBack()}
+                        className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                      </button>
+                      <button onClick={() => setEditMode(true)} className="flow-button-primary">
+                        <Edit3 className="h-4 w-4" />
+                        Edit
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Muscle Distribution (Edit Mode Only - at top) ── */}
+            {editMode && exercisesToShow.length > 0 && (
+              <div className="flow-panel rounded-[1.75rem] p-4">
+                <p className="flow-label mb-3">
+                  Muscle Distribution
+                </p>
+                <MuscleHeatmap
+                  exercises={heatmapExercises}
+                  variant="compact"
+                  showSetBars={true}
+                  showScoreLegend={false}
+                  layout="horizontal"
+                  imageSize="medium"
+                  maxBars={5}
+                />
+              </div>
+            )}
+
+            {/* ── Exercise list ── */}
+            <div>
+              <p className="flow-label mb-3">
+                Exercises ({exercisesToShow.length})
+              </p>
+              {exercisesToShow.length === 0 ? (
+                <div className="flow-panel rounded-[1.75rem] p-12 text-center">
+                  <p className="mb-4 text-sm text-gray-500">No exercises yet</p>
+                  {editMode ? (
+                    <button
+                      onClick={() => setShowLibrarySheet(true)}
+                      className="flow-button-primary lg:hidden"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Exercise
                     </button>
-                  </>
-                )}
+                  ) : (
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className="text-[11px] font-black uppercase tracking-[0.16em] text-orange-400 transition-colors hover:text-orange-300"
+                    >
+                      Add Exercises
+                    </button>
+                  )}
+                </div>
+              ) : editMode ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleExerciseDragEnd}
+                >
+                  <SortableContext
+                    items={exercisesToShow.map((ex) => ex.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-3">
+                      {exercisesToShow.map((exercise, index) => (
+                        <SortableExerciseWrapper key={exercise.id} exercise={exercise}>
+                          {(dragHandleProps) => (
+                            <ExerciseCard
+                              exercise={exercise}
+                              exerciseNumber={index + 1}
+                              editMode
+                              allExercises={exercisesToShow}
+                              dragHandleProps={dragHandleProps}
+                              onOpenDetails={handleOpenExerciseDetails}
+                              onUpdateSet={handleUpdateSet}
+                              onRemoveSet={handleRemoveSet}
+                              onAddSet={handleAddSet}
+                              onRemoveExercise={handleRemoveExercise}
+                              onUpdateNotes={handleUpdateNotes}
+                              onLinkSuperset={handleLinkSuperset}
+                              onRemoveSuperset={handleRemoveSuperset}
+                            />
+                          )}
+                        </SortableExerciseWrapper>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <div className="space-y-3">
+                  {exercisesToShow.map((exercise, index) => (
+                    <ExerciseCard
+                      key={exercise.id}
+                      exercise={exercise}
+                      exerciseNumber={index + 1}
+                      editMode={false}
+                      onOpenDetails={handleOpenExerciseDetails}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile: Add Exercise button at bottom for better UX */}
+            {editMode && exercisesToShow.length > 0 && (
+              <button
+                onClick={() => setShowLibrarySheet(true)}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-sm font-bold text-gray-400 transition-all hover:border-orange-600/30 hover:bg-orange-600/5 hover:text-orange-400 lg:hidden"
+              >
+                <Plus className="h-4 w-4" />
+                Add Exercise
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ══ RIGHT COLUMN — Sticky Sidebar ══ */}
+        <div className="w-full flex-shrink-0 space-y-4 lg:w-80 lg:self-start">
+
+          {/* Day Summary */}
+          <div className="flow-panel rounded-[1.75rem] p-4">
+            <h3 className="flow-label mb-3">
+              Day Summary
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flow-panel-subtle rounded-[1.25rem] p-3 text-center">
+                <p className="text-2xl font-black text-white">{exercisesToShow.length}</p>
+                <p className="text-[9px] font-bold uppercase text-gray-500">Exercises</p>
+              </div>
+              <div className="flow-panel-subtle rounded-[1.25rem] p-3 text-center">
+                <p className="text-2xl font-black text-white">{totalSets}</p>
+                <p className="text-[9px] font-bold uppercase text-gray-500">Total Sets</p>
               </div>
             </div>
           </div>
 
-          {/* ── Muscle Distribution (Edit Mode Only - at top) ── */}
-          {editMode && exercisesToShow.length > 0 && (
+          {/* Muscle Distribution (View Mode Only - in sidebar) */}
+          {!editMode && exercisesToShow.length > 0 && (
             <div className="flow-panel rounded-[1.75rem] p-4">
               <p className="flow-label mb-3">
                 Muscle Distribution
@@ -1092,177 +1240,51 @@ const WorkoutDetail = ({
                 variant="compact"
                 showSetBars={true}
                 showScoreLegend={false}
-                layout="horizontal"
                 imageSize="medium"
                 maxBars={5}
               />
             </div>
           )}
 
-          {/* ── Exercise list ── */}
-          <div>
-            <p className="flow-label mb-3">
-              Exercises ({exercisesToShow.length})
-            </p>
-            {exercisesToShow.length === 0 ? (
-              <div className="flow-panel rounded-[1.75rem] p-12 text-center">
-                <p className="mb-4 text-sm text-gray-500">No exercises yet</p>
-                {editMode ? (
-                  <button
-                    onClick={() => setShowLibrarySheet(true)}
-                    className="flow-button-primary lg:hidden"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Exercise
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setEditMode(true)}
-                    className="text-[11px] font-black uppercase tracking-[0.16em] text-orange-400 transition-colors hover:text-orange-300"
-                  >
-                    Add Exercises
-                  </button>
-                )}
+          {/* Add Exercise Library — edit mode, desktop only */}
+          {editMode && (
+            <div className="flow-panel hidden rounded-[1.75rem] lg:block">
+              <div className="border-b border-white/5 px-4 py-3">
+                <h3 className="flow-label">
+                  Add Exercises
+                </h3>
               </div>
-            ) : editMode ? (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleExerciseDragEnd}
-              >
-              <SortableContext
-                items={exercisesToShow.map((ex) => ex.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-3">
-                  {exercisesToShow.map((exercise, index) => (
-                    <SortableExerciseWrapper key={exercise.id} exercise={exercise}>
-                      {(dragHandleProps) => (
-                        <ExerciseCard
-                          exercise={exercise}
-                          exerciseNumber={index + 1}
-                          editMode
-                          allExercises={exercisesToShow}
-                          dragHandleProps={dragHandleProps}
-                          onOpenDetails={handleOpenExerciseDetails}
-                          onUpdateSet={handleUpdateSet}
-                          onRemoveSet={handleRemoveSet}
-                          onAddSet={handleAddSet}
-                          onRemoveExercise={handleRemoveExercise}
-                          onUpdateNotes={handleUpdateNotes}
-                          onLinkSuperset={handleLinkSuperset}
-                          onRemoveSuperset={handleRemoveSuperset}
-                        />
-                      )}
-                    </SortableExerciseWrapper>
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <div className="space-y-3">
-              {exercisesToShow.map((exercise, index) => (
-                <ExerciseCard
-                  key={exercise.id}
-                  exercise={exercise}
-                  exerciseNumber={index + 1}
-                  editMode={false}
-                  onOpenDetails={handleOpenExerciseDetails}
+              <div className="max-h-[calc(100vh-320px)] min-h-[300px] overflow-y-auto p-3">
+                <ExerciseLibraryPanel
+                  onAddExercise={handleAddExercise}
+                  onSelectExercise={handleSelectExerciseFromLibrary}
+                  selectedExerciseKey={selectedExerciseKey}
+                  showAddButton
+                  showCustomButton
                 />
-              ))}
+              </div>
             </div>
           )}
-          </div>
 
-          {/* Mobile: Add Exercise button at bottom for better UX */}
-          {editMode && exercisesToShow.length > 0 && (
-            <button
-              onClick={() => setShowLibrarySheet(true)}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-4 text-sm font-bold text-gray-400 transition-all hover:border-orange-600/30 hover:bg-orange-600/5 hover:text-orange-400 lg:hidden"
-            >
-              <Plus className="h-4 w-4" />
-              Add Exercise
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ══ RIGHT COLUMN — Sticky Sidebar ══ */}
-      <div className="w-full flex-shrink-0 space-y-4 lg:w-80 lg:self-start">
-
-        {/* Day Summary */}
-        <div className="flow-panel rounded-[1.75rem] p-4">
-          <h3 className="flow-label mb-3">
-            Day Summary
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flow-panel-subtle rounded-[1.25rem] p-3 text-center">
-              <p className="text-2xl font-black text-white">{exercisesToShow.length}</p>
-              <p className="text-[9px] font-bold uppercase text-gray-500">Exercises</p>
-            </div>
-            <div className="flow-panel-subtle rounded-[1.25rem] p-3 text-center">
-              <p className="text-2xl font-black text-white">{totalSets}</p>
-              <p className="text-[9px] font-bold uppercase text-gray-500">Total Sets</p>
-            </div>
-          </div>
         </div>
 
-        {/* Muscle Distribution (View Mode Only - in sidebar) */}
-        {!editMode && exercisesToShow.length > 0 && (
-          <div className="flow-panel rounded-[1.75rem] p-4">
-            <p className="flow-label mb-3">
-              Muscle Distribution
-            </p>
-            <MuscleHeatmap
-              exercises={heatmapExercises}
-              variant="compact"
-              showSetBars={true}
-              showScoreLegend={false}
-              imageSize="medium"
-              maxBars={5}
-            />
-          </div>
-        )}
-
-        {/* Add Exercise Library — edit mode, desktop only */}
+        {/* Mobile Exercise Library Sheet */}
         {editMode && (
-          <div className="flow-panel hidden rounded-[1.75rem] lg:block">
-            <div className="border-b border-white/5 px-4 py-3">
-              <h3 className="flow-label">
-                Add Exercises
-              </h3>
-            </div>
-            <div className="max-h-[calc(100vh-320px)] min-h-[300px] overflow-y-auto p-3">
-              <ExerciseLibraryPanel
-                onAddExercise={handleAddExercise}
-                onSelectExercise={handleSelectExerciseFromLibrary}
-                selectedExerciseKey={selectedExerciseKey}
-                showAddButton
-                showCustomButton
-              />
-            </div>
-          </div>
+          <ExerciseLibrarySheet
+            isOpen={showLibrarySheet}
+            onClose={() => setShowLibrarySheet(false)}
+            onAddExercise={handleAddExercise}
+            onSelectExercise={handleSelectExerciseFromLibrary}
+            selectedExerciseKey={selectedExerciseKey}
+            showAddButton
+          />
         )}
 
-      </div>
-
-      {/* Mobile Exercise Library Sheet */}
-      {editMode && (
-        <ExerciseLibrarySheet
-          isOpen={showLibrarySheet}
-          onClose={() => setShowLibrarySheet(false)}
-          onAddExercise={handleAddExercise}
-          onSelectExercise={handleSelectExerciseFromLibrary}
-          selectedExerciseKey={selectedExerciseKey}
-          showAddButton
+        <ExerciseDetailSheet
+          exercise={selectedExerciseDetail}
+          open={isExerciseDetailOpen}
+          onOpenChange={setIsExerciseDetailOpen}
         />
-      )}
-
-      <ExerciseDetailSheet
-        exercise={selectedExerciseDetail}
-        open={isExerciseDetailOpen}
-        onOpenChange={setIsExerciseDetailOpen}
-      />
       </div>
     </div>
   );

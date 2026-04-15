@@ -1,12 +1,20 @@
-import { useState, useCallback, useEffect } from "react";
-import RoutinesSectionNew from "@/features/routines/components/RoutinesSectionNew";
-import WorkoutDetail from "@/features/routines/screens/WorkoutDetail";
+import { Suspense, lazy, useState, useCallback, useEffect } from "react";
 
 type View = "list" | "detail";
 
 interface RoutineFlowProps {
   onViewModeChange?: (view: View) => void;
 }
+
+const RoutinesSectionNew = lazy(() => import("@/features/routines/components/RoutinesSectionNew"));
+const WorkoutDetail = lazy(() => import("@/features/routines/screens/WorkoutDetail"));
+
+const RoutineFlowFallback = ({ label }: { label: string }) => (
+  <div className="flex min-h-[320px] items-center justify-center rounded-[2rem] border border-white/10 user-surface-soft p-6 text-center text-sm font-bold uppercase tracking-[0.12em] text-white/55">
+    <span className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-orange-500" />
+    {label}
+  </div>
+);
 
 /**
  * RoutineFlow — orchestrates the routine management flow.
@@ -51,7 +59,8 @@ export function RoutineFlow({ onViewModeChange }: RoutineFlowProps) {
   // ── LIST ───────────────────────────────────────────────
   if (view === "list") {
     return (
-      <RoutinesSectionNew
+      <Suspense fallback={<RoutineFlowFallback label="Loading routine list..." />}>
+        <RoutinesSectionNew
         key={refreshKey}
         initialExpandedRoutineId={expandOnReturnId}
         initialInlineEditRoutineId={inlineEditRoutineId}
@@ -71,20 +80,23 @@ export function RoutineFlow({ onViewModeChange }: RoutineFlowProps) {
           setExpandOnReturnId(rId);
           setView("detail");
         }}
-      />
+        />
+      </Suspense>
     );
   }
 
   // ── DETAIL ─────────────────────────────────────────────
   if (view === "detail" && routineId && dayId) {
     return (
-      <WorkoutDetail
+      <Suspense fallback={<RoutineFlowFallback label="Loading workout detail..." />}>
+        <WorkoutDetail
         routineId={routineId}
         dayId={dayId}
         startInEditMode={startInEditMode}
         onBack={() => goToList(routineId)}   // expand the parent routine card on back
         onEditRoutineDays={() => goToList(routineId)}
-      />
+        />
+      </Suspense>
     );
   }
 

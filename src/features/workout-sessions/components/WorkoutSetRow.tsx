@@ -59,6 +59,28 @@ function parseDuration(value: string): number | null {
   return parseInt(value, 10) || null;
 }
 
+function clampNumericInput(value: string, maxDigits: number, allowDecimal: boolean): string {
+  const normalized = allowDecimal ? value.replace(/[^\d.]/g, "") : value.replace(/\D/g, "");
+  const decimalIndex = normalized.indexOf(".");
+
+  if (!allowDecimal || decimalIndex === -1) {
+    return normalized.slice(0, maxDigits);
+  }
+
+  const whole = normalized.slice(0, decimalIndex).replace(/\./g, "");
+  const fraction = normalized.slice(decimalIndex + 1).replace(/\./g, "");
+  const digits = `${whole}${fraction}`.slice(0, maxDigits);
+  const cappedWhole = digits.slice(0, whole.length);
+  const cappedFraction = digits.slice(cappedWhole.length);
+
+  return `${cappedWhole}.${cappedFraction}`;
+}
+
+function getInputWidth(value: string, minCh: number, maxCh: number): string {
+  const chars = Math.min(Math.max(value.length + 1, minCh), maxCh);
+  return `${chars}ch`;
+}
+
 export default function WorkoutSetRow({
   set,
   exerciseType,
@@ -149,7 +171,7 @@ export default function WorkoutSetRow({
       }`}
     >
       {/* Checkbox */}
-      <td className="w-10 px-1 sm:px-2 py-1 sm:py-2">
+      <td className="w-10 px-1 py-1 sm:py-2">
         <Checkbox
           checked={set.completed}
           onCheckedChange={(checked) => handleCompletedChange(checked === true)}
@@ -166,34 +188,36 @@ export default function WorkoutSetRow({
 
       {/* Actual inputs */}
       {fields.weight && (
-        <td className="px-1 sm:px-2 py-1 sm:py-2">
+        <td className="px-0.5 py-1 sm:py-2">
           <div className="flex items-center gap-1">
             <input
               type="number"
               value={localActualWeight}
-              onChange={(e) => setLocalActualWeight(e.target.value)}
+              onChange={(e) =>
+                setLocalActualWeight(clampNumericInput(e.target.value, 5, true))
+              }
               onBlur={handleWeightBlur}
               disabled={disabled}
               placeholder={set.targetWeight?.toString() ?? "-"}
-              className={`flow-input w-16 rounded-lg px-2 py-1 text-sm font-medium ${
+              className={`flow-input w-[4.5rem] rounded-lg px-2 py-1 text-center text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
-            <span className="text-[10px] sm:text-xs text-gray-500">kg</span>
+            <span className="flex-shrink-0 text-[10px] sm:text-xs text-gray-500">kg</span>
           </div>
         </td>
       )}
 
       {fields.reps && (
-        <td className="px-1 sm:px-2 py-1 sm:py-2">
+        <td className="px-0.5 py-1 sm:py-2">
           <input
             type="number"
             value={localActualReps}
-            onChange={(e) => setLocalActualReps(e.target.value)}
+            onChange={(e) => setLocalActualReps(clampNumericInput(e.target.value, 3, false))}
             onBlur={handleRepsBlur}
             disabled={disabled}
             placeholder={set.targetReps?.toString() ?? "-"}
-            className={`flow-input w-14 rounded-lg px-2 py-1 text-sm font-medium ${
+            className={`flow-input w-16 rounded-lg px-2 py-1 text-center text-sm font-medium ${
               set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
             }`}
           />
@@ -201,7 +225,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.duration && (
-        <td className="px-1 sm:px-2 py-1 sm:py-2">
+        <td className="px-0 py-1 sm:py-2">
           <div className="flex items-center gap-1">
             <Timer className="h-3.5 w-3.5 text-gray-500" />
             <input
@@ -220,7 +244,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.distance && (
-        <td className="px-1 sm:px-2 py-1 sm:py-2">
+        <td className="px-0 py-1 sm:py-2">
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -239,7 +263,7 @@ export default function WorkoutSetRow({
       )}
 
       {/* Target display */}
-      <td className="px-1 sm:px-2 py-1 sm:py-2 text-right">
+      <td className="px-0 py-1 sm:py-2 text-right">
         <span className="text-[10px] sm:text-xs leading-none text-gray-500">
           Target: {formatTarget()}
         </span>
@@ -247,7 +271,7 @@ export default function WorkoutSetRow({
 
       {/* Remove button */}
       {canRemove && onRemoveSet && (
-        <td className="w-10 px-1 sm:px-2 py-1 sm:py-2">
+        <td className="w-10 px-1 py-1 sm:py-2">
           <button
             type="button"
             onClick={() => onRemoveSet(set.routineLogSetId)}

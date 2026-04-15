@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -32,7 +32,6 @@ import {
   AlertCircle,
   Trash2,
   RefreshCw,
-  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +63,7 @@ import {
   workoutSessionQueryKeys,
 } from "../workoutSessionApi";
 import { getRoutineDetailApi, routineQueryKeys } from "@/features/routines/routineApi";
+import { DragHandle } from "@/shared/ui/DragHandle";
 import type {
   WorkoutSessionResponse,
   WorkoutSessionExerciseResponse,
@@ -348,6 +348,7 @@ function SessionExerciseCard({
   exerciseIndex,
   routineLogId,
   hasRoutine,
+  dragHandleProps,
   templateSetCounts,
   onSetUpdate,
   onAddSet,
@@ -363,6 +364,10 @@ function SessionExerciseCard({
   exerciseIndex: number;
   routineLogId: string;
   hasRoutine: boolean;
+  dragHandleProps?: {
+    attributes: Record<string, unknown>;
+    listeners: Record<string, unknown> | undefined;
+  };
   templateSetCounts: Map<string, number>;
   onSetUpdate: (exerciseId: string, setId: string, updates: UpdateWorkoutSetRequest) => void;
   onAddSet: (exerciseId: string) => void;
@@ -433,7 +438,14 @@ function SessionExerciseCard({
       )}
 
       {/* Header - Clickable for details */}
-      <div className="flex w-full items-center gap-4 p-4">
+      <div className="flex w-full items-center gap-2 p-4 sm:gap-3">
+        {dragHandleProps && (
+          <DragHandle
+            attributes={dragHandleProps.attributes}
+            listeners={dragHandleProps.listeners}
+          />
+        )}
+
         {/* Cover image/initials - Click opens detail */}
         <button
           type="button"
@@ -500,13 +512,13 @@ function SessionExerciseCard({
           <table className="w-full">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-gray-500">
-                <th className="w-10 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Done</th>
-                {fields.weight && <th className="w-20 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Weight</th>}
-                {fields.reps && <th className="w-16 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Reps</th>}
-                {fields.duration && <th className="w-20 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Time</th>}
-                {fields.distance && <th className="w-20 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Dist</th>}
-                <th className="px-1 sm:px-2 py-1.5 sm:py-2 text-right">Target</th>
-                {totalSets > 1 && <th className="w-10 px-1 sm:px-2 py-1.5 sm:py-2"></th>}
+                <th className="w-10 px-0.5 py-1.5 sm:py-2 text-left">Done</th>
+                {fields.weight && <th className="w-[5.5rem] px-0.5 py-1.5 sm:py-2 text-left">Weight</th>}
+                {fields.reps && <th className="w-[4.5rem] px-0.5 py-1.5 sm:py-2 text-left">Reps</th>}
+                {fields.duration && <th className="w-[5rem] px-0.5 py-1.5 sm:py-2 text-left">Time</th>}
+                {fields.distance && <th className="w-[5rem] px-0.5 py-1.5 sm:py-2 text-left">Dist</th>}
+                <th className="px-0.5 py-1.5 sm:py-2 text-right">Target</th>
+                {totalSets > 1 && <th className="w-10 px-0.5 py-1.5 sm:py-2"></th>}
               </tr>
             </thead>
             <tbody>
@@ -590,19 +602,8 @@ function SortableExerciseCard(props: SortableExerciseCardProps) {
 
   return (
     <div ref={setNodeRef} style={style} className="group relative">
-      <div className="flex items-start gap-2">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="mt-4 flex-shrink-0 cursor-grab text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-        {/* Exercise Card */}
-        <div className="min-w-0 flex-1">
-          <SessionExerciseCard {...props} />
-        </div>
+      <div className="min-w-0">
+        <SessionExerciseCard {...props} dragHandleProps={{ attributes, listeners }} />
       </div>
     </div>
   );
@@ -626,6 +627,8 @@ export default function WorkoutSessionScreen() {
   const [selectedExerciseDetail, setSelectedExerciseDetail] = useState<ExerciseDetailPreview | null>(null);
   const [isExerciseDetailOpen, setIsExerciseDetailOpen] = useState(false);
   const [addingToRoutineId, setAddingToRoutineId] = useState<string | null>(null);
+  const previousExpandedRoutineLogIdRef = useRef<string | null>(null);
+  const previousSessionExerciseIdsRef = useRef<string[]>([]);
 
   // Fetch session data
   const {
@@ -698,12 +701,57 @@ export default function WorkoutSessionScreen() {
     });
   }, [currentRoutineDay, session, templateSetCounts]);
 
-  // Initialize expanded exercises when session loads
+  // Reconcile expanded rows with the latest session payload while preserving user toggles.
   useEffect(() => {
-    if (session?.exercises) {
-      setExpandedExercises(new Set(session.exercises.map((e) => e.routineLogExerciseId)));
+    if (!session) {
+      previousExpandedRoutineLogIdRef.current = null;
+      previousSessionExerciseIdsRef.current = [];
+      return;
     }
-  }, [session?.routineLogId]);
+
+    const nextExerciseIds = session.exercises.map((exercise) => exercise.routineLogExerciseId);
+    const previousRoutineLogId = previousExpandedRoutineLogIdRef.current;
+    const previousExerciseIds = previousSessionExerciseIdsRef.current;
+    const isNewSession = previousRoutineLogId !== session.routineLogId;
+
+    setExpandedExercises((currentExpanded) => {
+      const fullyExpanded = new Set(nextExerciseIds);
+      const alreadyFullyExpanded =
+        currentExpanded.size === nextExerciseIds.length &&
+        nextExerciseIds.every((exerciseId) => currentExpanded.has(exerciseId));
+
+      if (isNewSession || previousExerciseIds.length === 0) {
+        return alreadyFullyExpanded ? currentExpanded : fullyExpanded;
+      }
+
+      const previousExerciseIdSet = new Set(previousExerciseIds);
+      const nextExerciseIdSet = new Set(nextExerciseIds);
+      const reconciledExpanded = new Set<string>();
+      let changed = false;
+
+      currentExpanded.forEach((exerciseId) => {
+        if (nextExerciseIdSet.has(exerciseId)) {
+          reconciledExpanded.add(exerciseId);
+        } else {
+          changed = true;
+        }
+      });
+
+      nextExerciseIds.forEach((exerciseId) => {
+        if (!previousExerciseIdSet.has(exerciseId)) {
+          reconciledExpanded.add(exerciseId);
+          if (!currentExpanded.has(exerciseId)) {
+            changed = true;
+          }
+        }
+      });
+
+      return changed ? reconciledExpanded : currentExpanded;
+    });
+
+    previousExpandedRoutineLogIdRef.current = session.routineLogId;
+    previousSessionExerciseIdsRef.current = nextExerciseIds;
+  }, [session]);
 
   // Live timer
   useEffect(() => {
@@ -742,7 +790,7 @@ export default function WorkoutSessionScreen() {
       totalVolume,
       exerciseCount: session.exercises.length,
     };
-  }, [session?.exercises]);
+  }, [session]);
 
   // Toggle exercise expansion
   const toggleExercise = useCallback((exerciseId: string) => {

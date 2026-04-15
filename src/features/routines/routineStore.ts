@@ -2,8 +2,7 @@ import {
   activateRoutineApi,
   createRoutineApi,
   deleteRoutineApi,
-  getMyRoutinesApi,
-  getRoutineDetailApi,
+  getMyRoutineDetailsApi,
   updateRoutineApi,
 } from "@/features/routines/routineApi";
 import { getApiErrorMessage } from "@/shared/api/client";
@@ -379,18 +378,7 @@ function applyServerDetailToRoutine(existing: Routine | undefined, detail: Routi
 }
 
 async function fetchRoutineDetails(): Promise<RoutineDetailResponse[]> {
-  const summaries = await getMyRoutinesApi();
-  if (summaries.length === 0) {
-    return [];
-  }
-
-  const results = await Promise.allSettled(
-    summaries.map((summary) => getRoutineDetailApi(summary.routineId))
-  );
-
-  return results
-    .filter((result): result is PromiseFulfilledResult<RoutineDetailResponse> => result.status === "fulfilled")
-    .map((result) => result.value);
+  return getMyRoutineDetailsApi();
 }
 
 function mergeRemoteRoutines(remoteDetails: RoutineDetailResponse[]): void {

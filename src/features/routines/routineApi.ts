@@ -19,6 +19,15 @@ export async function getMyRoutinesApi(): Promise<RoutineSummaryResponse[]> {
 }
 
 /**
+ * Get all routine details for the current user in one request.
+ * Used by the routines workspace to avoid list + N detail requests on initial load.
+ */
+export async function getMyRoutineDetailsApi(): Promise<RoutineDetailResponse[]> {
+  const response = await apiClient.get<RoutineDetailResponse[]>("/users/me/routines/details");
+  return response.data;
+}
+
+/**
  * Get full routine detail for editing (includes all exercises and sets)
  */
 export async function getRoutineDetailApi(routineId: string): Promise<RoutineDetailResponse> {

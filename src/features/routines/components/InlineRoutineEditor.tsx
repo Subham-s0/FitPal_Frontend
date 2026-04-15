@@ -5,7 +5,6 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
-  GripVertical,
   Edit2,
   Trash2,
   MoreVertical,
@@ -28,6 +27,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
+import { DragHandle } from "@/shared/ui/DragHandle";
 
 import {
   type Routine,
@@ -110,14 +110,7 @@ function SortableDayRow({
   return (
     <div ref={setNodeRef} style={style} className="group relative">
       <div className="flex items-center gap-2">
-        {/* Drag Handle */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="flex-shrink-0 cursor-grab text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
+        <DragHandle attributes={attributes} listeners={listeners} />
 
         {/* Day Card - Clickable to toggle expand */}
         <div

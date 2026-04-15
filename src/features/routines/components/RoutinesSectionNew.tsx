@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -10,7 +10,6 @@ import {
   Plus,
   MoreVertical,
   Dumbbell,
-  GripVertical,
   Star,
   Edit2,
   Trash2,
@@ -37,13 +36,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
+import { DragHandle } from "@/shared/ui/DragHandle";
 
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
-import MuscleHeatmap from "@/features/routines/components/MuscleHeatmap";
-import InlineRoutineEditor from "@/features/routines/components/InlineRoutineEditor";
-import AiRoutineGenerationDialog from "@/features/routines/components/AiRoutineGenerationDialog";
-import AiRoutinePreviewPanel from "@/features/routines/components/AiRoutinePreviewPanel";
-import StartWorkoutDayDialog from "@/features/routines/components/StartWorkoutDayDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -96,6 +91,19 @@ import {
 } from "@/features/workout-sessions/workoutSessionApi";
 import { getApiErrorMessage } from "@/shared/api/client";
 
+const MuscleHeatmap = lazy(() => import("@/features/routines/components/MuscleHeatmap"));
+const InlineRoutineEditor = lazy(() => import("@/features/routines/components/InlineRoutineEditor"));
+const AiRoutineGenerationDialog = lazy(() => import("@/features/routines/components/AiRoutineGenerationDialog"));
+const AiRoutinePreviewPanel = lazy(() => import("@/features/routines/components/AiRoutinePreviewPanel"));
+const StartWorkoutDayDialog = lazy(() => import("@/features/routines/components/StartWorkoutDayDialog"));
+
+const RoutinePanelFallback = ({ label }: { label: string }) => (
+  <div className="flex min-h-[220px] items-center justify-center rounded-[2rem] border border-white/10 user-surface-soft p-6 text-center text-sm font-bold uppercase tracking-[0.12em] text-white/50">
+    <span className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-orange-500" />
+    {label}
+  </div>
+);
+
 // ============================================
 // SORTABLE DAY ROW (for reordering inside the card)
 // ============================================
@@ -125,14 +133,9 @@ function SortableDayRow({
   onCopyDay,
   onStartWorkout,
 }: SortableDayRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: day.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: day.id,
+  });
 
   const [showMenu, setShowMenu] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
@@ -160,14 +163,7 @@ function SortableDayRow({
 
   return (
     <div ref={setNodeRef} style={style} className="group relative flex items-center gap-2">
-      {/* Drag Handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="flex-shrink-0 cursor-grab text-gray-600 opacity-0 transition-opacity group-hover:opacity-100 active:cursor-grabbing"
-      >
-        <GripVertical className="h-4 w-4" />
-      </div>
+      <DragHandle attributes={attributes} listeners={listeners} />
 
       {/* Day Card - Click to View */}
       <div
@@ -991,6 +987,12 @@ const RoutinesSection = ({
     generatedRoutineResult?.suggestions.filter(
       (suggestion) => !rejectedGeneratedSuggestionIds.includes(suggestion.splitId)
     ) ?? [];
+  const isInitialRoutineListLoading =
+    routinesListQuery.isLoading && routines.length === 0 && !inlineEditRoutineId;
+  const initialRoutineListErrorMessage =
+    routinesListQuery.isError && routines.length === 0 && !inlineEditRoutineId
+      ? getApiErrorMessage(routinesListQuery.error, "Failed to load routines.")
+      : null;
   const hasGeneratedRoutinePanel =
     (generatedRoutinePending || generatedRoutineResult !== null || generatedRoutineError !== null)
     && !(generatedPreviewResult !== null && generatedPreviewRoutine !== null);
@@ -1151,13 +1153,15 @@ const RoutinesSection = ({
               </div>
             </section>
           ) : generatedPreviewResult && generatedPreviewRoutine ? (
-            <AiRoutinePreviewPanel
-              key={generatedPreviewResult.selectedSuggestion.splitId}
-              previewRoutine={generatedPreviewRoutine}
-              previewResponse={generatedPreviewResult}
-              onImport={() => importGeneratedRoutineMutation.mutate()}
-              importPending={importGeneratedRoutineMutation.isPending}
-            />
+            <Suspense fallback={<RoutinePanelFallback label="Loading AI preview..." />}>
+              <AiRoutinePreviewPanel
+                key={generatedPreviewResult.selectedSuggestion.splitId}
+                previewRoutine={generatedPreviewRoutine}
+                previewResponse={generatedPreviewResult}
+                onImport={() => importGeneratedRoutineMutation.mutate()}
+                importPending={importGeneratedRoutineMutation.isPending}
+              />
+            </Suspense>
           ) : null
         )}
 
@@ -1368,22 +1372,49 @@ const RoutinesSection = ({
 
         {/* Inline Editor for New/Edit Routine */}
         {inlineEditRoutineId && (
-          <InlineRoutineEditor
-            routineId={inlineEditRoutineId}
-            isNewRoutine={isCreatingNewRoutine}
-            onSave={handleInlineEditorSave}
-            onCancel={handleInlineEditorCancel}
-            onEditDay={(routineId, dayId) => {
-              // Close inline editor and navigate to day edit mode
-              setInlineEditRoutineId(null);
-              setIsCreatingNewRoutine(false);
-              onEditDay?.(routineId, dayId);
-            }}
-          />
+          <Suspense fallback={<RoutinePanelFallback label="Loading routine editor..." />}>
+            <InlineRoutineEditor
+              routineId={inlineEditRoutineId}
+              isNewRoutine={isCreatingNewRoutine}
+              onSave={handleInlineEditorSave}
+              onCancel={handleInlineEditorCancel}
+              onEditDay={(routineId, dayId) => {
+                // Close inline editor and navigate to day edit mode
+                setInlineEditRoutineId(null);
+                setIsCreatingNewRoutine(false);
+                onEditDay?.(routineId, dayId);
+              }}
+            />
+          </Suspense>
         )}
 
         {/* Routine list — active first, then alphabetical */}
-        {routines.length === 0 && !inlineEditRoutineId ? (
+        {isInitialRoutineListLoading ? (
+          <div className="flow-panel rounded-[2rem] p-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+            </div>
+            <p className="mb-2 text-sm font-bold text-white">Loading routines...</p>
+            <p className="text-xs text-gray-500">
+              Fetching your saved routines and active workout day.
+            </p>
+          </div>
+        ) : initialRoutineListErrorMessage ? (
+          <div className="flow-panel rounded-[2rem] p-12 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
+              <AlertTriangle className="h-8 w-8 text-red-300" />
+            </div>
+            <p className="mb-2 text-sm font-bold text-white">Routines could not be loaded</p>
+            <p className="mb-6 text-xs text-gray-400">{initialRoutineListErrorMessage}</p>
+            <button
+              type="button"
+              onClick={() => void routinesListQuery.refetch()}
+              className="flow-button-primary"
+            >
+              Retry
+            </button>
+          </div>
+        ) : routines.length === 0 && !inlineEditRoutineId ? (
           <div className="flow-panel rounded-[2rem] p-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
               <Dumbbell className="h-8 w-8 text-gray-600" />
@@ -1555,14 +1586,16 @@ const RoutinesSection = ({
                         {/* Muscle Heatmap */}
                         {allExercises.length > 0 && (
                           <div className="order-1 w-full lg:order-2 lg:self-start">
-                            <MuscleHeatmap
-                              exercises={heatmapExercises}
-                              variant="full"
-                              showSetBars={false}
-                              showScoreLegend={false}
-                              stretchMode="none"
-                              className="w-full"
-                            />
+                            <Suspense fallback={<RoutinePanelFallback label="Loading muscle map..." />}>
+                              <MuscleHeatmap
+                                exercises={heatmapExercises}
+                                variant="full"
+                                showSetBars={false}
+                                showScoreLegend={false}
+                                stretchMode="none"
+                                className="w-full"
+                              />
+                            </Suspense>
                           </div>
                         )}
 
@@ -1682,22 +1715,30 @@ const RoutinesSection = ({
       </AlertDialog>
 
       {/* Start Workout Dialog */}
-      <StartWorkoutDayDialog
-        open={startWorkoutDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setStartWorkoutDialog(null);
-        }}
-        dayName={startWorkoutDialog?.dayName ?? ""}
-        routineName={startWorkoutDialog?.routineName ?? ""}
-        onConfirm={handleConfirmStartWorkout}
-        isStarting={startWorkoutMutation.isPending}
-      />
+      {startWorkoutDialog !== null && (
+        <Suspense fallback={null}>
+          <StartWorkoutDayDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) setStartWorkoutDialog(null);
+            }}
+            dayName={startWorkoutDialog.dayName}
+            routineName={startWorkoutDialog.routineName}
+            onConfirm={handleConfirmStartWorkout}
+            isStarting={startWorkoutMutation.isPending}
+          />
+        </Suspense>
+      )}
 
-      <AiRoutineGenerationDialog
-        open={isAiDialogOpen}
-        onOpenChange={setIsAiDialogOpen}
-        onGenerateRequest={handleGenerateRoutineRequest}
-      />
+      {isAiDialogOpen && (
+        <Suspense fallback={null}>
+          <AiRoutineGenerationDialog
+            open
+            onOpenChange={setIsAiDialogOpen}
+            onGenerateRequest={handleGenerateRoutineRequest}
+          />
+        </Suspense>
+      )}
     </UserSectionShell>
   );
 };

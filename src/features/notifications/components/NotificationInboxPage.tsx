@@ -182,11 +182,11 @@ export default function NotificationInboxPage() {
         <StatsCard icon={Megaphone} label="Read coverage" mobileLabel="Read%" value={unreadShare} tone="blue" />
       </div>
 
-      <div className="rounded-[18px] border table-border table-bg p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="rounded-2xl border table-border table-bg p-3.5 sm:rounded-[18px] sm:p-5">
+        <div className="mb-3 sm:mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] table-text-muted">Activity feed</p>
-            <p className="mt-2 text-sm table-text-muted">
+            <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] table-text-muted">Activity feed</p>
+            <p className="mt-1 sm:mt-2 text-[13px] sm:text-sm table-text-muted">
               {unreadCount > 0
                 ? `${unreadCount} unread, ${readCount} already opened.`
                 : "Everything here has been opened."}
@@ -197,11 +197,11 @@ export default function NotificationInboxPage() {
         {notificationsQuery.isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="h-28 animate-pulse rounded-[24px] bg-white/[0.04]" />
+              <div key={index} className="h-24 sm:h-28 animate-pulse rounded-xl sm:rounded-[24px] bg-white/[0.04]" />
             ))}
           </div>
         ) : notifications.length ? (
-          <div className="space-y-2.5">
+          <div className="space-y-2 sm:space-y-2.5">
             {notifications.map((notification) => {
               const actorLabel = notification.actorGymName ?? notification.actorDisplayName;
               return (
@@ -210,31 +210,36 @@ export default function NotificationInboxPage() {
                   type="button"
                   onClick={() => void openNotification(notification)}
                   className={cn(
-                    "w-full rounded-2xl border px-4 py-3.5 text-left transition hover:border-orange-500/25 hover:bg-orange-500/[0.04]",
+                    "w-full rounded-xl sm:rounded-2xl border px-3 py-3 sm:px-4 sm:py-3.5 text-left transition hover:border-orange-500/25 hover:bg-orange-500/[0.04]",
                     notification.unread
                       ? "border-orange-500/18 bg-orange-500/[0.08]"
                       : "border-white/10 bg-white/[0.02]"
                   )}
                 >
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="flex flex-col gap-2 sm:gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[15px] font-black text-white">{notification.title}</p>
-                        {notification.unread ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
-                            <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
-                            Unread
-                          </span>
-                        ) : null}
+                      <div className="flex flex-wrap items-start justify-between gap-1.5 sm:gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <p className="text-[14px] sm:text-[15px] font-black text-white">{notification.title}</p>
+                          {notification.unread ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-full border border-orange-500/20 bg-orange-500/[0.08] px-1.5 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
+                              <span className="h-1 sm:h-1.5 w-1 sm:w-1.5 rounded-full bg-orange-400" />
+                              Unread
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="shrink-0 pt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/35 md:hidden">
+                          {formatPublishedAt(notification.publishedAt)}
+                        </div>
                       </div>
                       {actorLabel ? (
-                        <p className="mt-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">
+                        <p className="mt-1 sm:mt-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">
                           {actorLabel}
                         </p>
                       ) : null}
-                      <p className="mt-2.5 text-sm leading-6 text-white/65">{notification.body}</p>
+                      <p className="mt-1.5 sm:mt-2.5 text-[13px] sm:text-sm leading-5 sm:leading-6 text-white/65">{notification.body}</p>
                     </div>
-                    <div className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35">
+                    <div className="hidden shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-white/35 md:block">
                       {formatPublishedAt(notification.publishedAt)}
                     </div>
                   </div>

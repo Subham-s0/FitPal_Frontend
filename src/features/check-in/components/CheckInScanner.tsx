@@ -609,7 +609,7 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
                   {scannerMode === "qr" ? (
                     <>
                       {/* Camera viewport */}
-                          <div className="relative mx-auto h-[24rem] w-full sm:h-[28rem] lg:h-[26rem] lg:w-[96%] xl:h-[30rem] xl:w-[94%] rounded-[1.5rem] overflow-hidden bg-[#080808] border border-white/5 flex-shrink-0 flex items-center justify-center">
+                          <div className="relative mx-auto h-[30rem] w-full sm:h-[30rem] lg:h-[26rem] lg:w-[96%] xl:h-[30rem] xl:w-[94%] rounded-[1.5rem] overflow-hidden bg-[#080808] border border-white/5 flex-shrink-0 flex items-center justify-center">
                         {!showScanner ? (
                           <div className="flex flex-col items-center gap-3 p-4 text-center">
                             <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] border border-orange-600/18 bg-orange-600/[0.05] shadow-[0_0_30px_rgba(255,153,0,0.08)]">

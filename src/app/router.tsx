@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { useAuthState } from "@/features/auth";
@@ -9,25 +9,34 @@ import {
   isProfileSetupRoute,
 } from "@/features/auth";
 
-import Index from "@/pages/Index";
-import Dashboard from "@/pages/Dashboard";
-import NotFound from "@/pages/NotFound";
-import LoginRegister from "@/pages/LoginRegister";
-import GymProfile from "@/pages/gym/GymProfile";
-import Payments from "@/pages/user/Payments";
-import Profile from "@/pages/user/Profile";
-import Settings from "@/pages/user/Settings";
-import Membership from "@/pages/user/Membership";
-import AdminDashboard from "@/pages/admin/AdminDashboard";
-import OAuthCallback from "@/pages/OAuthCallback";
-import Logout from "@/pages/Logout";
-import EsewaPaymentCallback from "@/pages/EsewaPaymentCallback";
-import KhaltiPaymentCallback from "@/pages/KhaltiPaymentCallback";
-import UserProfileSetup from "@/pages/user/UserProfileSetup";
-import GymProfileSetup from "@/pages/gym/GymProfileSetup";
-import ProfileSetupEntry from "@/pages/ProfileSetupEntry";
-import AdminLoginPortal from "@/pages/admin/AdminLoginPortal";
-import WorkoutSession from "@/pages/user/WorkoutSession";
+const Index = lazy(() => import("@/pages/Index"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const LoginRegister = lazy(() => import("@/pages/LoginRegister"));
+const GymProfile = lazy(() => import("@/pages/gym/GymProfile"));
+const Payments = lazy(() => import("@/pages/user/Payments"));
+const Profile = lazy(() => import("@/pages/user/Profile"));
+const Settings = lazy(() => import("@/pages/user/Settings"));
+const Membership = lazy(() => import("@/pages/user/Membership"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
+const OAuthCallback = lazy(() => import("@/pages/OAuthCallback"));
+const Logout = lazy(() => import("@/pages/Logout"));
+const EsewaPaymentCallback = lazy(() => import("@/pages/EsewaPaymentCallback"));
+const KhaltiPaymentCallback = lazy(() => import("@/pages/KhaltiPaymentCallback"));
+const UserProfileSetup = lazy(() => import("@/pages/user/UserProfileSetup"));
+const GymProfileSetup = lazy(() => import("@/pages/gym/GymProfileSetup"));
+const ProfileSetupEntry = lazy(() => import("@/pages/ProfileSetupEntry"));
+const AdminLoginPortal = lazy(() => import("@/pages/admin/AdminLoginPortal"));
+const WorkoutSession = lazy(() => import("@/pages/user/WorkoutSession"));
+
+const RouteFallback = () => (
+  <div className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
+    <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold">
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-orange-500" />
+      Loading FitPal...
+    </div>
+  </div>
+);
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const auth = useAuthState();
@@ -183,115 +192,117 @@ const RouteTitleManager = () => {
 const AppRouter = () => (
   <BrowserRouter>
     <RouteTitleManager />
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/home" element={<Navigate to="/" replace />} />
-      <Route path="/admin" element={<AdminLoginPortal />} />
-      <Route
-        path={ADMIN_DASHBOARD_ROUTE}
-        element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        }
-      />
-      <Route path="/login" element={<LoginRegister initialMode="login" />} />
-      <Route path="/signup" element={<LoginRegister initialMode="register" />} />
-      <Route path="/register" element={<Navigate to="/signup" replace />} />
-      <Route path="/logout" element={<Logout />} />
-      <Route path="/oauth/validate" element={<OAuthCallback />} />
-      <Route path="/oauth/callback" element={<OAuthCallback />} />
-      <Route path="/payments/esewa/success" element={<EsewaPaymentCallback />} />
-      <Route path="/payments/esewa/success/:paymentAttemptId" element={<EsewaPaymentCallback />} />
-      <Route path="/payments/esewa/failure" element={<EsewaPaymentCallback />} />
-      <Route path="/payments/esewa/failure/:paymentAttemptId" element={<EsewaPaymentCallback />} />
-      <Route path="/payments/khalti/return" element={<KhaltiPaymentCallback />} />
-      <Route path="/payments/khalti/return/:paymentAttemptId" element={<KhaltiPaymentCallback />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/home" element={<Navigate to="/" replace />} />
+        <Route path="/admin" element={<AdminLoginPortal />} />
+        <Route
+          path={ADMIN_DASHBOARD_ROUTE}
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route path="/login" element={<LoginRegister initialMode="login" />} />
+        <Route path="/signup" element={<LoginRegister initialMode="register" />} />
+        <Route path="/register" element={<Navigate to="/signup" replace />} />
+        <Route path="/logout" element={<Logout />} />
+        <Route path="/oauth/validate" element={<OAuthCallback />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
+        <Route path="/payments/esewa/success" element={<EsewaPaymentCallback />} />
+        <Route path="/payments/esewa/success/:paymentAttemptId" element={<EsewaPaymentCallback />} />
+        <Route path="/payments/esewa/failure" element={<EsewaPaymentCallback />} />
+        <Route path="/payments/esewa/failure/:paymentAttemptId" element={<EsewaPaymentCallback />} />
+        <Route path="/payments/khalti/return" element={<KhaltiPaymentCallback />} />
+        <Route path="/payments/khalti/return/:paymentAttemptId" element={<KhaltiPaymentCallback />} />
 
-      <Route
-        path="/payments"
-        element={
-          <ProtectedRoute>
-            <Payments />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/gym/:id"
-        element={
-          <ProtectedRoute>
-            <GymProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/membership"
-        element={
-          <ProtectedRoute>
-            <Membership />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/membership/upgrade" element={<Navigate to="/membership" replace />} />
-      <Route
-        path="/profile-setup"
-        element={
-          <ProtectedRoute>
-            <ProfileSetupEntry />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/user-profile-setup"
-        element={
-          <ProtectedRoute>
-            <UserProfileSetup />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/gym-profile-setup"
-        element={
-          <ProtectedRoute>
-            <GymProfileSetup />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/workout-session/:routineLogId"
-        element={
-          <ProtectedRoute>
-            <WorkoutSession />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/payments"
+          element={
+            <ProtectedRoute>
+              <Payments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gym/:id"
+          element={
+            <ProtectedRoute>
+              <GymProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/membership"
+          element={
+            <ProtectedRoute>
+              <Membership />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/membership/upgrade" element={<Navigate to="/membership" replace />} />
+        <Route
+          path="/profile-setup"
+          element={
+            <ProtectedRoute>
+              <ProfileSetupEntry />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user-profile-setup"
+          element={
+            <ProtectedRoute>
+              <UserProfileSetup />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gym-profile-setup"
+          element={
+            <ProtectedRoute>
+              <GymProfileSetup />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workout-session/:routineLogId"
+          element={
+            <ProtectedRoute>
+              <WorkoutSession />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   </BrowserRouter>
 );
 

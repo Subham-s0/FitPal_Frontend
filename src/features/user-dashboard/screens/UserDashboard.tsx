@@ -1,16 +1,11 @@
-import { useEffect, useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
+import { Suspense, lazy, useEffect, useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { toast } from "sonner";
 import { authStore } from "@/features/auth/store";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
-import { CheckInScreen } from "@/features/check-in";
 import { getMyCheckInsApi, checkOutMyCheckInApi } from "@/features/check-in/api";
 import { checkInQueryKeys } from "@/features/check-in/queryKeys";
-import { ExercisesScreen } from "@/features/exercises";
-import { GymsScreen } from "@/features/gyms";
-import MuscleHeatmap from "@/features/routines/components/MuscleHeatmap";
-import RoutineFlow from "@/features/routines/components/RoutineFlow";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import {
   getMySubscriptionApi,
@@ -60,14 +55,12 @@ import type {
   DashboardVisitRangeType,
 } from "@/features/user-dashboard/model";
 import type { UserSubscriptionResponse } from "@/features/subscription/model";
-import WorkoutsSection from "@/features/workout-sessions/components/WorkoutsSection";
 import {
   startWorkoutSessionApi,
   workoutSessionQueryKeys,
 } from "@/features/workout-sessions/workoutSessionApi";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
-import NotificationInboxPage from "@/features/notifications/components/NotificationInboxPage";
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -95,6 +88,14 @@ type UserDashboardSection = "home" | "gyms" | "routines" | "exercises" | "workou
 type MemberStatsRange = "week" | "month" | "year";
 type CheckInView = "scanner" | "logs";
 
+const MuscleHeatmap = lazy(() => import("@/features/routines/components/MuscleHeatmap"));
+const RoutineFlow = lazy(() => import("@/features/routines/components/RoutineFlow"));
+const CheckInScreen = lazy(() => import("@/features/check-in/screens/CheckInScreen"));
+const ExercisesScreen = lazy(() => import("@/features/exercises/screens/ExercisesScreen"));
+const GymsScreen = lazy(() => import("@/features/gyms/screens/GymsScreen"));
+const WorkoutsSection = lazy(() => import("@/features/workout-sessions/components/WorkoutsSection"));
+const NotificationInboxPage = lazy(() => import("@/features/notifications/components/NotificationInboxPage"));
+
 const USER_SECTIONS: UserDashboardSection[] = ["home", "gyms", "routines", "exercises", "workouts", "notifications", "checkin", "progress", "profile"];
 const ACTIVITY_MONTH_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -108,6 +109,19 @@ const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
 const PAUSE_DAYS_MIN = 1;
 const PAUSE_DAYS_MAX = 30;
 const DASHBOARD_SUBSCRIPTION_QUERY_KEY = ["dashboard-membership-state"] as const;
+
+const DashboardSectionFallback = ({ label }: { label: string }) => (
+  <div className="flex min-h-[320px] items-center justify-center rounded-[2rem] border border-white/10 user-surface-soft p-6 text-center text-sm font-bold uppercase tracking-[0.12em] text-white/55">
+    <span className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-orange-500" />
+    {label}
+  </div>
+);
+
+const DashboardHeatmapFallback = () => (
+  <div className="flex min-h-[360px] items-center justify-center rounded-[2rem] border border-white/10 user-surface-soft p-6 text-sm font-bold uppercase tracking-[0.12em] text-white/45">
+    Loading muscle map...
+  </div>
+);
 
 const resolveSection = (value: string | undefined): UserDashboardSection =>
   USER_SECTIONS.includes(value as UserDashboardSection) ? (value as UserDashboardSection) : "home";
@@ -1414,14 +1428,16 @@ const UserDashboard = () => {
                   </p>
                 ) : null}
 
-                <MuscleHeatmap
-                  exercises={heatmapExercises}
-                  variant="full"
-                  showSetBars={false}
-                  showScoreLegend={false}
-                  stretchMode="compact"
-                  className="h-full"
-                />
+                <Suspense fallback={<DashboardHeatmapFallback />}>
+                  <MuscleHeatmap
+                    exercises={heatmapExercises}
+                    variant="full"
+                    showSetBars={false}
+                    showScoreLegend={false}
+                    stretchMode="compact"
+                    className="h-full"
+                  />
+                </Suspense>
 
                 {routineHeatmapCard?.state === "EMPTY" ? (
                   <p className="mt-4 text-center text-sm text-white/50">
@@ -1441,30 +1457,50 @@ const UserDashboard = () => {
     switch (activeSection) {
       case "gyms":
         return (
-          <GymsScreen
-            onSwitchToCheckIn={() => {
-              setCheckInView("scanner");
-              setActiveSection("checkin");
-            }}
-          />
+          <Suspense fallback={<DashboardSectionFallback label="Loading gyms..." />}>
+            <GymsScreen
+              onSwitchToCheckIn={() => {
+                setCheckInView("scanner");
+                setActiveSection("checkin");
+              }}
+            />
+          </Suspense>
         );
       case "routines":
-        return <RoutineFlow onViewModeChange={(view) => setIsRoutineDetailView(view === "detail")} />;
+        return (
+          <Suspense fallback={<DashboardSectionFallback label="Loading routines..." />}>
+            <RoutineFlow onViewModeChange={(view) => setIsRoutineDetailView(view === "detail")} />
+          </Suspense>
+        );
       case "exercises":
-        return <ExercisesScreen />;
+        return (
+          <Suspense fallback={<DashboardSectionFallback label="Loading exercises..." />}>
+            <ExercisesScreen />
+          </Suspense>
+        );
       case "workouts":
-        return <WorkoutsSection onOpenRoutines={() => setActiveSection("routines")} />;
+        return (
+          <Suspense fallback={<DashboardSectionFallback label="Loading workouts..." />}>
+            <WorkoutsSection onOpenRoutines={() => setActiveSection("routines")} />
+          </Suspense>
+        );
       case "notifications":
-        return <NotificationInboxPage />;
+        return (
+          <Suspense fallback={<DashboardSectionFallback label="Loading notifications..." />}>
+            <NotificationInboxPage />
+          </Suspense>
+        );
       case "checkin":
         return (
-          <CheckInScreen
-            initialView={checkInView}
-            onBack={() => {
-              setCheckInView("scanner");
-              setActiveSection("home");
-            }}
-          />
+          <Suspense fallback={<DashboardSectionFallback label="Loading check-in..." />}>
+            <CheckInScreen
+              initialView={checkInView}
+              onBack={() => {
+                setCheckInView("scanner");
+                setActiveSection("home");
+              }}
+            />
+          </Suspense>
         );
       case "progress":
         return renderHome();
