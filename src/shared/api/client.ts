@@ -26,7 +26,7 @@ function isApiSuccessResponse<T>(value: unknown): value is ApiSuccessResponse<T>
 const apiClient = axios.create({
   baseURL: apiBaseUrl,
   headers: { "Content-Type": "application/json" },
-  timeout: 15_000,
+  timeout: 120_000,
 });
 
 // ── Request: attach JWT if available ──────────────────────────────────────
