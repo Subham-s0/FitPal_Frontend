@@ -1,4 +1,4 @@
-import { Bookmark, ChevronLeft, ChevronRight, MapPin, Navigation, Search, Star } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Loader2, MapPin, Navigation, Search, Star } from "lucide-react";
 import type {
   GymRecommendationItem,
   GymSortMode,
@@ -34,10 +34,29 @@ interface GymsSidebarRailProps {
   onStatusFilterChange: (filter: GymStatusFilter) => void;
   onSortModeChange: (sortMode: GymSortMode) => void;
   onResetFilters: () => void;
+  isLoading: boolean;
   currentPage: number;
   totalPages: number;
   onPreviousPage: () => void;
   onNextPage: () => void;
+}
+
+function DesktopGymLoadingCard() {
+  return (
+    <div className="flex items-center gap-4 rounded-[2rem] border border-white/10 user-surface px-4 py-5">
+      <div className="flex h-[116px] w-[114px] shrink-0 items-center justify-center rounded-[1.25rem] bg-white/[0.04]">
+        <Loader2 className="h-6 w-6 animate-spin text-orange-500" />
+      </div>
+      <div className="min-w-0 flex-1 space-y-3">
+        <div className="h-4 w-40 max-w-full animate-pulse rounded-full bg-white/10" />
+        <div className="h-2.5 w-28 max-w-full animate-pulse rounded-full bg-white/10" />
+        <div className="flex flex-wrap gap-2 pt-2">
+          <div className="h-6 w-16 animate-pulse rounded-full bg-white/10" />
+          <div className="h-6 w-12 animate-pulse rounded-full bg-white/10" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const GymsSidebarRail = ({
@@ -59,6 +78,7 @@ const GymsSidebarRail = ({
   onStatusFilterChange,
   onSortModeChange,
   onResetFilters,
+  isLoading,
   currentPage,
   totalPages,
   onPreviousPage,
@@ -120,7 +140,9 @@ const GymsSidebarRail = ({
 
       <div className="custom-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
         <div className="flex flex-col gap-4">
-          {visibleGyms.map((gym) => (
+          {isLoading ? (
+            <DesktopGymLoadingCard />
+          ) : visibleGyms.map((gym) => (
             <DesktopGymCard
               key={gym.gymId}
               gym={gym}
@@ -130,7 +152,7 @@ const GymsSidebarRail = ({
               onToggleSaved={() => onToggleSavedGym(gym.gymId)}
             />
           ))}
-          {totalGymCount === 0 && (
+          {!isLoading && totalGymCount === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
               <MapPin size={32} className="mb-4 text-orange-500" />
               <p className="text-sm font-bold text-white">

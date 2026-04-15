@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { deleteApiData, getApiData, patchApiData, postApiData } from "@/shared/api/client";
 import type {
   ApplicationRuleSummaryResponse,
   ApplicationRuleUpdateRequest,
@@ -17,120 +17,101 @@ import type {
 } from "./admin-settings.model";
 
 export async function getApplicationRulesApi(): Promise<ApplicationRuleSummaryResponse> {
-  const response = await apiClient.get<ApplicationRuleSummaryResponse>("/admin/application-rules/summary");
-  return response.data;
+  return getApiData<ApplicationRuleSummaryResponse>("/admin/application-rules/summary");
 }
 
 export async function updateApplicationRulesApi(payload: ApplicationRuleUpdateRequest): Promise<ApplicationRuleSummaryResponse> {
-  const response = await apiClient.patch<ApplicationRuleSummaryResponse>("/admin/application-rules", payload);
-  return response.data;
+  return patchApiData<ApplicationRuleSummaryResponse>("/admin/application-rules", payload);
 }
 
 export async function getCmsFeaturesApi(): Promise<CmsFeatureResponse[]> {
-  const response = await apiClient.get<CmsFeatureResponse[]>("/admin/cms/features");
-  return response.data;
+  return getApiData<CmsFeatureResponse[]>("/admin/cms/features");
 }
 
 export async function createCmsFeatureApi(payload: CmsFeatureUpsertRequest): Promise<CmsFeatureResponse> {
-  const response = await apiClient.post<CmsFeatureResponse>("/admin/cms/features", payload);
-  return response.data;
+  return postApiData<CmsFeatureResponse>("/admin/cms/features", payload);
 }
 
 export async function updateCmsFeatureApi(id: string, payload: CmsFeatureUpsertRequest): Promise<CmsFeatureResponse> {
-  const response = await apiClient.patch<CmsFeatureResponse>(`/admin/cms/features/${id}`, payload);
-  return response.data;
+  return patchApiData<CmsFeatureResponse>(`/admin/cms/features/${id}`, payload);
 }
 
 export async function deleteCmsFeatureApi(id: string): Promise<void> {
-  await apiClient.delete(`/admin/cms/features/${id}`);
+  await deleteApiData(`/admin/cms/features/${id}`);
 }
 
 export async function getCmsTestimonialsApi(): Promise<CmsTestimonialResponse[]> {
-  const response = await apiClient.get<CmsTestimonialResponse[]>("/admin/cms/testimonials");
-  return response.data;
+  return getApiData<CmsTestimonialResponse[]>("/admin/cms/testimonials");
 }
 
 export async function createCmsTestimonialApi(payload: CmsTestimonialUpsertRequest): Promise<CmsTestimonialResponse> {
-  const response = await apiClient.post<CmsTestimonialResponse>("/admin/cms/testimonials", payload);
-  return response.data;
+  return postApiData<CmsTestimonialResponse>("/admin/cms/testimonials", payload);
 }
 
 export async function updateCmsTestimonialApi(id: string, payload: CmsTestimonialUpsertRequest): Promise<CmsTestimonialResponse> {
-  const response = await apiClient.patch<CmsTestimonialResponse>(`/admin/cms/testimonials/${id}`, payload);
-  return response.data;
+  return patchApiData<CmsTestimonialResponse>(`/admin/cms/testimonials/${id}`, payload);
 }
 
 export async function deleteCmsTestimonialApi(id: string): Promise<void> {
-  await apiClient.delete(`/admin/cms/testimonials/${id}`);
+  await deleteApiData(`/admin/cms/testimonials/${id}`);
 }
 
 export async function getCmsHowToStepsApi(): Promise<CmsHowToStepResponse[]> {
-  const response = await apiClient.get<CmsHowToStepResponse[]>("/admin/cms/how-to-steps");
-  return response.data;
+  return getApiData<CmsHowToStepResponse[]>("/admin/cms/how-to-steps");
 }
 
 export async function createCmsHowToStepApi(payload: CmsHowToStepUpsertRequest): Promise<CmsHowToStepResponse> {
-  const response = await apiClient.post<CmsHowToStepResponse>("/admin/cms/how-to-steps", payload);
-  return response.data;
+  return postApiData<CmsHowToStepResponse>("/admin/cms/how-to-steps", payload);
 }
 
 export async function updateCmsHowToStepApi(id: string, payload: CmsHowToStepUpsertRequest): Promise<CmsHowToStepResponse> {
-  const response = await apiClient.patch<CmsHowToStepResponse>(`/admin/cms/how-to-steps/${id}`, payload);
-  return response.data;
+  return patchApiData<CmsHowToStepResponse>(`/admin/cms/how-to-steps/${id}`, payload);
 }
 
 export async function deleteCmsHowToStepApi(id: string): Promise<void> {
-  await apiClient.delete(`/admin/cms/how-to-steps/${id}`);
+  await deleteApiData(`/admin/cms/how-to-steps/${id}`);
 }
 
 export async function getCmsFaqsApi(): Promise<CmsFaqResponse[]> {
-  const response = await apiClient.get<CmsFaqResponse[]>("/admin/cms/faqs");
-  return response.data;
+  return getApiData<CmsFaqResponse[]>("/admin/cms/faqs");
 }
 
 export async function createCmsFaqApi(payload: CmsFaqUpsertRequest): Promise<CmsFaqResponse> {
-  const response = await apiClient.post<CmsFaqResponse>("/admin/cms/faqs", payload);
-  return response.data;
+  return postApiData<CmsFaqResponse>("/admin/cms/faqs", payload);
 }
 
 export async function updateCmsFaqApi(id: string, payload: CmsFaqUpsertRequest): Promise<CmsFaqResponse> {
-  const response = await apiClient.patch<CmsFaqResponse>(`/admin/cms/faqs/${id}`, payload);
-  return response.data;
+  return patchApiData<CmsFaqResponse>(`/admin/cms/faqs/${id}`, payload);
 }
 
 export async function deleteCmsFaqApi(id: string): Promise<void> {
-  await apiClient.delete(`/admin/cms/faqs/${id}`);
+  await deleteApiData(`/admin/cms/faqs/${id}`);
 }
 
 export async function getCmsStatsApi(): Promise<CmsStatResponse[]> {
-  const response = await apiClient.get<CmsStatResponse[]>("/admin/cms/stats");
-  return response.data;
+  return getApiData<CmsStatResponse[]>("/admin/cms/stats");
 }
 
 export async function createCmsStatApi(payload: CmsStatUpsertRequest): Promise<CmsStatResponse> {
-  const response = await apiClient.post<CmsStatResponse>("/admin/cms/stats", payload);
-  return response.data;
+  return postApiData<CmsStatResponse>("/admin/cms/stats", payload);
 }
 
 export async function updateCmsStatApi(id: string, payload: CmsStatUpsertRequest): Promise<CmsStatResponse> {
-  const response = await apiClient.patch<CmsStatResponse>(`/admin/cms/stats/${id}`, payload);
-  return response.data;
+  return patchApiData<CmsStatResponse>(`/admin/cms/stats/${id}`, payload);
 }
 
 export async function deleteCmsStatApi(id: string): Promise<void> {
-  await apiClient.delete(`/admin/cms/stats/${id}`);
+  await deleteApiData(`/admin/cms/stats/${id}`);
 }
 
 export async function reindexAllExerciseEmbeddingsApi(): Promise<ExerciseEmbeddingIndexingResult> {
-  const response = await apiClient.post<ExerciseEmbeddingIndexingResult>(
+  return postApiData<ExerciseEmbeddingIndexingResult>(
     "/admin/embeddings/reindex",
     undefined,
     { timeout: 300_000 }
   );
-  return response.data;
 }
 
 export async function getExerciseEmbeddingStatusApi(): Promise<ExerciseEmbeddingStatusResponse> {
-  const response = await apiClient.get<ExerciseEmbeddingStatusResponse>("/admin/embeddings/status");
-  return response.data;
+  return getApiData<ExerciseEmbeddingStatusResponse>("/admin/embeddings/status");
 }

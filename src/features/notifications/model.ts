@@ -1,12 +1,6 @@
-export interface NotificationPageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
+import type { PageResponse } from "@/shared/api/model";
+
+export type NotificationPageResponse<T> = PageResponse<T>;
 
 export interface AccountNotificationResponse {
   notificationId: number;

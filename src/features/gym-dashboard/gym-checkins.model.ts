@@ -1,4 +1,4 @@
-import type { PageResponse } from "@/features/admin/admin-gym.model";
+import type { PageResponse } from "@/shared/api/model";
 
 export type GymCheckInStatus = "ACCESS_PENDING" | "CHECKED_IN" | "CHECKED_OUT" | "DENIED";
 export type GymCheckInDenyReason =

@@ -11,16 +11,6 @@ import type {
 
 export type GymPayoutProvider = "ESEWA" | "KHALTI";
 
-export interface PageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
-
 export type AdminGymSortBy =
   | "gymId"
   | "gymName"

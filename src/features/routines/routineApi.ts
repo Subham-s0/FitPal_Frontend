@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { deleteApiData, getApiData, patchApiData, postApiData, putApiData } from "@/shared/api/client";
 import type {
   RoutineSummaryResponse,
   RoutineDetailResponse,
@@ -14,8 +14,7 @@ import type {
  * Get all routines for the current user (list view with day summaries)
  */
 export async function getMyRoutinesApi(): Promise<RoutineSummaryResponse[]> {
-  const response = await apiClient.get<RoutineSummaryResponse[]>("/users/me/routines");
-  return response.data;
+  return getApiData<RoutineSummaryResponse[]>("/users/me/routines");
 }
 
 /**
@@ -23,24 +22,21 @@ export async function getMyRoutinesApi(): Promise<RoutineSummaryResponse[]> {
  * Used by the routines workspace to avoid list + N detail requests on initial load.
  */
 export async function getMyRoutineDetailsApi(): Promise<RoutineDetailResponse[]> {
-  const response = await apiClient.get<RoutineDetailResponse[]>("/users/me/routines/details");
-  return response.data;
+  return getApiData<RoutineDetailResponse[]>("/users/me/routines/details");
 }
 
 /**
  * Get full routine detail for editing (includes all exercises and sets)
  */
 export async function getRoutineDetailApi(routineId: string): Promise<RoutineDetailResponse> {
-  const response = await apiClient.get<RoutineDetailResponse>(`/users/me/routines/${routineId}`);
-  return response.data;
+  return getApiData<RoutineDetailResponse>(`/users/me/routines/${routineId}`);
 }
 
 /**
  * Create a new routine
  */
 export async function createRoutineApi(request: RoutineUpsertRequest): Promise<RoutineDetailResponse> {
-  const response = await apiClient.post<RoutineDetailResponse>("/users/me/routines", request);
-  return response.data;
+  return postApiData<RoutineDetailResponse>("/users/me/routines", request);
 }
 
 /**
@@ -54,33 +50,31 @@ export async function updateRoutineApi(
   routineId: string,
   request: RoutineUpsertRequest
 ): Promise<RoutineDetailResponse> {
-  const response = await apiClient.patch<RoutineDetailResponse>(
+  return patchApiData<RoutineDetailResponse>(
     `/users/me/routines/${routineId}`,
     request
   );
-  return response.data;
 }
 
 /**
  * Activate a routine (sets it as the current active routine)
  */
 export async function activateRoutineApi(routineId: string): Promise<void> {
-  await apiClient.put(`/users/me/routines/${routineId}/activate`);
+  await putApiData(`/users/me/routines/${routineId}/activate`);
 }
 
 /**
  * Delete a routine
  */
 export async function deleteRoutineApi(routineId: string): Promise<void> {
-  await apiClient.delete(`/users/me/routines/${routineId}`);
+  await deleteApiData(`/users/me/routines/${routineId}`);
 }
 
 /**
  * Get user routine settings and active routine progress
  */
 export async function getMyRoutineSettingsApi(): Promise<UserRoutineSettingsResponse> {
-  const response = await apiClient.get<UserRoutineSettingsResponse>("/users/me/routine-settings");
-  return response.data;
+  return getApiData<UserRoutineSettingsResponse>("/users/me/routine-settings");
 }
 
 // ============================================

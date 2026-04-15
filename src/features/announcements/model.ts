@@ -1,18 +1,12 @@
+import type { PageResponse } from "@/shared/api/model";
+
 export type AnnouncementSourceType = "ADMIN" | "GYM";
 export type AnnouncementAudienceScope = "ALL_USERS" | "ALL_GYMS" | "SPECIFIC_ACCOUNTS" | "FOLLOWERS_OF_GYM";
 export type AnnouncementVisibilityScope = "IN_APP" | "PUBLIC" | "BOTH";
 export type AnnouncementReviewStatus = "NOT_REQUIRED" | "NOT_SUBMITTED" | "PENDING" | "APPROVED" | "REJECTED";
 export type AnnouncementPublishStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "CANCELLED" | "EXPIRED";
 
-export interface AnnouncementPageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
+export type AnnouncementPageResponse<T> = PageResponse<T>;
 
 export interface AnnouncementTargetAccountResponse {
   accountId: number;

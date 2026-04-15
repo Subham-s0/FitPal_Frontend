@@ -1105,7 +1105,7 @@ const RoutinesSection = ({
       description="Create and manage your workout routines"
       actions={
         !inlineEditRoutineId && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-nowrap items-center justify-end gap-2">
             <button
               onClick={() => setIsAiDialogOpen(true)}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-orange-200 transition-colors hover:bg-orange-500/15"
@@ -1129,7 +1129,7 @@ const RoutinesSection = ({
           generateAiRoutinePreviewMutation.isPending ? (
             <section className="flow-panel rounded-[2rem] border border-orange-500/15 bg-orange-500/[0.04] p-5">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-500/10">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center">
                   <Loader2 className="h-5 w-5 animate-spin text-orange-200" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1220,7 +1220,7 @@ const RoutinesSection = ({
                   <div className="space-y-4">
                     <div className="rounded-[1.5rem] border border-orange-500/15 bg-orange-500/[0.04] p-4">
                       <div className="flex flex-wrap items-center gap-3">
-                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-orange-400/20 bg-orange-500/10">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center">
                           <Loader2 className="h-5 w-5 animate-spin text-orange-200" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -1391,7 +1391,7 @@ const RoutinesSection = ({
         {/* Routine list — active first, then alphabetical */}
         {isInitialRoutineListLoading ? (
           <div className="flow-panel rounded-[2rem] p-12 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
             </div>
             <p className="mb-2 text-sm font-bold text-white">Loading routines...</p>

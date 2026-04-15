@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { getApiData } from "@/shared/api/client";
 import type {
   DashboardMemberStatsResponse,
   DashboardMonthlyActivityRequest,
@@ -18,14 +18,13 @@ function buildDashboardParams(request?: Record<string, string | number | undefin
 }
 
 export async function getDashboardSummaryApi(): Promise<DashboardSummaryResponse> {
-  const response = await apiClient.get<DashboardSummaryResponse>("/users/me/dashboard/summary");
-  return response.data;
+  return getApiData<DashboardSummaryResponse>("/users/me/dashboard/summary");
 }
 
 export async function getDashboardMonthlyActivityApi(
   request: DashboardMonthlyActivityRequest
 ): Promise<DashboardMonthlyActivityResponse> {
-  const response = await apiClient.get<DashboardMonthlyActivityResponse>(
+  return getApiData<DashboardMonthlyActivityResponse>(
     "/users/me/dashboard/activity/monthly",
     {
       params: buildDashboardParams({
@@ -34,13 +33,12 @@ export async function getDashboardMonthlyActivityApi(
       }),
     }
   );
-  return response.data;
 }
 
 export async function getDashboardVisitStatsApi(
   request: DashboardVisitStatsRequest
 ): Promise<DashboardMemberStatsResponse> {
-  const response = await apiClient.get<DashboardMemberStatsResponse>("/users/me/dashboard/visits", {
+  return getApiData<DashboardMemberStatsResponse>("/users/me/dashboard/visits", {
     params: buildDashboardParams({
       rangeType: request.rangeType,
       year: request.year,
@@ -48,7 +46,6 @@ export async function getDashboardVisitStatsApi(
       weekStart: request.weekStart,
     }),
   });
-  return response.data;
 }
 
 export const dashboardQueryKeys = {

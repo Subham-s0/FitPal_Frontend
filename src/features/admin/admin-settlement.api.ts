@@ -1,6 +1,6 @@
 import { AxiosHeaders } from "axios";
 
-import apiClient from "@/shared/api/client";
+import { getApiData, patchApiData, postApiData } from "@/shared/api/client";
 import type {
   CreatePayoutSettlementRequest,
   GymCheckinSettlementSearchParams,
@@ -47,40 +47,36 @@ const formDataTransformRequest = [
 export async function getAdminPendingSettlementsApi(
   params?: PendingGymSettlementSearchParams
 ): Promise<PendingGymSettlementPage> {
-  const response = await apiClient.get<PendingGymSettlementPage>("/admin/payout-settlements/pending", {
+  return getApiData<PendingGymSettlementPage>("/admin/payout-settlements/pending", {
     params: buildPendingParams(params),
   });
-  return response.data;
 }
 
 /** GET /api/admin/payout-settlements/due-timeline */
 export async function getAdminDueTimelineApi(
   params?: PendingGymSettlementSearchParams
 ): Promise<SettlementDueTimelineResponse> {
-  const response = await apiClient.get<SettlementDueTimelineResponse>("/admin/payout-settlements/due-timeline", {
+  return getApiData<SettlementDueTimelineResponse>("/admin/payout-settlements/due-timeline", {
     params: buildPendingParams(params),
   });
-  return response.data;
 }
 
 /** GET /api/admin/payout-settlements/batches */
 export async function getAdminPayoutBatchesApi(
   params?: PayoutSettlementSearchParams
 ): Promise<PayoutSettlementPage> {
-  const response = await apiClient.get<PayoutSettlementPage>("/admin/payout-settlements/batches", {
+  return getApiData<PayoutSettlementPage>("/admin/payout-settlements/batches", {
     params: buildBatchParams(params),
   });
-  return response.data;
 }
 
 /** GET /api/gyms/me/payout-settlements/batches */
 export async function getGymPayoutBatchesApi(
   params?: GymPayoutSettlementSearchParams
 ): Promise<PayoutSettlementPage> {
-  const response = await apiClient.get<PayoutSettlementPage>("/gyms/me/payout-settlements/batches", {
+  return getApiData<PayoutSettlementPage>("/gyms/me/payout-settlements/batches", {
     params: buildBatchParams(params),
   });
-  return response.data;
 }
 
 /**
@@ -103,31 +99,28 @@ export async function createAdminPayoutSettlementApi(
     formData.append("proofImage", proofImage);
   }
 
-  const response = await apiClient.post<PayoutSettlementResponse>(`/admin/gyms/${gymId}/payout-settlements`, formData, {
+  return postApiData<PayoutSettlementResponse>(`/admin/gyms/${gymId}/payout-settlements`, formData, {
     timeout: 120_000,
     transformRequest: [...formDataTransformRequest],
   });
-  return response.data;
 }
 
 /** GET /api/gyms/me/payout-settlements/checkin-settlements */
 export async function getGymCheckinSettlementsApi(
   params?: GymCheckinSettlementSearchParams
 ): Promise<PendingGymSettlementPage> {
-  const response = await apiClient.get<PendingGymSettlementPage>("/gyms/me/payout-settlements/checkin-settlements", {
+  return getApiData<PendingGymSettlementPage>("/gyms/me/payout-settlements/checkin-settlements", {
     params,
   });
-  return response.data;
 }
 
 /** GET /api/gyms/me/payout-settlements/due-timeline */
 export async function getGymDueTimelineApi(
   params?: GymCheckinSettlementSearchParams
 ): Promise<SettlementDueTimelineResponse> {
-  const response = await apiClient.get<SettlementDueTimelineResponse>("/gyms/me/payout-settlements/due-timeline", {
+  return getApiData<SettlementDueTimelineResponse>("/gyms/me/payout-settlements/due-timeline", {
     params,
   });
-  return response.data;
 }
 
 /** PATCH /api/gyms/me/payout-settlements/:id/review */
@@ -135,15 +128,13 @@ export async function reviewGymPayoutSettlementApi(
   payoutSettlementId: number,
   approved: boolean
 ): Promise<PayoutSettlementResponse> {
-  const response = await apiClient.patch<PayoutSettlementResponse>(
+  return patchApiData<PayoutSettlementResponse>(
     `/gyms/me/payout-settlements/${payoutSettlementId}/review`,
     { approved },
   );
-  return response.data;
 }
 
 /** GET /api/gyms/me/payout-settlements/analytics */
 export async function getGymSettlementAnalyticsApi(): Promise<GymSettlementAnalyticsResponse> {
-  const response = await apiClient.get<GymSettlementAnalyticsResponse>("/gyms/me/payout-settlements/analytics");
-  return response.data;
+  return getApiData<GymSettlementAnalyticsResponse>("/gyms/me/payout-settlements/analytics");
 }

@@ -22,6 +22,7 @@ export interface GymsRecommendationState {
   locationPermission: LocationPermissionState;
   userCoords: Coordinates | null;
   mode: RecommendationMode;
+  isDiscoverLoading: boolean;
   gyms: GymRecommendationItem[];
   filteredGyms: GymRecommendationItem[];
   selectedGym: GymRecommendationItem | null;
@@ -190,6 +191,7 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
     enabled: mode === "show-all" || Boolean(userCoords),
     staleTime: 30_000,
   });
+  const isDiscoverLoading = discoverQuery.isLoading || (discoverQuery.isFetching && gyms.length === 0);
 
   const toggleSavedMutation = useMutation({
     mutationFn: async ({ gymId, nextIsSaved }: { gymId: number; nextIsSaved: boolean }) => {
@@ -476,6 +478,7 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
     locationPermission,
     userCoords,
     mode,
+    isDiscoverLoading,
     gyms,
     filteredGyms,
     selectedGym,

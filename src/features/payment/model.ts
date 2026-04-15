@@ -1,4 +1,5 @@
 import type { BillingCycle } from "@/features/subscription/model";
+export type { PageResponse } from "@/shared/api/model";
 
 export type PaymentMethod = "ESEWA" | "KHALTI";
 
@@ -80,16 +81,6 @@ export interface UserPaymentHistorySummaryResponse {
   completedPayments: number;
   failedPayments: number;
   totalPaidAmount: number;
-}
-
-export interface PageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
 }
 
 export interface UserPaymentHistoryItemResponse {

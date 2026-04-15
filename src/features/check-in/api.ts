@@ -1,15 +1,18 @@
-import apiClient from "@/shared/api/client";
+import { getApiData, postApiData } from "@/shared/api/client";
+import type { PageResponse } from "@/shared/api/model";
 import type {
   CheckInCheckOutRequest,
   CheckInScanRequest,
   GymCheckInResponse,
-  PageResponse,
+  UserCheckInHistorySummaryRequest,
   UserCheckInHistoryItemResponse,
   UserCheckInHistorySearchRequest,
   UserCheckInHistorySummaryResponse,
 } from "@/features/check-in/model";
 
-function buildHistoryParams(request?: UserCheckInHistorySearchRequest) {
+function buildHistoryParams(
+  request?: UserCheckInHistorySearchRequest | UserCheckInHistorySummaryRequest
+) {
   if (!request) {
     return undefined;
   }
@@ -21,42 +24,37 @@ function buildHistoryParams(request?: UserCheckInHistorySearchRequest) {
 }
 
 export async function scanMyCheckInApi(payload: CheckInScanRequest): Promise<GymCheckInResponse> {
-  const response = await apiClient.post<GymCheckInResponse>("/users/me/check-ins/scan", payload);
-  return response.data;
+  return postApiData<GymCheckInResponse>("/users/me/check-ins/scan", payload);
 }
 
 export async function checkOutMyCheckInApi(
   checkInId: string,
   payload?: CheckInCheckOutRequest
 ): Promise<GymCheckInResponse> {
-  const response = await apiClient.post<GymCheckInResponse>(
+  return postApiData<GymCheckInResponse>(
     `/users/me/check-ins/${checkInId}/check-out`,
     payload ?? {}
   );
-  return response.data;
 }
 
 export async function getMyCheckInsApi(): Promise<GymCheckInResponse[]> {
-  const response = await apiClient.get<GymCheckInResponse[]>("/users/me/check-ins");
-  return response.data;
+  return getApiData<GymCheckInResponse[]>("/users/me/check-ins");
 }
 
 export async function getMyCheckInHistoryApi(
   request?: UserCheckInHistorySearchRequest
 ): Promise<PageResponse<UserCheckInHistoryItemResponse>> {
-  const response = await apiClient.get<PageResponse<UserCheckInHistoryItemResponse>>(
+  return getApiData<PageResponse<UserCheckInHistoryItemResponse>>(
     "/users/me/check-ins/history",
     { params: buildHistoryParams(request) }
   );
-  return response.data;
 }
 
 export async function getMyCheckInHistorySummaryApi(
-  request?: UserCheckInHistorySearchRequest
+  request?: UserCheckInHistorySummaryRequest
 ): Promise<UserCheckInHistorySummaryResponse> {
-  const response = await apiClient.get<UserCheckInHistorySummaryResponse>(
+  return getApiData<UserCheckInHistorySummaryResponse>(
     "/users/me/check-ins/history/summary",
     { params: buildHistoryParams(request) }
   );
-  return response.data;
 }

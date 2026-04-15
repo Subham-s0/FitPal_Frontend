@@ -1,4 +1,4 @@
-import type { PageResponse } from "@/features/check-in/model";
+import type { PageResponse } from "@/shared/api/model";
 import type { PublicGymReviewResponse } from "@/features/gyms/model";
 
 export type GymReviewSortMode = "NEWEST" | "OLDEST" | "NAME_A_Z" | "NAME_Z_A";

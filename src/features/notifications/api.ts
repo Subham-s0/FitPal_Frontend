@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { getApiData, postApiData } from "@/shared/api/client";
 import type {
   AccountNotificationResponse,
   NotificationListParams,
@@ -9,22 +9,19 @@ import type {
 export async function getNotificationsApi(
   params: NotificationListParams = {}
 ): Promise<NotificationPageResponse<AccountNotificationResponse>> {
-  const response = await apiClient.get<NotificationPageResponse<AccountNotificationResponse>>("/notifications", {
+  return getApiData<NotificationPageResponse<AccountNotificationResponse>>("/notifications", {
     params,
   });
-  return response.data;
 }
 
 export async function getNotificationUnreadCountApi(): Promise<NotificationUnreadCountResponse> {
-  const response = await apiClient.get<NotificationUnreadCountResponse>("/notifications/unread-count");
-  return response.data;
+  return getApiData<NotificationUnreadCountResponse>("/notifications/unread-count");
 }
 
 export async function markNotificationReadApi(notificationId: number): Promise<AccountNotificationResponse> {
-  const response = await apiClient.post<AccountNotificationResponse>(`/notifications/${notificationId}/read`);
-  return response.data;
+  return postApiData<AccountNotificationResponse>(`/notifications/${notificationId}/read`);
 }
 
 export async function markAllNotificationsReadApi(): Promise<void> {
-  await apiClient.post("/notifications/read-all");
+  await postApiData("/notifications/read-all");
 }

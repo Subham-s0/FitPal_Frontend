@@ -1,27 +1,9 @@
 import axios, { AxiosHeaders } from "axios";
+import type { AxiosRequestConfig } from "axios";
 import { apiBaseUrl } from "@/shared/api/config";
-import type { ApiErrorResponse } from "@/features/auth/model";
+import type { ApiErrorResponse, ApiResponse } from "@/shared/api/model";
 import { authStore } from "@/features/auth/store";
 import { AUTH_STORAGE_KEY } from "@/features/auth/storage";
-
-interface ApiSuccessResponse<T> {
-  success: boolean;
-  message: string;
-  data: T | null;
-}
-
-function isApiSuccessResponse<T>(value: unknown): value is ApiSuccessResponse<T> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.success === "boolean" &&
-    typeof candidate.message === "string" &&
-    Object.prototype.hasOwnProperty.call(candidate, "data")
-  );
-}
 
 const apiClient = axios.create({
   baseURL: apiBaseUrl,
@@ -46,12 +28,7 @@ apiClient.interceptors.request.use((config) => {
 
 // ── Response: handle 401 globally ─────────────────────────────────────────
 apiClient.interceptors.response.use(
-  (response) => {
-    if (isApiSuccessResponse(response.data)) {
-      response.data = response.data.data;
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       authStore.clearAuth();
@@ -70,6 +47,57 @@ apiClient.interceptors.response.use(
 );
 
 export { AUTH_STORAGE_KEY };
+
+export function unwrapApiResponse<T>(response: ApiResponse<T>): T {
+  if (!response.success) {
+    throw new Error(response.message || "Request failed");
+  }
+
+  return response.data as T;
+}
+
+export async function getApiData<T>(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const response = await apiClient.get<ApiResponse<T>>(url, config);
+  return unwrapApiResponse(response.data);
+}
+
+export async function postApiData<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const response = await apiClient.post<ApiResponse<T>>(url, data, config);
+  return unwrapApiResponse(response.data);
+}
+
+export async function putApiData<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const response = await apiClient.put<ApiResponse<T>>(url, data, config);
+  return unwrapApiResponse(response.data);
+}
+
+export async function patchApiData<T>(
+  url: string,
+  data?: unknown,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const response = await apiClient.patch<ApiResponse<T>>(url, data, config);
+  return unwrapApiResponse(response.data);
+}
+
+export async function deleteApiData<T = void>(
+  url: string,
+  config?: AxiosRequestConfig
+): Promise<T> {
+  const response = await apiClient.delete<ApiResponse<T>>(url, config);
+  return unwrapApiResponse(response.data);
+}
 
 export function getApiErrorMessage(
   error: unknown,

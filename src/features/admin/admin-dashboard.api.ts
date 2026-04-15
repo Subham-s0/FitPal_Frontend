@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { getApiData } from "@/shared/api/client";
 import type {
   ApiHealthRange,
   DashboardApiHealthResponse,
@@ -17,59 +17,49 @@ import type {
 } from "@/features/admin/admin-dashboard.model";
 
 export async function getDashboardSnapshotApi(): Promise<DashboardSnapshotResponse> {
-  const response = await apiClient.get<DashboardSnapshotResponse>("/admin/dashboard/snapshot");
-  return response.data;
+  return getApiData<DashboardSnapshotResponse>("/admin/dashboard/snapshot");
 }
 
 export async function getDashboardRevenueApi(): Promise<DashboardRevenueResponse> {
-  const response = await apiClient.get<DashboardRevenueResponse>("/admin/dashboard/revenue");
-  return response.data;
+  return getApiData<DashboardRevenueResponse>("/admin/dashboard/revenue");
 }
 
 export async function getDashboardRevenueTrendApi(range: RevenueTrendRange): Promise<DashboardRevenueTrendResponse> {
-  const response = await apiClient.get<DashboardRevenueTrendResponse>("/admin/dashboard/revenue-trend", {
+  return getApiData<DashboardRevenueTrendResponse>("/admin/dashboard/revenue-trend", {
     params: { range },
   });
-  return response.data;
 }
 
 export async function getDashboardPeakActivityApi(range: PeakActivityRange): Promise<DashboardPeakActivityResponse> {
-  const response = await apiClient.get<DashboardPeakActivityResponse>("/admin/dashboard/peak-activity", {
+  return getApiData<DashboardPeakActivityResponse>("/admin/dashboard/peak-activity", {
     params: { range },
   });
-  return response.data;
 }
 
 export async function getDashboardMembersApi(): Promise<DashboardMembersResponse> {
-  const response = await apiClient.get<DashboardMembersResponse>("/admin/dashboard/members");
-  return response.data;
+  return getApiData<DashboardMembersResponse>("/admin/dashboard/members");
 }
 
 export async function getDashboardRecentSignupsApi(): Promise<DashboardRecentSignupResponse[]> {
-  const response = await apiClient.get<DashboardRecentSignupResponse[]>("/admin/dashboard/recent-signups");
-  return response.data;
+  return getApiData<DashboardRecentSignupResponse[]>("/admin/dashboard/recent-signups");
 }
 
 export async function getDashboardMemberActivityApi(): Promise<DashboardMemberActivityResponse> {
-  const response = await apiClient.get<DashboardMemberActivityResponse>("/admin/dashboard/member-activity");
-  return response.data;
+  return getApiData<DashboardMemberActivityResponse>("/admin/dashboard/member-activity");
 }
 
 export async function getDashboardTopGymsApi(range: TopGymsRange): Promise<DashboardTopGymResponse[]> {
-  const response = await apiClient.get<DashboardTopGymResponse[]>("/admin/dashboard/top-gyms", {
+  return getApiData<DashboardTopGymResponse[]>("/admin/dashboard/top-gyms", {
     params: { range },
   });
-  return response.data;
 }
 
 export async function getDashboardRecentPayoutsApi(): Promise<DashboardRecentPayoutResponse[]> {
-  const response = await apiClient.get<DashboardRecentPayoutResponse[]>("/admin/dashboard/recent-payouts");
-  return response.data;
+  return getApiData<DashboardRecentPayoutResponse[]>("/admin/dashboard/recent-payouts");
 }
 
 export async function getDashboardApiHealthApi(range: ApiHealthRange): Promise<DashboardApiHealthResponse> {
-  const response = await apiClient.get<DashboardApiHealthResponse>("/admin/dashboard/api-health", {
+  return getApiData<DashboardApiHealthResponse>("/admin/dashboard/api-health", {
     params: { range },
   });
-  return response.data;
 }

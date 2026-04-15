@@ -12,6 +12,9 @@ export { default as apiClient, getApiErrorMessage, AUTH_STORAGE_KEY } from "./cl
 // API configuration
 export { apiBaseUrl, apiBasePath, backendOrigin, buildApiUrl, buildGoogleOAuthStartUrl } from "./config";
 
+// API contracts
+export type { ApiErrorResponse, ApiResponse, PageResponse } from "./model";
+
 // TanStack Query client
 export { queryClient } from "./queryClient";
 

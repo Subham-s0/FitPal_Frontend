@@ -112,7 +112,7 @@ const DASHBOARD_SUBSCRIPTION_QUERY_KEY = ["dashboard-membership-state"] as const
 
 const DashboardSectionFallback = ({ label }: { label: string }) => (
   <div className="flex min-h-[320px] items-center justify-center rounded-[2rem] border border-white/10 user-surface-soft p-6 text-center text-sm font-bold uppercase tracking-[0.12em] text-white/55">
-    <span className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-orange-500" />
+    <Loader2 className="mr-3 h-4 w-4 animate-spin text-orange-500" />
     {label}
   </div>
 );

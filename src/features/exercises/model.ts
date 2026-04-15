@@ -1,3 +1,5 @@
+export type { PageResponse } from "@/shared/api/model";
+
 export type ExerciseMuscleType = "PRIMARY" | "SECONDARY";
 
 export interface ExerciseEquipmentResponse {
@@ -51,16 +53,6 @@ export interface ExerciseLibrarySearchRequest {
   query?: string;
   equipmentIds?: number[];
   muscleIds?: number[];
-}
-
-export interface PageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
 }
 
 export type ExerciseType = 

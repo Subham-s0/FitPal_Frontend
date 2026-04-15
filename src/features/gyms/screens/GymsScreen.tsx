@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, Search, Star } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, MapPin, Search, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { GymRecommendationItem } from "@/features/gyms/types";
 import DesktopSelectedGymCard from "@/features/gyms/components/DesktopSelectedGymCard";
@@ -90,6 +90,7 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
         onStatusFilterChange={state.setStatusFilter}
         onSortModeChange={state.setSortMode}
         onResetFilters={state.resetFilters}
+        isLoading={state.isDiscoverLoading}
         currentPage={currentPage}
         totalPages={totalPages}
         onPreviousPage={() => setCurrentPage((page) => Math.max(1, page - 1))}
@@ -171,15 +172,24 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
         {!state.selectedGym && (
           <div className="absolute bottom-[calc(var(--mobile-bottom-dock-height,52px)+env(safe-area-inset-bottom)+8px)] left-0 right-0 z-[1000] pb-4 pt-10 md:hidden">
             <div className="flex gap-3 overflow-x-auto px-4 pb-2" style={{ scrollbarWidth: "none" }}>
-              {pagedGyms.map((gym) => (
-                <MobileGymCard
-                  key={gym.gymId}
-                  gym={gym}
-                  isSaved={gym.isSaved}
-                  onClick={() => state.selectGym(gym)}
-                  onToggleSaved={() => state.toggleSavedGym(gym.gymId)}
+              {state.isDiscoverLoading && pagedGyms.length === 0 ? (
+                <MobileGymCardSkeleton />
+              ) : state.filteredGyms.length === 0 ? (
+                <MobileGymStatusCard
+                  title={state.showSavedOnly ? "No saved gyms yet." : "No gyms found."}
+                  subtitle={state.showSavedOnly ? "Save a gym to see it here" : "Try a different search area"}
                 />
-              ))}
+              ) : (
+                pagedGyms.map((gym) => (
+                  <MobileGymCard
+                    key={gym.gymId}
+                    gym={gym}
+                    isSaved={gym.isSaved}
+                    onClick={() => state.selectGym(gym)}
+                    onToggleSaved={() => state.toggleSavedGym(gym.gymId)}
+                  />
+                ))
+              )}
               {totalPages > 1 && (
                 <MobilePaginationCard
                   currentPage={currentPage}
@@ -286,6 +296,35 @@ function MobileGymCard({
           <span className="text-slate-500">{gym.occupancyPercent}%</span>
         )}
       </div>
+    </div>
+  );
+}
+
+function MobileGymCardSkeleton() {
+  return (
+    <div className="w-[248px] shrink-0 rounded-2xl border border-white/10 user-surface p-4 shadow-xl">
+      <div className="mb-2 flex items-start gap-2.5">
+        <div className="h-9 w-9 rounded-lg bg-white/5" />
+        <div className="min-w-0 flex-1">
+          <div className="h-3.5 w-36 max-w-full animate-pulse rounded-full bg-white/10" />
+          <div className="mt-2 h-2.5 w-20 animate-pulse rounded-full bg-white/10" />
+        </div>
+        <div className="h-8 w-8 rounded-full bg-white/5" />
+      </div>
+      <div className="mt-4 flex gap-2">
+        <div className="h-6 w-16 animate-pulse rounded-lg bg-white/5" />
+        <div className="h-6 w-12 animate-pulse rounded-lg bg-white/5" />
+      </div>
+    </div>
+  );
+}
+
+function MobileGymStatusCard({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="flex w-[248px] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 user-surface p-4 text-center shadow-xl">
+      <MapPin size={28} className="mb-3 text-orange-500" />
+      <p className="text-sm font-bold text-white">{title}</p>
+      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{subtitle}</p>
     </div>
   );
 }

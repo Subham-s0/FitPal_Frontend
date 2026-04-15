@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { deleteApiData, getApiData, patchApiData, postApiData } from "@/shared/api/client";
 import type {
   AddWorkoutExerciseRequest,
   AddWorkoutSetRequest,
@@ -17,48 +17,42 @@ import type {
 } from "@/features/workout-sessions/workoutSessionTypes";
 
 export async function getTodayWorkoutSessionApi(): Promise<TodayWorkoutSessionResponse> {
-  const response = await apiClient.get<TodayWorkoutSessionResponse>("/users/me/workout-sessions/today");
-  return response.data;
+  return getApiData<TodayWorkoutSessionResponse>("/users/me/workout-sessions/today");
 }
 
 export async function getWorkoutSessionHistoryApi(): Promise<WorkoutSessionSummaryResponse[]> {
-  const response = await apiClient.get<WorkoutSessionSummaryResponse[]>("/users/me/workout-sessions/history");
-  return response.data;
+  return getApiData<WorkoutSessionSummaryResponse[]>("/users/me/workout-sessions/history");
 }
 
 export async function getWorkoutSessionHistoryPaginatedApi(
   page: number = 0,
   size: number = 10
 ): Promise<WorkoutSessionHistoryPageResponse> {
-  const response = await apiClient.get<WorkoutSessionHistoryPageResponse>(
+  return getApiData<WorkoutSessionHistoryPageResponse>(
     `/users/me/workout-sessions/history/paginated?page=${page}&size=${size}`
   );
-  return response.data;
 }
 
 export async function getWorkoutInsightsApi(
   range: WorkoutInsightRange = "7d"
 ): Promise<WorkoutInsightsResponse> {
-  const response = await apiClient.get<WorkoutInsightsResponse>(
+  return getApiData<WorkoutInsightsResponse>(
     `/users/me/workout-sessions/insights?range=${range}`
   );
-  return response.data;
 }
 
 export async function getWorkoutSessionApi(routineLogId: string): Promise<WorkoutSessionResponse> {
-  const response = await apiClient.get<WorkoutSessionResponse>(`/users/me/workout-sessions/${routineLogId}`);
-  return response.data;
+  return getApiData<WorkoutSessionResponse>(`/users/me/workout-sessions/${routineLogId}`);
 }
 
 export async function deleteWorkoutSessionApi(routineLogId: string): Promise<void> {
-  await apiClient.delete(`/users/me/workout-sessions/${routineLogId}`);
+  await deleteApiData(`/users/me/workout-sessions/${routineLogId}`);
 }
 
 export async function startWorkoutSessionApi(
   request: StartWorkoutSessionRequest
 ): Promise<WorkoutSessionResponse> {
-  const response = await apiClient.post<WorkoutSessionResponse>("/users/me/workout-sessions/start", request);
-  return response.data;
+  return postApiData<WorkoutSessionResponse>("/users/me/workout-sessions/start", request);
 }
 
 export async function updateWorkoutSetApi(
@@ -67,44 +61,40 @@ export async function updateWorkoutSetApi(
   routineLogSetId: string,
   request: UpdateWorkoutSetRequest
 ): Promise<WorkoutSessionSetResponse> {
-  const response = await apiClient.patch<WorkoutSessionSetResponse>(
+  return patchApiData<WorkoutSessionSetResponse>(
     `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}/sets/${routineLogSetId}`,
     request
   );
-  return response.data;
 }
 
 export async function completeWorkoutSessionApi(
   routineLogId: string,
   request: CompleteWorkoutSessionRequest
 ): Promise<WorkoutSessionResponse> {
-  const response = await apiClient.post<WorkoutSessionResponse>(
+  return postApiData<WorkoutSessionResponse>(
     `/users/me/workout-sessions/${routineLogId}/complete`,
     request
   );
-  return response.data;
 }
 
 export async function skipWorkoutSessionApi(
   routineLogId: string,
   request: SkipWorkoutSessionRequest
 ): Promise<WorkoutSessionResponse> {
-  const response = await apiClient.post<WorkoutSessionResponse>(
+  return postApiData<WorkoutSessionResponse>(
     `/users/me/workout-sessions/${routineLogId}/skip`,
     request
   );
-  return response.data;
 }
 
 export async function addWorkoutExerciseApi(
   routineLogId: string,
   request: AddWorkoutExerciseRequest
 ): Promise<WorkoutSessionExerciseResponse> {
-  const response = await apiClient.post<WorkoutSessionExerciseResponse>(
+  return postApiData<WorkoutSessionExerciseResponse>(
     `/users/me/workout-sessions/${routineLogId}/exercises`,
     request
   );
-  return response.data;
 }
 
 export async function addWorkoutSetApi(
@@ -112,18 +102,17 @@ export async function addWorkoutSetApi(
   routineLogExerciseId: string,
   request: AddWorkoutSetRequest
 ): Promise<WorkoutSessionSetResponse> {
-  const response = await apiClient.post<WorkoutSessionSetResponse>(
+  return postApiData<WorkoutSessionSetResponse>(
     `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}/sets`,
     request
   );
-  return response.data;
 }
 
 export async function addExerciseToRoutineApi(
   routineLogId: string,
   routineLogExerciseId: string
 ): Promise<void> {
-  await apiClient.post(
+  await postApiData(
     `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}/add-to-routine`
   );
 }
@@ -133,7 +122,7 @@ export async function deleteWorkoutSetApi(
   routineLogExerciseId: string,
   routineLogSetId: string
 ): Promise<void> {
-  await apiClient.delete(
+  await deleteApiData(
     `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}/sets/${routineLogSetId}`
   );
 }
@@ -142,7 +131,7 @@ export async function deleteWorkoutExerciseApi(
   routineLogId: string,
   routineLogExerciseId: string
 ): Promise<void> {
-  await apiClient.delete(
+  await deleteApiData(
     `/users/me/workout-sessions/${routineLogId}/exercises/${routineLogExerciseId}`
   );
 }
@@ -150,21 +139,19 @@ export async function deleteWorkoutExerciseApi(
 export async function syncSessionToRoutineApi(
   routineLogId: string
 ): Promise<WorkoutSessionResponse> {
-  const response = await apiClient.post<WorkoutSessionResponse>(
+  return postApiData<WorkoutSessionResponse>(
     `/users/me/workout-sessions/${routineLogId}/sync-to-routine`
   );
-  return response.data;
 }
 
 export async function reorderWorkoutExercisesApi(
   routineLogId: string,
   exerciseIds: string[]
 ): Promise<WorkoutSessionResponse> {
-  const response = await apiClient.patch<WorkoutSessionResponse>(
+  return patchApiData<WorkoutSessionResponse>(
     `/users/me/workout-sessions/${routineLogId}/exercises/reorder`,
     { exerciseIds }
   );
-  return response.data;
 }
 
 export const workoutSessionQueryKeys = {
@@ -176,4 +163,3 @@ export const workoutSessionQueryKeys = {
   details: () => [...workoutSessionQueryKeys.all, "detail"] as const,
   detail: (routineLogId: string) => [...workoutSessionQueryKeys.details(), routineLogId] as const,
 };
-

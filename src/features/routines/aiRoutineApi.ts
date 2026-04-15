@@ -1,4 +1,4 @@
-import apiClient from "@/shared/api/client";
+import { getApiData, postApiData } from "@/shared/api/client";
 import type {
   AiRoutineBootstrapResponse,
   AiRoutinePreviewResponse,
@@ -8,30 +8,27 @@ import type {
 } from "@/features/routines/aiRoutineTypes";
 
 export async function getAiRoutineBootstrapApi(): Promise<AiRoutineBootstrapResponse> {
-  const response = await apiClient.get<AiRoutineBootstrapResponse>("/ai/routines/bootstrap");
-  return response.data;
+  return getApiData<AiRoutineBootstrapResponse>("/ai/routines/bootstrap");
 }
 
 export async function prepareAiRoutineSuggestionsApi(
   request: GenerateRoutineSuggestionsRequest
 ): Promise<AiRoutineSuggestionsResponse> {
-  const response = await apiClient.post<AiRoutineSuggestionsResponse>(
+  return postApiData<AiRoutineSuggestionsResponse>(
     "/ai/routines/suggestions",
     request,
     { timeout: 0 }
   );
-  return response.data;
 }
 
 export async function generateAiRoutinePreviewApi(
   request: GenerateRoutinePreviewRequest
 ): Promise<AiRoutinePreviewResponse> {
-  const response = await apiClient.post<AiRoutinePreviewResponse>(
+  return postApiData<AiRoutinePreviewResponse>(
     "/ai/routines/preview",
     request,
     { timeout: 0 }
   );
-  return response.data;
 }
 
 export const aiRoutineQueryKeys = {

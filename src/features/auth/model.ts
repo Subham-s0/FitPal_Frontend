@@ -72,12 +72,3 @@ export interface AuthResponse {
   hasActiveSubscription: boolean;
   hasDashboardAccess: boolean;
 }
-
-export interface ApiErrorResponse {
-  timestamp: string;
-  status: number;
-  error: string;
-  message: string;
-  details: string[];
-  path: string;
-}

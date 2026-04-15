@@ -1,4 +1,4 @@
-import type { PageResponse } from "@/features/check-in/model";
+import type { PageResponse } from "@/shared/api/model";
 import type { AccessTier, CheckInAccessMode } from "@/features/profile/model";
 
 export type UserGymDiscoverMode = "nearest" | "best-match" | "show-all";

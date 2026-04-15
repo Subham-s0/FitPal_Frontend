@@ -4,6 +4,7 @@ import type {
   RoutineStructureType,
   SupersetGroupResponse,
 } from "@/features/routines/routineTypes";
+import type { PageResponse } from "@/shared/api/model";
 
 export type WorkoutSessionMode = "ROUTINE" | "FREESTYLE";
 export type TodaySessionState = "NONE" | "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "SKIPPED";
@@ -175,13 +176,4 @@ export interface AddWorkoutSetRequest {
   completed?: boolean;
 }
 
-export interface WorkoutSessionHistoryPageResponse {
-  items: WorkoutSessionSummaryResponse[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
-
+export type WorkoutSessionHistoryPageResponse = PageResponse<WorkoutSessionSummaryResponse>;

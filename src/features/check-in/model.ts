@@ -1,4 +1,5 @@
 import type { AccessTier } from "@/features/profile/model";
+export type { PageResponse } from "@/shared/api/model";
 
 export type CheckInStatus = "ACCESS_PENDING" | "CHECKED_IN" | "CHECKED_OUT" | "DENIED";
 
@@ -65,21 +66,24 @@ export interface UserCheckInHistorySummaryResponse {
   uniqueGyms: number;
 }
 
-export interface PageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
+export type UserCheckInHistorySortBy =
+  | "checkInAt"
+  | "checkOutAt"
+  | "createdAt"
+  | "updatedAt"
+  | "status"
+  | "gym.gymName";
 
 export interface UserCheckInHistorySearchRequest {
   statuses?: CheckInStatus[];
   gymName?: string;
-  sortBy?: string;
+  sortBy?: UserCheckInHistorySortBy;
   sortDirection?: "ASC" | "DESC";
   page?: number;
   size?: number;
+}
+
+export interface UserCheckInHistorySummaryRequest {
+  statuses?: CheckInStatus[];
+  gymName?: string;
 }

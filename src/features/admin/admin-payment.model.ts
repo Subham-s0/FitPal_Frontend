@@ -1,4 +1,4 @@
-import type { PageResponse } from "@/features/payment/model";
+import type { PageResponse } from "@/shared/api/model";
 import type { PaymentMethod, PaymentStatus } from "@/features/payment/model";
 import type { BillingCycle } from "@/features/subscription/model";
 import type { RevenueTrendGranularity } from "@/features/payment/payment.constants";

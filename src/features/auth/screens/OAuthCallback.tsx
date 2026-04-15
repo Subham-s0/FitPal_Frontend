@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import type { ApiErrorResponse, AuthResponse } from "@/features/auth/model";
+import type { AuthResponse } from "@/features/auth/model";
+import type { ApiErrorResponse } from "@/shared/api/model";
 import { authStore } from "@/features/auth/store";
 import { getPostAuthRoute } from "@/features/auth/auth-routing";
 import { toast } from "sonner";

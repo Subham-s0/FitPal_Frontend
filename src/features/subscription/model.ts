@@ -1,3 +1,5 @@
+export type { PageResponse } from "@/shared/api/model";
+
 export type BillingCycle = "MONTHLY" | "YEARLY";
 
 export type SubscriptionStatus =
@@ -15,16 +17,6 @@ export type SubscriptionPauseHistoryStatus =
   | "RESUMED_EARLY"
   | "COMPLETED"
   | "CANCELLED_SCHEDULED";
-
-export interface PageResponse<T> {
-  items: T[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
-}
 
 export interface SelectUserSubscriptionRequest {
   planId: number;
