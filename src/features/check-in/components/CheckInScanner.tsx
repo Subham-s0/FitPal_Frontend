@@ -559,35 +559,19 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
         <button
           type="button"
           onClick={onBack}
-          className="rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-200 hover:border-[hsla(30,100%,50%,0.35)] hover:bg-[hsla(30,100%,50%,0.14)] hover:text-white active:scale-95"
+          className="rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-3 py-1.5 sm:px-5 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-200 hover:border-[hsla(30,100%,50%,0.35)] hover:bg-[hsla(30,100%,50%,0.14)] hover:text-white active:scale-95"
         >
           View Recents
         </button>
       }
+      headerClassName="!flex-row !mb-4 !text-left justify-between items-center"
       bodyClassName="space-y-0"
-      titleClassName="tracking-tighter"
+      titleClassName="tracking-tighter !text-xl sm:!text-2xl"
     >
       <div className="flex h-full flex-col gap-3 overflow-hidden font-sans text-white">
-        {/* Header */}
-        <div className="hidden items-center justify-between flex-shrink-0">
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-tighter leading-none">
-              Member <span className="text-gradient-fire">Check-In</span>
-            </h1>
-            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-gray-500 mt-1">
-              Access the gym
-            </p>
-          </div>
-          <button
-            onClick={onBack}
-            className="rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-200 hover:border-[hsla(30,100%,50%,0.35)] hover:bg-[hsla(30,100%,50%,0.14)] hover:text-white active:scale-95"
-          >
-            View Recents
-          </button>
-        </div>
 
         {/* Main grid — fills remaining height */}
-        <div className="grid grid-cols-1 gap-3 flex-1 min-h-0 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 gap-3 flex-1 min-h-0 lg:grid-cols-[minmax(0,1.18fr)_300px] xl:grid-cols-[minmax(0,1.28fr)_320px]">
           {/* ── Left column: scanner ── */}
           <div className="flex flex-col gap-2 min-h-0 overflow-y-auto">
             <div className="bg-[#111] border border-white/5 rounded-[1.75rem] flex flex-col min-h-0 overflow-hidden">
@@ -625,7 +609,7 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
                   {scannerMode === "qr" ? (
                     <>
                       {/* Camera viewport */}
-                          <div className="relative mx-auto h-[15rem] w-full sm:h-[18rem] lg:h-[20rem] lg:w-[92%] xl:h-[22rem] xl:w-[88%] rounded-[1.5rem] overflow-hidden bg-[#080808] border border-white/5 flex-shrink-0 flex items-center justify-center">
+                          <div className="relative mx-auto h-[24rem] w-full sm:h-[28rem] lg:h-[26rem] lg:w-[96%] xl:h-[30rem] xl:w-[94%] rounded-[1.5rem] overflow-hidden bg-[#080808] border border-white/5 flex-shrink-0 flex items-center justify-center">
                         {!showScanner ? (
                           <div className="flex flex-col items-center gap-3 p-4 text-center">
                             <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] border border-orange-600/18 bg-orange-600/[0.05] shadow-[0_0_30px_rgba(255,153,0,0.08)]">

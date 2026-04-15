@@ -407,32 +407,29 @@ function MembershipActionSurface({
 
 function SubscriptionHistoryCards({ items }: { items: UserSubscriptionHistoryItemResponse[] }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {items.map((item) => (
         <div
           key={item.subscriptionId}
-          className="rounded-[18px] border table-border user-surface-soft p-5 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+          className="rounded-[14px] border table-border user-surface-soft p-3 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] sm:rounded-[18px] sm:p-4"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-orange-500/25 bg-orange-500/10">
-                <Crown className="h-4 w-4 text-orange-400" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-start gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-orange-500/25 bg-orange-500/10 sm:h-10 sm:w-10 sm:rounded-[10px]">
+                <Crown className="h-3.5 w-3.5 text-orange-400 sm:h-4 sm:w-4" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black uppercase tracking-tight text-white">
+                <p className="truncate text-xs font-black uppercase tracking-tight text-white sm:text-sm">
                   {item.planName ?? "Membership"}
                 </p>
-                <p className="mt-1 text-[11px] text-slate-400">
-                  {item.planType ?? "N/A"}
-                </p>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-orange-400">
-                  {item.billingCycle?.toLowerCase() ?? "N/A"}
+                <p className="mt-0.5 text-[10px] text-slate-400 sm:mt-1 sm:text-[11px]">
+                  {item.planType ?? "N/A"} · {item.billingCycle?.toLowerCase() ?? "N/A"}
                 </p>
               </div>
             </div>
             <span
               className={cn(
-                "inline-flex shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
+                "inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] sm:px-2.5 sm:py-1 sm:text-[10px]",
                 getSubscriptionStatusClasses(item.subscriptionStatus)
               )}
             >
@@ -440,24 +437,22 @@ function SubscriptionHistoryCards({ items }: { items: UserSubscriptionHistoryIte
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 text-[11px]">
+          <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] sm:mt-3 sm:gap-3 sm:text-[11px]">
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Selected</p>
-              <p className="mt-1 font-semibold text-slate-200">
-                {formatMembershipDate(item.createdAt)}
-              </p>
+              <p className="mt-0.5 font-semibold text-slate-200">{formatMembershipDate(item.createdAt)}</p>
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Total</p>
-              <p className="mt-1 font-black text-white">NPR {formatCurrencyAmount(item.totalAmount)}</p>
+              <p className="mt-0.5 font-black text-white">NPR {formatCurrencyAmount(item.totalAmount)}</p>
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Starts</p>
-              <p className="mt-1 text-slate-200">{formatMembershipDate(item.startsAt)}</p>
+              <p className="mt-0.5 text-slate-200">{formatMembershipDate(item.startsAt)}</p>
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Ends</p>
-              <p className="mt-1 text-slate-200">{formatMembershipDate(item.endsAt)}</p>
+              <p className="mt-0.5 text-slate-200">{formatMembershipDate(item.endsAt)}</p>
             </div>
           </div>
         </div>
@@ -1657,7 +1652,7 @@ const MembershipUpgrade = () => {
             {currentMembership ? (
               <div className="grid gap-4 xl:grid-cols-[1.12fr_0.88fr]">
                 {/* Plan info card */}
-                <div className="relative overflow-hidden rounded-[18px] border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+                <div className="relative overflow-hidden rounded-[18px] border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5 shadow-sm transition duration-200 hover:brightness-110">
                   <div className="absolute -right-10 -top-8 h-36 w-36 rounded-full bg-orange-500/10 blur-3xl" />
                   <div className="absolute bottom-0 left-0 h-24 w-24 rounded-full bg-yellow-500/5 blur-2xl" />
                   <div className="relative">
@@ -1741,7 +1736,7 @@ const MembershipUpgrade = () => {
                 </div>
 
                 {/* Pause / Resume card */}
-                <div className="overflow-hidden rounded-[18px] border table-border user-surface shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+                <div className="overflow-hidden rounded-[18px] border table-border user-surface shadow-sm transition duration-200 hover:brightness-110">
                   {/* Card header */}
                   <div className="border-b border-white/[0.05] px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -2393,20 +2388,20 @@ const MembershipUpgrade = () => {
                   {currentPauseHistory.map((event) => (
                     <div
                       key={event.pauseEventId}
-                      className="rounded-[18px] border table-border user-surface-soft p-5 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+                      className="rounded-[14px] border table-border user-surface-soft p-3 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] sm:rounded-[18px] sm:p-5"
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                          <p className="text-[9px] font-black uppercase tracking-[0.14em] table-text-muted sm:text-[10px]">
                             Pause event
                           </p>
-                          <p className="mt-2 text-lg font-black uppercase text-white">
+                          <p className="mt-1 text-base font-black uppercase text-white sm:mt-2 sm:text-lg">
                             {formatPauseDuration(event.pauseDays)}
                           </p>
                         </div>
                         <div
                           className={cn(
-                            "rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em]",
+                            "rounded-full border px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] sm:px-3 sm:py-1.5 sm:text-[10px]",
                             getPauseHistoryStatusClasses(event.historyStatus)
                           )}
                         >
@@ -2414,33 +2409,35 @@ const MembershipUpgrade = () => {
                         </div>
                       </div>
 
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-[14px] border table-border user-surface p-4">
-                          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
-                            <CalendarDays size={14} />
+                      <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
+                        <div className="rounded-[10px] border table-border user-surface p-2.5 sm:rounded-[14px] sm:p-4">
+                          <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.12em] table-text-muted sm:gap-2 sm:text-[10px]">
+                            <CalendarDays size={12} className="sm:hidden" />
+                            <CalendarDays size={14} className="hidden sm:block" />
                             Pause Start
                           </p>
-                          <p className="mt-2 text-sm font-semibold text-white">
+                          <p className="mt-1 text-xs font-semibold text-white sm:mt-2 sm:text-sm">
                             {formatMembershipDate(event.pauseStartAt)}
                           </p>
                         </div>
 
-                        <div className="rounded-[14px] border table-border user-surface p-4">
-                          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
-                            <Clock3 size={14} />
+                        <div className="rounded-[10px] border table-border user-surface p-2.5 sm:rounded-[14px] sm:p-4">
+                          <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.12em] table-text-muted sm:gap-2 sm:text-[10px]">
+                            <Clock3 size={12} className="sm:hidden" />
+                            <Clock3 size={14} className="hidden sm:block" />
                             Planned Resume
                           </p>
-                          <p className="mt-2 text-sm font-semibold text-white">
+                          <p className="mt-1 text-xs font-semibold text-white sm:mt-2 sm:text-sm">
                             {formatMembershipDate(event.plannedResumeAt)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-3 rounded-[14px] border table-border user-surface p-4">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">
+                      <div className="mt-2 rounded-[10px] border table-border user-surface p-2.5 sm:mt-3 sm:rounded-[14px] sm:p-4">
+                        <p className="text-[9px] font-black uppercase tracking-[0.12em] table-text-muted sm:text-[10px]">
                           Actual Outcome
                         </p>
-                        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                        <p className="mt-1 text-xs leading-relaxed text-slate-300 sm:mt-2 sm:text-sm">
                           {event.actualResumeAt
                             ? event.historyStatus === "CANCELLED_SCHEDULED"
                               ? `Cancelled on ${formatMembershipDate(event.actualResumeAt)} before the scheduled pause began.`

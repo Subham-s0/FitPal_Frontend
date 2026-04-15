@@ -12,6 +12,7 @@ import type {
   PaymentAttemptStatusResponse,
   UserPaymentHistoryItemResponse,
   UserPaymentHistorySearchRequest,
+  UserPaymentHistorySummaryResponse,
 } from "@/features/payment/model";
 
 function buildPaymentHistoryParams(request?: UserPaymentHistorySearchRequest) {
@@ -80,6 +81,17 @@ export async function getMyPaymentHistoryApi(
 ): Promise<PageResponse<UserPaymentHistoryItemResponse>> {
   const response = await apiClient.get<PageResponse<UserPaymentHistoryItemResponse>>(
     "/users/me/payments/history",
+    { params: buildPaymentHistoryParams(request) }
+  );
+  return response.data;
+}
+
+/** GET /api/users/me/payments/history/summary */
+export async function getMyPaymentHistorySummaryApi(
+  request?: UserPaymentHistorySearchRequest
+): Promise<UserPaymentHistorySummaryResponse> {
+  const response = await apiClient.get<UserPaymentHistorySummaryResponse>(
+    "/users/me/payments/history/summary",
     { params: buildPaymentHistoryParams(request) }
   );
   return response.data;

@@ -132,7 +132,7 @@ const ProfileContainer = () => {
       >
         {/* Tab Navigation */}
         <Tabs value={activeTab} onValueChange={(v) => setTab(v as ProfileTab)} className="mb-5 sm:mb-6">
-          <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 max-sm:-mx-4 max-sm:-mt-5 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+          <TabsList className="flex h-auto w-auto gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 max-sm:-mx-4 max-sm:-mt-5 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
             {(
               [
                 { id: "profile", label: "Profile", mobileLabel: "Profile", icon: User },

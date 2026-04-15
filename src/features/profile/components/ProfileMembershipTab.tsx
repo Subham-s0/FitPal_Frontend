@@ -86,13 +86,13 @@ interface MembershipCardProps {
 
 function MembershipCard({ subscription, onViewDetails, onViewPlans }: MembershipCardProps) {
   return (
-    <div className="rounded-[18px] border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-5 sm:p-7 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+    <div className="rounded-[18px] border border-orange-500/20 bg-gradient-to-br from-orange-500/10 to-transparent p-4 sm:p-7 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-xl font-black uppercase text-white sm:text-2xl">
+          <h3 className="text-lg font-black uppercase text-white sm:text-2xl">
             {subscription.planName}
           </h3>
-          <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-orange-400 sm:text-xs">
+          <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-400 sm:mt-1 sm:text-xs">
             {subscription.planType} · {subscription.billingCycle}
           </p>
         </div>
@@ -101,7 +101,7 @@ function MembershipCard({ subscription, onViewDetails, onViewPlans }: Membership
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:grid-cols-4 sm:gap-3">
+      <div className="mt-3 grid grid-cols-4 gap-1.5 sm:mt-6 sm:gap-3">
         {[
           { label: "Base", value: formatMoney(subscription.baseAmount) },
           { label: "Billed", value: formatMoney(subscription.billedAmount) },
@@ -110,12 +110,12 @@ function MembershipCard({ subscription, onViewDetails, onViewPlans }: Membership
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-[14px] border table-border user-surface-soft p-3.5 text-center transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04] shadow-sm"
+            className="rounded-[14px] border table-border user-surface-soft p-2 text-center shadow-sm transition duration-200 hover:brightness-110 sm:p-3.5"
           >
-            <p className="text-[9px] font-black uppercase tracking-[0.14em] table-text-muted">
+            <p className="text-[8px] font-black uppercase tracking-[0.14em] table-text-muted sm:text-[9px]">
               {item.label}
             </p>
-            <p className="mt-1 text-base font-black text-white sm:text-lg">{item.value}</p>
+            <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-lg">{item.value}</p>
           </div>
         ))}
       </div>
@@ -149,22 +149,22 @@ interface MembershipStatsProps {
 
 function MembershipStats({ subscription }: MembershipStatsProps) {
   return (
-    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-      <div className="rounded-[18px] border table-border user-surface-soft px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Status</p>
-        <p className="mt-1 text-[15px] font-black text-white">
+    <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5 sm:gap-3">
+      <div className="rounded-xl border table-border user-surface-soft p-2.5 shadow-sm transition duration-200 hover:brightness-110 sm:rounded-[18px] sm:px-5 sm:py-4">
+        <p className="text-[8px] font-black uppercase tracking-[0.14em] table-text-muted sm:text-[10px]">Status</p>
+        <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-[15px]">
           {subscription.hasActiveSubscription ? "Active" : "Pending"}
         </p>
       </div>
-      <div className="rounded-[18px] border table-border user-surface-soft px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Auto Renew</p>
-        <p className="mt-1 text-[15px] font-black text-white">
+      <div className="rounded-xl border table-border user-surface-soft p-2.5 shadow-sm transition duration-200 hover:brightness-110 sm:rounded-[18px] sm:px-5 sm:py-4">
+        <p className="text-[8px] font-black uppercase tracking-[0.14em] table-text-muted sm:text-[10px]">Auto Renew</p>
+        <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-[15px]">
           {subscription.autoRenew ? "Enabled" : "Disabled"}
         </p>
       </div>
-      <div className="rounded-[18px] border table-border user-surface-soft px-5 py-4 shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
-        <p className="text-[10px] font-black uppercase tracking-[0.14em] table-text-muted">Discount</p>
-        <p className="mt-1 text-[15px] font-black text-white">
+      <div className="rounded-xl border table-border user-surface-soft p-2.5 shadow-sm transition duration-200 hover:brightness-110 sm:rounded-[18px] sm:px-5 sm:py-4">
+        <p className="text-[8px] font-black uppercase tracking-[0.14em] table-text-muted sm:text-[10px]">Discount</p>
+        <p className="mt-0.5 truncate text-sm font-black text-white sm:mt-1 sm:text-[15px]">
           {subscription.discountAmount > 0
             ? `${formatMoney(subscription.discountAmount)} (${subscription.discountPercent.toFixed(0)}%)`
             : "None"}
@@ -180,20 +180,20 @@ interface MembershipFeaturesProps {
 
 function MembershipFeatures({ features }: MembershipFeaturesProps) {
   return (
-    <div className="mt-5 border-t table-border-cell pt-5 sm:mt-7 sm:pt-7">
-      <p className="mb-4 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500">
+    <div className="mt-4 border-t table-border-cell pt-4 sm:mt-7 sm:pt-7">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-[0.14em] text-orange-500 sm:mb-4 sm:text-[11px]">
         Features Included
       </p>
-      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
         {features.map((feature, i) => (
           <li
             key={i}
-            className="flex items-center gap-3.5 rounded-[14px] border table-border user-surface p-3.5 transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
+            className="flex items-start gap-2 rounded-[10px] border table-border user-surface p-2.5 sm:gap-3.5 sm:rounded-[14px] sm:p-3.5"
           >
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-orange-500/20 bg-orange-500/10 shadow-[0_0_10px_rgba(249,115,22,0.2)]">
-              <Check className="h-3.5 w-3.5 text-orange-400 stroke-[3px]" />
+            <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-orange-500/20 bg-orange-500/10 shadow-[0_0_10px_rgba(249,115,22,0.2)] sm:h-6 sm:w-6">
+              <Check className="h-3 w-3 text-orange-400 stroke-[3px] sm:h-3.5 sm:w-3.5" />
             </div>
-            <p className="text-[12px] font-bold text-slate-200">{feature}</p>
+            <p className="text-[10px] font-bold leading-tight text-slate-200 sm:text-[12px]">{feature}</p>
           </li>
         ))}
       </ul>
@@ -207,7 +207,7 @@ interface NoSubscriptionCardProps {
 
 function NoSubscriptionCard({ onViewPlans }: NoSubscriptionCardProps) {
   return (
-    <div className="flex flex-col items-center rounded-[18px] border table-border user-surface-soft p-10 text-center shadow-sm transition-all hover:border-orange-500/30 hover:bg-orange-500/[0.04]">
+    <div className="flex flex-col items-center rounded-[18px] border table-border user-surface-soft p-10 text-center shadow-sm">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-orange-500/20 bg-orange-500/10 shadow-[0_0_20px_rgba(249,115,22,0.15)]">
         <Gem className="h-8 w-8 text-orange-500" />
       </div>

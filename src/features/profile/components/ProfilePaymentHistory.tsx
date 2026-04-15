@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { getMyPaymentHistoryApi } from "@/features/payment/api";
+import { getMyPaymentHistoryApi, getMyPaymentHistorySummaryApi } from "@/features/payment/api";
 import type {
   PaymentMethod,
   PaymentStatus,
@@ -85,80 +85,57 @@ function PaymentRowCards({
   onOpenDetail: (payment: UserPaymentHistoryItemResponse) => void;
 }) {
   return (
-    <div className="space-y-3 md:hidden">
+    <div className="space-y-2 md:hidden">
       {items.map((payment) => (
         <div
           key={payment.paymentAttemptId}
-          className="rounded-2xl border table-border table-bg p-4 transition-colors hover:table-bg-hover"
+          className="rounded-[14px] border table-border user-surface-soft p-3 shadow-sm transition-all hover:brightness-[1.08]"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-orange-500/25 bg-orange-500/10">
-                <CreditCard className="h-4 w-4 text-orange-400" />
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-start gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-orange-500/25 bg-orange-500/10">
+                <CreditCard className="h-3.5 w-3.5 text-orange-400" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black uppercase tracking-tight text-white">
+                <p className="truncate text-xs font-black uppercase tracking-tight text-white">
                   {payment.planName || "Membership payment"}
                 </p>
-                <p className="mt-1 text-[11px] text-slate-400">
-                  {payment.invoiceNumber || `Payment #${payment.paymentAttemptId}`}
-                </p>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-orange-400">
-                  {[payment.planType, payment.billingCycle].filter(Boolean).join(" · ")}
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  {payment.invoiceNumber || `#${payment.paymentAttemptId}`} · {getPaymentMethodLabel(payment.paymentMethod)}
                 </p>
               </div>
             </div>
-            <Badge className={cn("shrink-0", getPaymentStatusBadgeClassName(payment.paymentStatus))}>
+            <Badge className={cn("shrink-0 text-[9px] px-2 py-0.5", getPaymentStatusBadgeClassName(payment.paymentStatus))}>
               {payment.paymentStatus}
             </Badge>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 text-[11px]">
+          <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Amount</p>
-              <p className="mt-1 font-black text-white">
-                {formatMoney(payment.totalAmount, payment.currency)}
-              </p>
-            </div>
-            <div>
-              <p className="font-bold uppercase tracking-wider text-slate-500">Method</p>
-              <p className="mt-1 font-bold text-slate-200">{getPaymentMethodLabel(payment.paymentMethod)}</p>
+              <p className="mt-0.5 font-black text-white">{formatMoney(payment.totalAmount, payment.currency)}</p>
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Paid At</p>
-              <p className="mt-1 text-slate-200">{formatDateTime(payment.paymentTime)}</p>
+              <p className="mt-0.5 text-slate-200">{formatDateTime(payment.paymentTime)}</p>
+            </div>
+            <div>
+              <p className="font-bold uppercase tracking-wider text-slate-500">Plan</p>
+              <p className="mt-0.5 text-slate-200">{payment.planType || "—"}</p>
             </div>
             <div>
               <p className="font-bold uppercase tracking-wider text-slate-500">Billing</p>
-              <p className="mt-1 text-slate-200">{payment.billingName || "—"}</p>
-              <p className="mt-0.5 break-all text-[10px] text-slate-500">{payment.billingEmail || ""}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-2 rounded-xl border table-border table-bg-alt p-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Billing email</p>
-              <p className="mt-1 break-all text-xs text-slate-300">{payment.billingEmail || "—"}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Phone</p>
-              <p className="mt-1 text-xs text-slate-300">{payment.billingPhoneNumber || "—"}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Address</p>
-              <p className="mt-1 text-xs text-slate-300">
-                {[payment.billingAddress, payment.billingCity].filter(Boolean).join(", ") || "—"}
-              </p>
+              <p className="mt-0.5 text-slate-200">{payment.billingCycle || "—"}</p>
             </div>
           </div>
 
           <button
             type="button"
             onClick={() => onOpenDetail(payment)}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-200 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-[10px] border border-white/8 bg-white/[0.03] py-2 text-[9px] font-bold uppercase tracking-wider text-slate-400 transition-colors hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-orange-300"
           >
-            <Eye className="h-3.5 w-3.5" />
-            View full details
+            <Eye className="h-3 w-3" />
+            View details
           </button>
         </div>
       ))}
@@ -193,10 +170,22 @@ export default function ProfilePaymentHistory() {
       }),
   });
 
+  const summaryQuery = useQuery({
+    queryKey: profileQueryKeys.paymentHistorySummary(
+      statusFilter === "ALL" ? null : statusFilter,
+      methodFilter === "ALL" ? null : methodFilter
+    ),
+    queryFn: () =>
+      getMyPaymentHistorySummaryApi({
+        statuses: statusFilter === "ALL" ? undefined : [statusFilter],
+        paymentMethods: methodFilter === "ALL" ? undefined : [methodFilter],
+      }),
+  });
+
   const pageData = historyQuery.data ?? null;
   const items = useMemo(() => pageData?.items ?? [], [pageData]);
 
-  const summary = useMemo(() => {
+  const pageSummary = useMemo(() => {
     const completed = items.filter((item) => item.paymentStatus === "COMPLETED").length;
     const failed = items.filter((item) => item.paymentStatus === "FAILED").length;
     const totalPaid = items
@@ -205,6 +194,14 @@ export default function ProfilePaymentHistory() {
 
     return { completed, failed, totalPaid };
   }, [items]);
+
+  const summary = summaryQuery.data
+    ? {
+        completed: summaryQuery.data.completedPayments,
+        failed: summaryQuery.data.failedPayments,
+        totalPaid: summaryQuery.data.totalPaidAmount,
+      }
+    : pageSummary;
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -243,9 +240,11 @@ export default function ProfilePaymentHistory() {
   };
 
   const handleRefresh = () => {
-    void historyQuery.refetch().then((result) => {
-      if (result.error) {
-        toast.error(getApiErrorMessage(result.error, "Failed to refresh payment history"));
+    void Promise.all([historyQuery.refetch(), summaryQuery.refetch()]).then(([historyResult, summaryResult]) => {
+      if (historyResult.error || summaryResult.error) {
+        toast.error(
+          getApiErrorMessage(historyResult.error ?? summaryResult.error, "Failed to refresh payment history")
+        );
       }
     });
   };
@@ -279,21 +278,33 @@ export default function ProfilePaymentHistory() {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[14px] border border-emerald-500/15 bg-emerald-500/[0.07] p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-emerald-400">Completed</p>
-            <p className="mt-1 text-xl font-black text-white">{summary.completed}</p>
-            <p className="mt-0.5 text-[10px] text-emerald-500/60">on this page</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="rounded-[12px] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] to-emerald-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl">
+                <CheckCircle2 className="h-3 w-3 text-emerald-400 sm:h-4 sm:w-4" />
+              </div>
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-400 sm:text-[10px]">Done</p>
+            </div>
+            <p className="mt-1.5 text-xl font-black text-white sm:mt-2 sm:text-2xl">{summary.completed}</p>
           </div>
-          <div className="rounded-[14px] border border-red-500/15 bg-red-500/[0.07] p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-red-400">Failed</p>
-            <p className="mt-1 text-xl font-black text-white">{summary.failed}</p>
-            <p className="mt-0.5 text-[10px] text-red-500/60">on this page</p>
+          <div className="rounded-[12px] border border-red-500/20 bg-gradient-to-br from-red-500/[0.12] to-red-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl">
+                <XCircle className="h-3 w-3 text-red-400 sm:h-4 sm:w-4" />
+              </div>
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-red-400 sm:text-[10px]">Failed</p>
+            </div>
+            <p className="mt-1.5 text-xl font-black text-white sm:mt-2 sm:text-2xl">{summary.failed}</p>
           </div>
-          <div className="rounded-[14px] border border-orange-500/15 bg-orange-500/[0.07] p-4">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-orange-400">Total Paid</p>
-            <p className="mt-1 text-xl font-black text-white">{formatMoney(summary.totalPaid)}</p>
-            <p className="mt-0.5 text-[10px] text-orange-500/60">on this page</p>
+          <div className="rounded-[12px] border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.12] to-orange-500/[0.04] p-2.5 transition duration-200 hover:brightness-110 sm:rounded-[14px] sm:p-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-orange-500/20 bg-orange-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl">
+                <Receipt className="h-3 w-3 text-orange-400 sm:h-4 sm:w-4" />
+              </div>
+              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-orange-400 sm:text-[10px]">Paid</p>
+            </div>
+            <p className="mt-1.5 text-base font-black text-white sm:mt-2 sm:text-xl">{formatMoney(summary.totalPaid)}</p>
           </div>
         </div>
 
@@ -537,10 +548,6 @@ export default function ProfilePaymentHistory() {
               >
                 Previous
               </button>
-              
-              <span className="px-4 py-1.5 rounded-full border table-border table-bg-alt text-[11px] font-semibold text-white">
-                Page {(pageData?.page ?? 0) + 1} of {Math.max(pageData?.totalPages ?? 1, 1)}
-              </span>
 
               <button
                 type="button"

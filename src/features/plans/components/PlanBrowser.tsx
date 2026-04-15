@@ -203,7 +203,6 @@ export default function PlanBrowser({
       <div
         key={plan.planId}
         ref={plan.mostPopular ? featuredPlanRef : undefined}
-        onClick={handleSelect}
         className={cn(
           "relative flex h-full flex-col text-left transition-all duration-500",
           compact
@@ -216,7 +215,6 @@ export default function PlanBrowser({
               ? "w-[82vw] max-w-[20rem] shrink-0 snap-center"
               : "w-[85vw] max-w-[22rem] shrink-0 snap-center"
             : "",
-          cardInteractive && "cursor-pointer hover:-translate-y-1",
           isSelected
             ? "border-2 border-orange-500 bg-[#16110d]"
             : plan.mostPopular
@@ -386,12 +384,17 @@ export default function PlanBrowser({
             <div className="relative px-7">
               <button
                 type="button"
-                onClick={() => setMobilePlanIndex(Math.max(0, boundedMobileIndex - 1))}
-                disabled={boundedMobileIndex === 0}
-                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-[#0f0f0f]/90 p-1.5 text-slate-500 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur transition-all duration-200 hover:text-orange-400 hover:drop-shadow-[0_0_8px_rgba(249,115,22,0.7)] disabled:pointer-events-none disabled:opacity-20"
+                onClick={() =>
+                  setMobilePlanIndex(
+                    boundedMobileIndex === 0
+                      ? orderedPlans.length - 1
+                      : boundedMobileIndex - 1
+                  )
+                }
+                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-transparent p-1 text-white/50 transition-all duration-200 hover:text-orange-400 hover:scale-125 active:scale-90"
                 aria-label="Previous plan"
               >
-                <ChevronLeft size={22} strokeWidth={2.5} />
+                <ChevronLeft size={24} strokeWidth={3} />
               </button>
 
               <div>
@@ -401,13 +404,16 @@ export default function PlanBrowser({
               <button
                 type="button"
                 onClick={() =>
-                  setMobilePlanIndex(Math.min(orderedPlans.length - 1, boundedMobileIndex + 1))
+                  setMobilePlanIndex(
+                    boundedMobileIndex >= orderedPlans.length - 1
+                      ? 0
+                      : boundedMobileIndex + 1
+                  )
                 }
-                disabled={boundedMobileIndex >= orderedPlans.length - 1}
-                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/10 bg-[#0f0f0f]/90 p-1.5 text-slate-500 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur transition-all duration-200 hover:text-orange-400 hover:drop-shadow-[0_0_8px_rgba(249,115,22,0.7)] disabled:pointer-events-none disabled:opacity-20"
+                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-transparent p-1 text-white/50 transition-all duration-200 hover:text-orange-400 hover:scale-125 active:scale-90"
                 aria-label="Next plan"
               >
-                <ChevronRight size={22} strokeWidth={2.5} />
+                <ChevronRight size={24} strokeWidth={3} />
               </button>
             </div>
 

@@ -265,9 +265,9 @@ const UserLayout = ({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="mobile-menu-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-none bg-white/[0.06] text-white md:hidden"
+            className="mobile-menu-btn flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-none bg-transparent text-white/60 transition-all duration-200 hover:scale-110 hover:text-orange-400 active:scale-90 md:hidden"
           >
-            <Menu size={20} />
+            <Menu size={22} strokeWidth={2.5} />
           </button>
           <DashboardBrandLink
             href="/dashboard"

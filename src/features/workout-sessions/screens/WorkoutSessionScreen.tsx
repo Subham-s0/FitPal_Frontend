@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import WorkoutSetRow from "../components/WorkoutSetRow";
+import WorkoutSetRow, { getVisibleFieldsForExerciseType } from "../components/WorkoutSetRow";
 import WorkoutSummarySheet from "../components/WorkoutSummarySheet";
 import ExerciseDetailSheet from "@/features/routines/components/ExerciseDetailSheet";
 import {
@@ -388,6 +388,8 @@ function SessionExerciseCard({
     : totalSets;
   const isModifiedFromTemplate = hasRoutine && exercise.routineDayExerciseId !== null && totalSets !== templateSetCount;
 
+  const fields = getVisibleFieldsForExerciseType(exercise.exerciseType);
+
   return (
     <div
       className={`flow-panel overflow-hidden rounded-2xl transition-all ${
@@ -499,12 +501,13 @@ function SessionExerciseCard({
           <table className="w-full">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-gray-500">
-                <th className="w-10 px-2 py-2 text-left">Done</th>
-                <th className="w-12 px-2 py-2 text-center">Set</th>
-                <th className="px-2 py-2 text-left">Weight</th>
-                <th className="px-2 py-2 text-left">Reps</th>
-                <th className="px-2 py-2 text-right">Target</th>
-                {totalSets > 1 && <th className="w-10 px-2 py-2"></th>}
+                <th className="w-10 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Done</th>
+                {fields.weight && <th className="w-20 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Weight</th>}
+                {fields.reps && <th className="w-16 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Reps</th>}
+                {fields.duration && <th className="w-20 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Time</th>}
+                {fields.distance && <th className="w-20 px-1 sm:px-2 py-1.5 sm:py-2 text-left">Dist</th>}
+                <th className="px-1 sm:px-2 py-1.5 sm:py-2 text-right">Target</th>
+                {totalSets > 1 && <th className="w-10 px-1 sm:px-2 py-1.5 sm:py-2"></th>}
               </tr>
             </thead>
             <tbody>

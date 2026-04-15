@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -71,6 +71,7 @@ interface QuestionCardProps {
   number: number;
   title: string;
   description: string;
+  mobileDescription?: string;
   children: React.ReactNode;
 }
 
@@ -212,21 +213,32 @@ function formatSnapshotSummary(snapshot: AiLiftSnapshotResponse | null): string 
   return `${snapshot.bestSetWeight} x ${snapshot.bestSetReps} (${sourceLabel})`;
 }
 
-function QuestionCard({ number, title, description, children }: QuestionCardProps) {
+function QuestionCard({
+  number,
+  title,
+  description,
+  mobileDescription,
+  children,
+}: QuestionCardProps) {
   return (
     <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 sm:p-4">
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.05] text-xs font-black text-slate-200">
           {number}
         </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="space-y-0.5">
-            <h3 className="text-xs font-black uppercase tracking-[0.1em] text-white sm:text-sm">{title}</h3>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <h3 className="text-xs font-black uppercase tracking-[0.1em] text-white sm:text-sm">{title}</h3>
+          {mobileDescription ? (
+            <>
+              <p className="text-[11px] leading-snug text-slate-400 sm:hidden">{mobileDescription}</p>
+              <p className="hidden text-[11px] leading-snug text-slate-400 sm:block sm:text-xs">{description}</p>
+            </>
+          ) : (
             <p className="text-[11px] leading-snug text-slate-400 sm:text-xs">{description}</p>
-          </div>
-          {children}
+          )}
         </div>
       </div>
+      <div className="mt-3 sm:pl-12">{children}</div>
     </section>
   );
 }
@@ -273,9 +285,11 @@ export default function AiRoutineGenerationDialog({
   onGenerateRequest,
 }: AiRoutineGenerationDialogProps) {
   const navigate = useNavigate();
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState<AiRoutineFormState>(createInitialForm);
   const [errors, setErrors] = useState<AiRoutineFormErrors>({});
   const [wizardStep, setWizardStep] = useState(0);
+  const [mobileDialogStyle, setMobileDialogStyle] = useState<CSSProperties | undefined>();
   /** Profile/history summary before numbered questions (not counted as a step). */
   const [preambleSeen, setPreambleSeen] = useState(false);
 
@@ -492,26 +506,106 @@ export default function AiRoutineGenerationDialog({
     !bootstrapQuery.isLoading &&
     !bootstrapQuery.isError;
 
+  useEffect(() => {
+    if (!open) {
+      setMobileDialogStyle(undefined);
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const updateMobilePosition = () => {
+      if (window.innerWidth >= 640) {
+        setMobileDialogStyle(undefined);
+        return;
+      }
+
+      const dialogEl = dialogContentRef.current;
+      if (!dialogEl) {
+        return;
+      }
+
+      const viewportHeight = window.innerHeight;
+      const topPadding = 16;
+      const bottomGap = 12;
+      const bottomNav = document.querySelector(".bottom-nav");
+      const dockTop =
+        bottomNav instanceof HTMLElement
+          ? bottomNav.getBoundingClientRect().top
+          : viewportHeight - 16;
+
+      const availableHeight = Math.max(320, Math.floor(dockTop - topPadding - bottomGap));
+      const dialogHeight = Math.min(dialogEl.scrollHeight, availableHeight);
+      const centeredTop = Math.round(topPadding + (availableHeight - dialogHeight) / 2);
+      const maxTop = Math.max(topPadding, Math.round(dockTop - dialogHeight - bottomGap));
+      const top = Math.min(centeredTop, maxTop);
+
+      setMobileDialogStyle({
+        top: `${top}px`,
+        bottom: "auto",
+        transform: "translateX(-50%)",
+        maxHeight: `${availableHeight}px`,
+      });
+    };
+
+    const scheduleUpdate = () => {
+      window.requestAnimationFrame(updateMobilePosition);
+    };
+
+    scheduleUpdate();
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("orientationchange", scheduleUpdate);
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleUpdate) : null;
+    const dialogEl = dialogContentRef.current;
+    if (dialogEl && resizeObserver) {
+      resizeObserver.observe(dialogEl);
+    }
+
+    const bottomNav = document.querySelector(".bottom-nav");
+    if (bottomNav instanceof HTMLElement && resizeObserver) {
+      resizeObserver.observe(bottomNav);
+    }
+
+    return () => {
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("orientationchange", scheduleUpdate);
+      resizeObserver?.disconnect();
+    };
+  }, [
+    open,
+    wizardStep,
+    preambleSeen,
+    bootstrapQuery.isLoading,
+    bootstrapQuery.isError,
+    bootstrap?.canGenerate,
+    missingManualLifts.length,
+  ]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        ref={dialogContentRef}
+        style={mobileDialogStyle}
         className={cn(
-          "flex max-h-[calc(100dvh-1.5rem)] flex-col overflow-hidden rounded-[1.4rem] border border-white/[0.08] bg-[#090909] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] sm:max-h-[min(90vh,40rem)]",
+          "left-1/2 top-[50%] flex max-h-[calc(100dvh-1rem)] -translate-x-1/2 translate-y-[-50%] flex-col overflow-hidden rounded-[1.25rem] border border-white/[0.08] bg-[#090909] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] sm:max-h-[min(90vh,40rem)] sm:rounded-[1.4rem]",
           "min-w-0 w-[min(calc(100vw-1rem),36rem)] max-w-[min(calc(100vw-1rem),36rem)]",
         )}
       >
         <DialogHeader className="shrink-0 border-b border-white/[0.06] px-4 pb-3 pt-3 text-left sm:px-5 sm:pb-4 sm:pt-4">
           <div className="flex items-start gap-3 pr-8">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.05]">
-              <Sparkles className="h-5 w-5 text-slate-200" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-orange-500/20 bg-[linear-gradient(135deg,rgba(255,106,0,0.18),rgba(255,149,0,0.08))] sm:h-11 sm:w-11">
+              <Sparkles className="h-4 w-4 text-orange-300 sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0 space-y-0.5">
               <DialogTitle className="text-base font-black uppercase tracking-[0.08em] text-white sm:text-lg">
-                Generate Routine with AI
+                Generate <span className="text-gradient-fire">Routine</span>
               </DialogTitle>
-              <DialogDescription className="text-[11px] leading-relaxed text-slate-400 sm:text-sm">
-                Step through a few questions. The backend validates your profile before preparing the
-                AI request.
+              <DialogDescription className="text-[10px] leading-relaxed text-slate-400 sm:text-sm">
+                Answer a few questions to generate your routine.
               </DialogDescription>
             </div>
           </div>
@@ -734,7 +828,7 @@ export default function AiRoutineGenerationDialog({
                               daysPerWeek: undefined,
                             }));
                           }}
-                          className="h-10 rounded-xl border-white/10 bg-white/[0.03] text-sm text-white"
+                          className="h-10 rounded-xl border-white/10 bg-white/[0.03] !text-[13px] font-semibold text-white"
                           placeholder="2"
                         />
                         {errors.daysPerWeek && (
@@ -750,6 +844,7 @@ export default function AiRoutineGenerationDialog({
                     <QuestionCard
                       number={2}
                       title="Equipment"
+                      mobileDescription='Pick what you can use. "All equipment" includes every supported type in your library.'
                       description="Pick what you can use. “All equipment” uses every equipment type available in your exercise library."
                     >
                       <div className="space-y-2">
@@ -812,7 +907,7 @@ export default function AiRoutineGenerationDialog({
                             }));
                           }}
                         >
-                          <SelectTrigger className="h-10 rounded-xl border-white/10 bg-white/[0.03] text-left text-sm text-white focus:ring-orange-500/30">
+                          <SelectTrigger className="h-10 rounded-xl border-white/10 bg-white/[0.03] text-left text-[13px] font-semibold text-white focus:ring-orange-500/30">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="border-white/10 bg-[#111] text-white">
@@ -867,8 +962,8 @@ export default function AiRoutineGenerationDialog({
                               </label>
 
                               {liftState.enabled && (
-                                <div className="grid gap-2 sm:grid-cols-2">
-                                  <div className="space-y-1">
+                                <div className="flex flex-nowrap items-end gap-2">
+                                  <div className="w-[7.5rem] space-y-1">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">
                                       Weight (kg)
                                     </Label>
@@ -880,11 +975,11 @@ export default function AiRoutineGenerationDialog({
                                       onChange={(event) =>
                                         updateLiftField(lift, { weight: event.target.value })
                                       }
-                                      className="h-10 rounded-xl border-white/10 bg-white/[0.03] text-sm text-white"
+                                      className="h-10 rounded-xl border-white/10 bg-white/[0.03] px-3 text-center !text-[13px] font-semibold tabular-nums text-white"
                                       placeholder="80"
                                     />
                                   </div>
-                                  <div className="space-y-1">
+                                  <div className="w-[5.5rem] space-y-1">
                                     <Label className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">
                                       Reps
                                     </Label>
@@ -896,7 +991,7 @@ export default function AiRoutineGenerationDialog({
                                       onChange={(event) =>
                                         updateLiftField(lift, { reps: event.target.value })
                                       }
-                                      className="h-10 rounded-xl border-white/10 bg-white/[0.03] text-sm text-white"
+                                      className="h-10 rounded-xl border-white/10 bg-white/[0.03] px-3 text-center !text-[13px] font-semibold tabular-nums text-white"
                                       placeholder="5"
                                     />
                                   </div>
@@ -942,7 +1037,7 @@ export default function AiRoutineGenerationDialog({
               </div>
 
               {showWizardNav && (
-                <div className="relative z-20 mt-3 shrink-0 space-y-2 border-t border-white/[0.06] bg-[#090909] pt-3">
+                <div className="relative z-20 mt-3 shrink-0 space-y-2 border-t border-white/[0.06] bg-[#090909] pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3">
                   {!preambleSeen ? (
                     <div className="flex items-center justify-end gap-2">
                       <button

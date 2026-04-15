@@ -26,7 +26,6 @@ const TB_IDLE =
   "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/20 hover:text-white";
 
 const statCardClass = "rounded-2xl border table-border table-bg p-4";
-
 function formatPublishedAt(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -38,32 +37,57 @@ function formatPublishedAt(value: string) {
 function StatsCard({
   icon: Icon,
   label,
+  mobileLabel,
   value,
   tone,
 }: {
   icon: typeof Bell;
   label: string;
+  mobileLabel: string;
   value: string;
   tone: "orange" | "emerald" | "blue";
 }) {
-  const toneClasses =
+  const cardClass =
     tone === "emerald"
-      ? "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-300"
+      ? "rounded-[12px] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.12] to-emerald-500/[0.04] p-2.5 sm:rounded-[14px] sm:p-4"
       : tone === "blue"
-        ? "border-sky-500/20 bg-sky-500/[0.08] text-sky-300"
-        : "border-orange-500/20 bg-orange-500/[0.08] text-orange-300";
+        ? "rounded-[12px] border border-sky-500/20 bg-gradient-to-br from-sky-500/[0.12] to-sky-500/[0.04] p-2.5 sm:rounded-[14px] sm:p-4"
+        : "rounded-[12px] border border-orange-500/20 bg-gradient-to-br from-orange-500/[0.12] to-orange-500/[0.04] p-2.5 sm:rounded-[14px] sm:p-4";
+
+  const iconClass =
+    tone === "emerald"
+      ? "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl"
+      : tone === "blue"
+        ? "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl"
+        : "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-orange-500/20 bg-orange-500/[0.15] sm:h-8 sm:w-8 sm:rounded-xl";
+
+  const iconColor =
+    tone === "emerald" ? "h-3 w-3 text-emerald-400 sm:h-4 sm:w-4"
+      : tone === "blue" ? "h-3 w-3 text-sky-400 sm:h-4 sm:w-4"
+        : "h-3 w-3 text-orange-400 sm:h-4 sm:w-4";
+
+  const labelColor =
+    tone === "emerald" ? "text-[9px] font-black uppercase tracking-[0.12em] text-emerald-400 sm:text-[10px]"
+      : tone === "blue" ? "text-[9px] font-black uppercase tracking-[0.12em] text-sky-400 sm:text-[10px]"
+        : "text-[9px] font-black uppercase tracking-[0.12em] text-orange-400 sm:text-[10px]";
+
+  const subColor =
+    tone === "emerald" ? "mt-0.5 text-[9px] text-emerald-500/50 sm:text-[10px]"
+      : tone === "blue" ? "mt-0.5 text-[9px] text-sky-500/50 sm:text-[10px]"
+        : "mt-0.5 text-[9px] text-orange-500/50 sm:text-[10px]";
 
   return (
-    <div className={statCardClass}>
-      <div className="flex items-center gap-3">
-        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl border", toneClasses)}>
-          <Icon className="h-5 w-5" />
+    <div className={cardClass}>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className={iconClass}>
+          <Icon className={iconColor} />
         </div>
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{label}</p>
-          <p className="mt-2 text-2xl font-black text-white">{value}</p>
-        </div>
+        <p className={labelColor}>
+          <span className="sm:hidden">{mobileLabel}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </p>
       </div>
+      <p className="mt-1.5 text-xl font-black text-white sm:mt-2 sm:text-2xl">{value}</p>
     </div>
   );
 }
@@ -149,11 +173,13 @@ export default function NotificationInboxPage() {
           Mark all
         </button>
       }
+      headerClassName="!flex-row !mb-4 !text-left justify-between items-center"
+      titleClassName="tracking-tighter !text-2xl"
     >
-      <div className="grid gap-3 md:grid-cols-3">
-        <StatsCard icon={Inbox} label="Total notifications" value={String(totalNotifications)} tone="orange" />
-        <StatsCard icon={Bell} label="Unread right now" value={String(unreadCount)} tone="emerald" />
-        <StatsCard icon={Megaphone} label="Read coverage" value={unreadShare} tone="blue" />
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <StatsCard icon={Inbox} label="Total notifications" mobileLabel="Total" value={String(totalNotifications)} tone="orange" />
+        <StatsCard icon={Bell} label="Unread right now" mobileLabel="Unread" value={String(unreadCount)} tone="emerald" />
+        <StatsCard icon={Megaphone} label="Read coverage" mobileLabel="Read%" value={unreadShare} tone="blue" />
       </div>
 
       <div className="rounded-[18px] border table-border table-bg p-5">

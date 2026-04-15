@@ -19,7 +19,7 @@ type VisibleFields = {
   distance: boolean;
 };
 
-function getVisibleFieldsForExerciseType(exerciseType: string): VisibleFields {
+export function getVisibleFieldsForExerciseType(exerciseType: string): VisibleFields {
   switch (exerciseType) {
     case "WEIGHT_REPS":
       return { weight: true, reps: true, duration: false, distance: false };
@@ -149,7 +149,7 @@ export default function WorkoutSetRow({
       }`}
     >
       {/* Checkbox */}
-      <td className="w-10 px-2 py-2.5">
+      <td className="w-10 px-1 sm:px-2 py-1.5 sm:py-2.5">
         <Checkbox
           checked={set.completed}
           onCheckedChange={(checked) => handleCompletedChange(checked === true)}
@@ -162,24 +162,11 @@ export default function WorkoutSetRow({
         />
       </td>
 
-      {/* Set number */}
-      <td className="w-12 px-2 py-2.5 text-center">
-        <span
-          className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-            set.warmup
-              ? "bg-amber-500/20 text-amber-400"
-              : set.completed
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "bg-white/10 text-gray-400"
-          }`}
-        >
-          {set.warmup ? "W" : set.setOrder}
-        </span>
-      </td>
+
 
       {/* Actual inputs */}
       {fields.weight && (
-        <td className="px-2 py-2.5">
+        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -188,17 +175,17 @@ export default function WorkoutSetRow({
               onBlur={handleWeightBlur}
               disabled={disabled}
               placeholder={set.targetWeight?.toString() ?? "-"}
-              className={`flow-input w-16 rounded-lg px-2 py-1.5 text-center text-sm font-medium ${
+              className={`flow-input w-16 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
-            <span className="text-xs text-gray-500">kg</span>
+            <span className="text-[10px] sm:text-xs text-gray-500">kg</span>
           </div>
         </td>
       )}
 
       {fields.reps && (
-        <td className="px-2 py-2.5">
+        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
           <input
             type="number"
             value={localActualReps}
@@ -206,7 +193,7 @@ export default function WorkoutSetRow({
             onBlur={handleRepsBlur}
             disabled={disabled}
             placeholder={set.targetReps?.toString() ?? "-"}
-            className={`flow-input w-14 rounded-lg px-2 py-1.5 text-center text-sm font-medium ${
+            className={`flow-input w-14 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
               set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
             }`}
           />
@@ -214,7 +201,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.duration && (
-        <td className="px-2 py-2.5">
+        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
           <div className="flex items-center gap-1">
             <Timer className="h-3.5 w-3.5 text-gray-500" />
             <input
@@ -224,7 +211,7 @@ export default function WorkoutSetRow({
               onBlur={handleDurationBlur}
               disabled={disabled}
               placeholder={formatDuration(set.targetDurationSeconds) || "0:00"}
-              className={`flow-input w-16 rounded-lg px-2 py-1.5 text-center text-sm font-medium ${
+              className={`flow-input w-16 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
@@ -233,7 +220,7 @@ export default function WorkoutSetRow({
       )}
 
       {fields.distance && (
-        <td className="px-2 py-2.5">
+        <td className="px-1 sm:px-2 py-1.5 sm:py-2.5">
           <div className="flex items-center gap-1">
             <input
               type="number"
@@ -242,25 +229,25 @@ export default function WorkoutSetRow({
               onBlur={handleDistanceBlur}
               disabled={disabled}
               placeholder={set.targetDistance?.toString() ?? "-"}
-              className={`flow-input w-16 rounded-lg px-2 py-1.5 text-center text-sm font-medium ${
+              className={`flow-input w-16 rounded-lg px-2 py-1 sm:py-1.5 text-center text-sm font-medium ${
                 set.completed ? "bg-emerald-500/10 text-emerald-300" : "text-white"
               }`}
             />
-            <span className="text-xs text-gray-500">m</span>
+            <span className="text-[10px] sm:text-xs text-gray-500">m</span>
           </div>
         </td>
       )}
 
       {/* Target display */}
-      <td className="px-2 py-2.5 text-right">
-        <span className="text-xs text-gray-500">
+      <td className="px-1 sm:px-2 py-1.5 sm:py-2.5 text-right">
+        <span className="text-[10px] sm:text-xs leading-none text-gray-500">
           Target: {formatTarget()}
         </span>
       </td>
 
       {/* Remove button */}
       {canRemove && onRemoveSet && (
-        <td className="w-10 px-2 py-2.5">
+        <td className="w-10 px-1 sm:px-2 py-1.5 sm:py-2.5">
           <button
             type="button"
             onClick={() => onRemoveSet(set.routineLogSetId)}

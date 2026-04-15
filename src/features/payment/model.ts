@@ -75,6 +75,13 @@ export interface PaymentAttemptStatusResponse {
   gatewayResponseMessage: string | null;
 }
 
+export interface UserPaymentHistorySummaryResponse {
+  totalPayments: number;
+  completedPayments: number;
+  failedPayments: number;
+  totalPaidAmount: number;
+}
+
 export interface PageResponse<T> {
   items: T[];
   page: number;

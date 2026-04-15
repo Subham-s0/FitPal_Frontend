@@ -115,11 +115,6 @@ export const ProfileSetupShell = ({
         className="relative z-10 mb-2 flex w-full flex-col items-center text-center transition-[max-width] duration-300"
         style={{ maxWidth: wide ? "960px" : "580px" }}
       >
-        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-orange-600">
-          <span className="h-px w-8 bg-orange-600" />
-          FitPal Profile Setup
-        </div>
-
         <h1 className="mb-1.5 text-[26px] font-black uppercase leading-[1.1] tracking-[-0.5px]">
           {currentStep.titlePrefix}{" "}
           <span
@@ -134,10 +129,10 @@ export const ProfileSetupShell = ({
         <p className="text-[13px] leading-[1.55] text-slate-400">{currentStep.subtitle}</p>
 
         <div
-          className="mt-5 w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="mt-5 w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{ maxWidth: "760px" }}
         >
-          <div className="flex w-max min-w-full items-start px-1 pb-7 pt-3">
+          <div className="flex w-full min-w-full items-start px-0 pb-7 pt-3 sm:w-max sm:px-1">
             {steps.map((step, index) => {
               const done = index < stepIndex;
               const active = index === stepIndex;
@@ -148,7 +143,7 @@ export const ProfileSetupShell = ({
               return (
                 <div
                   key={step.id}
-                  className="relative flex min-w-[92px] flex-1 flex-col items-center overflow-visible px-1.5"
+                  className="relative flex min-w-0 flex-1 flex-col items-center overflow-visible px-0.5 sm:min-w-[92px] sm:px-1.5"
                 >
                   <div
                     className={cn(

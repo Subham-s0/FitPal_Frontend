@@ -230,29 +230,15 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
         <button
           type="button"
           onClick={onBack}
-          className="flex items-center gap-2 self-start rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+          className="flex items-center gap-2 self-start rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-3 py-1.5 sm:px-5 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-200 hover:border-[hsla(30,100%,50%,0.35)] hover:bg-[hsla(30,100%,50%,0.14)] hover:text-white active:scale-95"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Scanner
+          <ArrowLeft className="h-3.5 w-3.5" /> Back
         </button>
       }
+      headerClassName="!flex-row !mb-4 !text-left justify-between items-center"
+      titleClassName="tracking-tighter !text-xl sm:!text-2xl"
     >
       <div className="h-full w-full space-y-8 font-sans text-white">
-        <div className="hidden flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="leading-none text-4xl font-black uppercase tracking-tighter">
-              Recent <span className="text-gradient-fire">Check-Ins</span>
-            </h1>
-            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500">
-              Access Log
-            </p>
-          </div>
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 self-start rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-600 hover:text-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Scanner
-          </button>
-        </div>
 
         {requestError ? (
           <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-5 py-4 text-sm text-red-200">
@@ -260,24 +246,25 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 xl:grid-cols-4">
           {[
-            { label: "All Attempts", value: summary.totalAttempts, color: "#FF9900", icon: History },
-            { label: "Completed", value: summary.completedVisits, color: "#60a5fa", icon: CheckCircle2 },
-            { label: "Denied", value: summary.deniedVisits, color: "#f87171", icon: XCircle },
-            { label: "Unique Gyms", value: summary.uniqueGyms, color: "#a78bfa", icon: MapPin },
-          ].map(({ label, value, color, icon: Icon }) => (
+            { label: "Total", tooltip: "All Attempts", value: summary.totalAttempts, color: "#FF9900", icon: History },
+            { label: "Completed", tooltip: "Completed", value: summary.completedVisits, color: "#60a5fa", icon: CheckCircle2 },
+            { label: "Denied", tooltip: "Denied", value: summary.deniedVisits, color: "#f87171", icon: XCircle },
+            { label: "Gyms", tooltip: "Unique Gyms", value: summary.uniqueGyms, color: "#a78bfa", icon: MapPin },
+          ].map(({ label, tooltip, value, color, icon: Icon }) => (
             <div
               key={label}
-              className="rounded-2xl border border-white/6 bg-white/[0.02] p-5 transition-all hover:bg-white/[0.04]"
+              className="rounded-xl sm:rounded-2xl border border-white/6 bg-white/[0.02] p-3 sm:p-5 transition-all hover:bg-white/[0.04]"
+              title={tooltip}
             >
-              <div className="mb-3 flex items-center gap-2">
-                <Icon className="h-4 w-4" style={{ color }} />
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/30">
+              <div className="mb-1.5 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
+                <Icon className="h-3 w-3 sm:h-4 sm:w-4" style={{ color }} />
+                <p className="truncate text-[9px] font-black uppercase tracking-widest text-white/40">
                   {label}
                 </p>
               </div>
-              <p className="text-[30px] font-black leading-none" style={{ color }}>
+              <p className="text-xl sm:text-[30px] font-black leading-none" style={{ color }}>
                 {summaryQuery.isLoading ? "--" : value}
               </p>
             </div>
@@ -365,155 +352,157 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
             </div>
           </div>
 
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="table-header-bg table-border border-b">
-                {["Gym", "Date", "Check-In", "Check-Out", "Duration", "Tier", "Status"].map((header) => (
-                  <th
-                    key={header}
-                    className="table-text-muted px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] first:pl-5"
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {historyQuery.isLoading ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center">
-                    <History className="mx-auto mb-3 h-8 w-8 animate-pulse text-white/20" />
-                    <p className="text-sm font-semibold text-white/40">Loading records...</p>
-                  </td>
-                </tr>
-              ) : history.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center">
-                    <History className="mx-auto mb-3 h-8 w-8 text-white/20" />
-                    <p className="text-sm font-semibold text-white/40">No records found</p>
-                  </td>
-                </tr>
-              ) : (
-                history.map((entry) => {
-                  const statusConfig = STATUS_CONFIG[entry.status];
-                  const tierKey = entry.membershipTierAtCheckIn ?? "BASIC";
-                  const tierConfig = TIER[tierKey];
-                  const denyReason = getStatusSubtext(entry);
-
-                  return (
-                    <tr
-                      key={entry.checkInId}
-                      className="table-border-row border-b transition-colors last:border-0 hover:bg-white/[0.025]"
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[700px] whitespace-nowrap border-collapse">
+              <thead>
+                <tr className="table-header-bg table-border border-b">
+                  {["Gym", "Date", "Check-In", "Check-Out", "Duration", "Tier", "Status"].map((header) => (
+                    <th
+                      key={header}
+                      className="table-text-muted px-3.5 py-3 text-left text-[10px] font-black uppercase tracking-[0.14em] first:pl-5"
                     >
-                      <td className="px-3.5 py-3.5 pl-5">
-                        <div className="flex items-center gap-2.5">
-                          {entry.gymLogoUrl ? (
-                            <img
-                              src={entry.gymLogoUrl}
-                              alt={entry.gymName ?? "Gym logo"}
-                              className="h-10 w-10 flex-shrink-0 rounded-[10px] border border-white/8 object-cover"
-                            />
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {historyQuery.isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <History className="mx-auto mb-3 h-8 w-8 animate-pulse text-white/20" />
+                      <p className="text-sm font-semibold text-white/40">Loading records...</p>
+                    </td>
+                  </tr>
+                ) : history.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 text-center">
+                      <History className="mx-auto mb-3 h-8 w-8 text-white/20" />
+                      <p className="text-sm font-semibold text-white/40">No records found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  history.map((entry) => {
+                    const statusConfig = STATUS_CONFIG[entry.status];
+                    const tierKey = entry.membershipTierAtCheckIn ?? "BASIC";
+                    const tierConfig = TIER[tierKey];
+                    const denyReason = getStatusSubtext(entry);
+
+                    return (
+                      <tr
+                        key={entry.checkInId}
+                        className="table-border-row border-b transition-colors last:border-0 hover:bg-white/[0.025]"
+                      >
+                        <td className="px-3.5 py-3.5 pl-5">
+                          <div className="flex items-center gap-2.5">
+                            {entry.gymLogoUrl ? (
+                              <img
+                                src={entry.gymLogoUrl}
+                                alt={entry.gymName ?? "Gym logo"}
+                                className="h-10 w-10 flex-shrink-0 rounded-[10px] border border-white/8 object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[10px] border border-white/8 bg-white/5">
+                                <Building2 className="h-4 w-4 text-orange-600/70" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <p className="truncate text-[14px] font-bold">
+                                {entry.gymName ?? "Unknown Gym"}
+                              </p>
+                              <p className="table-text-muted mt-0.5 truncate text-[11px]">
+                                {entry.gymId ? `#${entry.gymId}` : "Unknown location"}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3.5 py-3.5">
+                          <div className="flex items-center gap-2 text-white/70">
+                            <Calendar className="h-3.5 w-3.5 text-white/40" />
+                            <span className="whitespace-nowrap text-[12px] font-semibold">
+                              {formatDate(entry.checkInAt)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3.5 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                            <span className="text-[12px] font-bold text-white/80">
+                              {formatTime(entry.checkInAt)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3.5 py-3.5">
+                          {entry.checkOutAt ? (
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                              <span className="text-[12px] font-bold text-white/80">
+                                {formatTime(entry.checkOutAt)}
+                              </span>
+                            </div>
                           ) : (
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[10px] border border-white/8 bg-white/5">
-                              <Building2 className="h-4 w-4 text-orange-600/70" />
+                            <span className="text-[12px] text-white/30">--</span>
+                          )}
+                        </td>
+                        <td className="px-3.5 py-3.5">
+                          {typeof entry.durationSeconds === "number" ? (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3.5 w-3.5 text-white/40" />
+                              <span className="font-mono text-[12px] font-bold text-white/70">
+                                {formatDuration(entry.durationSeconds)}
+                              </span>
+                            </div>
+                          ) : entry.status === "DENIED" ? (
+                            <span className="text-[12px] text-white/30">N/A</span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                              <span className="text-[12px] text-yellow-500/70">
+                                {entry.status === "ACCESS_PENDING" ? "Pending" : "Active"}
+                              </span>
                             </div>
                           )}
-                          <div className="min-w-0">
-                            <p className="truncate text-[14px] font-bold">
-                              {entry.gymName ?? "Unknown Gym"}
-                            </p>
-                            <p className="table-text-muted mt-0.5 truncate text-[11px]">
-                              {entry.gymId ? `#${entry.gymId}` : "Unknown location"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        <div className="flex items-center gap-2 text-white/70">
-                          <Calendar className="h-3.5 w-3.5 text-white/40" />
-                          <span className="whitespace-nowrap text-[12px] font-semibold">
-                            {formatDate(entry.checkInAt)}
+                        </td>
+                        <td className="px-3.5 py-3.5">
+                          <span
+                            className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
+                            style={{
+                              color: tierConfig.color,
+                              borderColor: tierConfig.border,
+                              backgroundColor: tierConfig.bg,
+                            }}
+                          >
+                            {tierConfig.label}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                          <span className="text-[12px] font-bold text-white/80">
-                            {formatTime(entry.checkInAt)}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        {entry.checkOutAt ? (
+                        </td>
+                        <td className="px-3.5 py-3.5">
                           <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                            <span className="text-[12px] font-bold text-white/80">
-                              {formatTime(entry.checkOutAt)}
-                            </span>
+                            {entry.status === "CHECKED_OUT" ? (
+                              <CheckCircle2 className="h-4 w-4" style={{ color: statusConfig.color }} />
+                            ) : entry.status === "DENIED" ? (
+                              <XCircle className="h-4 w-4" style={{ color: statusConfig.color }} />
+                            ) : entry.status === "ACCESS_PENDING" ? (
+                              <Clock className="h-4 w-4" style={{ color: statusConfig.color }} />
+                            ) : (
+                              <ShieldCheck className="h-4 w-4" style={{ color: statusConfig.color }} />
+                            )}
+                            <div>
+                              <span className="text-[10px] font-bold" style={{ color: statusConfig.color }}>
+                                {statusConfig.label}
+                              </span>
+                              {denyReason ? (
+                                <p className="mt-0.5 text-[9px] text-white/30 max-w-[120px] truncate">{denyReason}</p>
+                              ) : null}
+                            </div>
                           </div>
-                        ) : (
-                          <span className="text-[12px] text-white/30">--</span>
-                        )}
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        {typeof entry.durationSeconds === "number" ? (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-3.5 w-3.5 text-white/40" />
-                            <span className="font-mono text-[12px] font-bold text-white/70">
-                              {formatDuration(entry.durationSeconds)}
-                            </span>
-                          </div>
-                        ) : entry.status === "DENIED" ? (
-                          <span className="text-[12px] text-white/30">N/A</span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                            <span className="text-[12px] text-yellow-500/70">
-                              {entry.status === "ACCESS_PENDING" ? "Pending" : "Active"}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        <span
-                          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider"
-                          style={{
-                            color: tierConfig.color,
-                            borderColor: tierConfig.border,
-                            backgroundColor: tierConfig.bg,
-                          }}
-                        >
-                          {tierConfig.label}
-                        </span>
-                      </td>
-                      <td className="px-3.5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          {entry.status === "CHECKED_OUT" ? (
-                            <CheckCircle2 className="h-4 w-4" style={{ color: statusConfig.color }} />
-                          ) : entry.status === "DENIED" ? (
-                            <XCircle className="h-4 w-4" style={{ color: statusConfig.color }} />
-                          ) : entry.status === "ACCESS_PENDING" ? (
-                            <Clock className="h-4 w-4" style={{ color: statusConfig.color }} />
-                          ) : (
-                            <ShieldCheck className="h-4 w-4" style={{ color: statusConfig.color }} />
-                          )}
-                          <div>
-                            <span className="text-[10px] font-bold" style={{ color: statusConfig.color }}>
-                              {statusConfig.label}
-                            </span>
-                            {denyReason ? (
-                              <p className="mt-0.5 text-[9px] text-white/30">{denyReason}</p>
-                            ) : null}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
 
           <div className="table-border flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="table-text-muted text-[12px]">

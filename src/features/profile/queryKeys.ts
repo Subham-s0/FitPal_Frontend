@@ -9,6 +9,7 @@ import type { PaymentMethod, PaymentStatus } from "@/features/payment/model";
  * - profile.subscription: User subscription details
  * - profile.routineSettings: User routine preferences
  * - profile.paymentHistory: Payment transaction history with filters
+ * - profile.paymentHistorySummary: Payment summary totals with filters
  */
 export const profileQueryKeys = {
   // Root key
@@ -36,5 +37,15 @@ export const profileQueryKeys = {
     method ?? "all",
     sortDirection ?? "DESC",
     page ?? 0,
+  ] as const,
+
+  paymentHistorySummary: (
+    status?: PaymentStatus | "all" | null,
+    method?: PaymentMethod | "all" | null
+  ) => [
+    ...profileQueryKeys.all,
+    "payment-history-summary",
+    status ?? "all",
+    method ?? "all",
   ] as const,
 };

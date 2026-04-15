@@ -1089,7 +1089,7 @@ const RoutinesSection = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setIsAiDialogOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.12em] text-orange-200 transition-colors hover:bg-orange-500/15"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-orange-200 transition-colors hover:bg-orange-500/15"
             >
               <Sparkles className="h-4 w-4" />
               Generate with AI
@@ -1378,7 +1378,7 @@ const RoutinesSection = ({
             <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
               <button
                 onClick={() => setIsAiDialogOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-5 py-3 text-[11px] font-black uppercase tracking-[0.12em] text-orange-200 transition-colors hover:bg-orange-500/15"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-orange-200 transition-colors hover:bg-orange-500/15"
               >
                 <Sparkles className="h-4 w-4" />
                 Generate with AI
