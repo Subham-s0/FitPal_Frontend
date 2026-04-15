@@ -13,6 +13,36 @@ export interface DashboardRouteState {
 
 type DashboardRole = "USER" | "GYM" | "ADMIN" | "SUPERADMIN";
 
+export const USER_DASHBOARD_SECTION_PATHS: Record<string, string> = {
+  home: "/dashboard",
+  gyms: "/gyms",
+  routines: "/routines",
+  exercises: "/exercises",
+  workouts: "/workouts",
+  notifications: "/notifications",
+  checkin: "/check-ins",
+  progress: "/dashboard",
+};
+
+export const getUserDashboardSectionPath = (activeSection: string) =>
+  USER_DASHBOARD_SECTION_PATHS[activeSection] ?? "/dashboard";
+
+export const getUserDashboardSectionFromPath = (pathname: string) => {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+
+  if (normalizedPath === "/dashboard") {
+    return "home";
+  }
+
+  if (normalizedPath === "/checkin") {
+    return "checkin";
+  }
+
+  return Object.entries(USER_DASHBOARD_SECTION_PATHS).find(
+    ([section, path]) => section !== "home" && path === normalizedPath,
+  )?.[0] ?? null;
+};
+
 export const createDashboardState = (
   activeSection: string,
   extras: Omit<DashboardRouteState, "activeSection"> = {},
@@ -33,16 +63,22 @@ export const createAdminDashboardState = (
 
 export const getDashboardPathForRole = (role: DashboardRole | string | null | undefined) => {
   const normalizedRole = role?.toUpperCase();
-  return normalizedRole === "ADMIN" || normalizedRole === "SUPERADMIN"
-    ? "/admin/dashboard"
-    : "/dashboard";
+  if (normalizedRole === "ADMIN" || normalizedRole === "SUPERADMIN") {
+    return "/admin/dashboard";
+  }
+
+  if (normalizedRole === "GYM") {
+    return "/gym/dashboard";
+  }
+
+  return "/dashboard";
 };
 
 export const navigateToUserDashboardSection = (
   navigate: NavigateFunction,
   activeSection: string,
   extras: Omit<DashboardRouteState, "activeSection"> = {},
-) => navigate("/dashboard", { state: createUserDashboardState(activeSection, extras) });
+) => navigate(getUserDashboardSectionPath(activeSection), { state: createUserDashboardState(activeSection, extras) });
 
 export const navigateToAdminDashboardSection = (
   navigate: NavigateFunction,

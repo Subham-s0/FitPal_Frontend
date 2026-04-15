@@ -29,6 +29,9 @@ interface GymDetailsSheetProps {
   onCheckIn: (gymId: number) => void;
   isSaved: boolean;
   onToggleSaved: () => void;
+  showSaveAction?: boolean;
+  checkInActionLabel?: string;
+  canUseCheckInAction?: (gym: GymRecommendationItem) => boolean;
 }
 
 const GymDetailsSheet = ({
@@ -39,6 +42,9 @@ const GymDetailsSheet = ({
   onCheckIn,
   isSaved,
   onToggleSaved,
+  showSaveAction = true,
+  checkInActionLabel = "Check In",
+  canUseCheckInAction = canCheckInAtGym,
 }: GymDetailsSheetProps) => {
   const navigate = useNavigate();
   const touchStartYRef = useRef<number | null>(null);
@@ -83,6 +89,9 @@ const GymDetailsSheet = ({
             onViewProfile={() => navigate(`/gym/${gym.gymId}`)}
             onCheckIn={() => onCheckIn(gym.gymId)}
             onToggleSaved={onToggleSaved}
+            showSaveAction={showSaveAction}
+            checkInActionLabel={checkInActionLabel}
+            canUseCheckInAction={canUseCheckInAction}
           />
         </div>
       </div>
@@ -99,6 +108,9 @@ interface SheetContentProps {
   onViewProfile: () => void;
   onCheckIn: () => void;
   onToggleSaved: () => void;
+  showSaveAction: boolean;
+  checkInActionLabel: string;
+  canUseCheckInAction: (gym: GymRecommendationItem) => boolean;
 }
 
 function SheetContent({
@@ -110,9 +122,13 @@ function SheetContent({
   onViewProfile,
   onCheckIn,
   onToggleSaved,
+  showSaveAction,
+  checkInActionLabel,
+  canUseCheckInAction,
 }: SheetContentProps) {
   const isExpanded = snap === "expanded";
   const previewImageUrl = getGymPreviewImageUrl(gym);
+  const showCheckInAction = canUseCheckInAction(gym);
 
   return (
     <div className="space-y-4">
@@ -184,17 +200,19 @@ function SheetContent({
         </div>
 
         <div className="-mr-2 -mt-1 flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={onToggleSaved}
-            className={`rounded-full border p-2 transition-colors ${
-              isSaved
-                ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
-                : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
-            }`}
-          >
-            <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
-          </button>
+          {showSaveAction && (
+            <button
+              type="button"
+              onClick={onToggleSaved}
+              className={`rounded-full border p-2 transition-colors ${
+                isSaved
+                  ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
+                  : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
+              }`}
+            >
+              <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
+            </button>
+          )}
           {snap === "compact" && (
             <button
               type="button"
@@ -270,7 +288,7 @@ function SheetContent({
         >
           View Profile
         </button>
-        {canCheckInAtGym(gym) && (
+        {showCheckInAction && (
           <button
             type="button"
             onClick={onCheckIn}
@@ -278,7 +296,7 @@ function SheetContent({
             style={{ background: "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)" }}
           >
             <QrCode size={14} />
-            Check In
+            {checkInActionLabel}
           </button>
         )}
       </div>

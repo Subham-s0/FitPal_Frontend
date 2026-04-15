@@ -7,7 +7,6 @@ import {
   ClipboardList,
   Clock3,
   Filter,
-  Info,
   Layers,
   Loader2,
   RefreshCcw,
@@ -1005,8 +1004,6 @@ export default function ManageSettlements() {
       return sum;
     }, 0);
   }, [aggregateQ.data?.items]);
-
-  const unpaidOrInPayoutCount = (metrics?.pendingCount ?? 0) + (metrics?.inPayoutCount ?? 0);
 
   const chartBarData = useMemo(() => {
     const items = aggregateQ.data?.items ?? [];

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Dumbbell, Activity, Timer, Trophy, Heart, Zap, Flame, BicepsFlexed } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -29,7 +29,6 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const navigate = useNavigate();
   const auth = useAuthState();
-  const previousAccessTokenRef = useRef(auth.accessToken);
   const isLoginMode = mode === "login";
 
   useEffect(() => {
@@ -37,11 +36,9 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
   }, [initialMode]);
 
   useEffect(() => {
-    const hadAccessToken = Boolean(previousAccessTokenRef.current);
     const hasAccessToken = Boolean(auth.accessToken);
 
     if (!hasAccessToken) {
-      previousAccessTokenRef.current = auth.accessToken;
       return;
     }
 
@@ -55,7 +52,6 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
       })
     );
 
-    previousAccessTokenRef.current = auth.accessToken;
   }, [auth.accessToken, auth.hasActiveSubscription, auth.hasDashboardAccess, auth.hasSubscription, auth.profileCompleted, auth.role, navigate]);
 
   useEffect(() => {

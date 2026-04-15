@@ -22,6 +22,7 @@ interface GymsFilterDropdownProps {
   onToggleSavedOnly: () => void;
   onResetFilters: () => void;
   className?: string;
+  allowSavedGyms?: boolean;
 }
 
 const GymsFilterDropdown = ({
@@ -34,9 +35,10 @@ const GymsFilterDropdown = ({
   onToggleSavedOnly,
   onResetFilters,
   className = "",
+  allowSavedGyms = true,
 }: GymsFilterDropdownProps) => {
   const hasActiveFilters =
-    statusFilter !== "all" || sortMode !== "recommended" || showSavedOnly;
+    statusFilter !== "all" || sortMode !== "recommended" || (allowSavedGyms && showSavedOnly);
 
   return (
     <DropdownMenu>
@@ -106,22 +108,26 @@ const GymsFilterDropdown = ({
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
 
-        <DropdownMenuSeparator className="my-2 bg-white/10" />
+        {allowSavedGyms && (
+          <>
+            <DropdownMenuSeparator className="my-2 bg-white/10" />
 
-        <DropdownMenuItem
-          onSelect={(event) => {
-            event.preventDefault();
-            onToggleSavedOnly();
-          }}
-          className={`rounded-xl py-2 pl-3 pr-3 text-sm font-medium focus:bg-white/[0.05] focus:text-white ${
-            showSavedOnly ? "bg-orange-500/10 text-orange-300" : ""
-          }`}
-        >
-          Saved only
-          <DropdownMenuShortcut className={showSavedOnly ? "text-orange-300/80 opacity-100" : ""}>
-            {savedGymCount}
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                onToggleSavedOnly();
+              }}
+              className={`rounded-xl py-2 pl-3 pr-3 text-sm font-medium focus:bg-white/[0.05] focus:text-white ${
+                showSavedOnly ? "bg-orange-500/10 text-orange-300" : ""
+              }`}
+            >
+              Saved only
+              <DropdownMenuShortcut className={showSavedOnly ? "text-orange-300/80 opacity-100" : ""}>
+                {savedGymCount}
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </>
+        )}
 
         <DropdownMenuSeparator className="my-2 bg-white/10" />
 

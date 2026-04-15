@@ -172,7 +172,6 @@ export default function PlanBrowser({
   }, [isMobile, shouldUseDesktopScroll, orderedPlans]);
 
   const renderPlanCard = (plan: PlanResponse, index: number) => {
-    const planKey = getPlanTypeKey(plan);
     const price = isYearly ? plan.yearlyBilledAmount : plan.monthlyPrice;
     const durationDays = isYearly ? plan.yearlyDurationDays : plan.monthlyDurationDays;
     const isSelected =
@@ -311,9 +310,7 @@ export default function PlanBrowser({
                 ? "cursor-not-allowed border border-white/10 bg-white/[0.03] text-slate-500"
                 : isSelected
                   ? "bg-orange-600 text-white shadow-[0_4px_16px_rgba(234,88,12,0.3)] hover:bg-[#dc4e05]"
-                  : plan.mostPopular
-                    ? "bg-orange-600 text-white hover:bg-[#dc4e05]"
-                  : "border border-orange-600/30 bg-orange-600/10 text-orange-500 hover:bg-orange-600/20"
+                  : "border border-orange-600/30 bg-orange-600/10 text-orange-500 hover:border-orange-500/70 hover:bg-orange-500/25 hover:text-orange-100 hover:shadow-[0_0_18px_rgba(234,88,12,0.24)]"
             )}
           >
             {footerLabel}
@@ -391,7 +388,7 @@ export default function PlanBrowser({
                       : boundedMobileIndex - 1
                   )
                 }
-                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-transparent p-1 text-white/50 transition-all duration-200 hover:text-orange-400 hover:scale-125 active:scale-90"
+                className="absolute left-0 top-1/2 z-10 -translate-y-1/2 bg-transparent p-1 text-white/50 transition-all duration-200 hover:scale-125 hover:text-orange-400 active:scale-90"
                 aria-label="Previous plan"
               >
                 <ChevronLeft size={24} strokeWidth={3} />
@@ -410,7 +407,7 @@ export default function PlanBrowser({
                       : boundedMobileIndex + 1
                   )
                 }
-                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-transparent p-1 text-white/50 transition-all duration-200 hover:text-orange-400 hover:scale-125 active:scale-90"
+                className="absolute right-0 top-1/2 z-10 -translate-y-1/2 bg-transparent p-1 text-white/50 transition-all duration-200 hover:scale-125 hover:text-orange-400 active:scale-90"
                 aria-label="Next plan"
               >
                 <ChevronRight size={24} strokeWidth={3} />

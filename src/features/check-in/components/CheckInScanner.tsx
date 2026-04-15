@@ -25,8 +25,8 @@ import {
   getMyCheckInsApi,
   scanMyCheckInApi,
 } from "@/features/check-in/api";
+import { refreshCheckInState, syncCheckInVisitCache } from "@/features/check-in/cache";
 import { checkInQueryKeys } from "@/features/check-in/queryKeys";
-import { dashboardQueryKeys } from "@/features/user-dashboard/api";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import type { CheckInStatus, GymCheckInResponse } from "@/features/check-in/model";
 
@@ -333,8 +333,9 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(0);
 
   const checkInsQuery = useQuery({
-    queryKey: checkInQueryKeys.lists(),
+    queryKey: checkInQueryKeys.active(),
     queryFn: getMyCheckInsApi,
+    refetchInterval: 5_000,
   });
 
   const checkIns = checkInsQuery.data ?? EMPTY_CHECK_INS;
@@ -362,18 +363,6 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
     const intervalId = window.setInterval(updateDuration, 1_000);
     return () => window.clearInterval(intervalId);
   }, [openVisit]);
-
-  async function refreshCheckInQueries() {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: checkInQueryKeys.all }),
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all }),
-    ]);
-
-    await Promise.all([
-      queryClient.refetchQueries({ queryKey: checkInQueryKeys.all, type: "all" }),
-      queryClient.refetchQueries({ queryKey: dashboardQueryKeys.all, type: "all" }),
-    ]);
-  }
 
   const switchScannerMode = (mode: ScannerMode) => {
     setScannerMode(mode);
@@ -411,7 +400,8 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
       setActionFeedback(feedback);
       setScanState(toInlineScanState(variables.source, feedback));
       setShowScanner(false);
-      await refreshCheckInQueries();
+      syncCheckInVisitCache(queryClient, response);
+      await refreshCheckInState(queryClient);
     },
     onError: (error, variables) => {
       const feedback: ActionFeedback = {
@@ -444,7 +434,8 @@ const CheckInScanner: React.FC<CheckInScannerProps> = ({ onBack }) => {
         title: "Checked Out",
         detail: response.message ?? "Your gym session has been closed.",
       });
-      await refreshCheckInQueries();
+      syncCheckInVisitCache(queryClient, response);
+      await refreshCheckInState(queryClient);
     },
     onError: (error) => {
       setActionFeedback({

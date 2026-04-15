@@ -1,10 +1,11 @@
-import { Suspense, lazy, useEffect, useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState, useMemo, type ChangeEvent, type MouseEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { toast } from "sonner";
 import { authStore } from "@/features/auth/store";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import { getMyCheckInsApi, checkOutMyCheckInApi } from "@/features/check-in/api";
+import { refreshCheckInState, syncCheckInVisitCache } from "@/features/check-in/cache";
 import { checkInQueryKeys } from "@/features/check-in/queryKeys";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
 import {
@@ -16,16 +17,6 @@ import { getPlansApi } from "@/features/plans/api";
 import { plansQueryKeys } from "@/features/plans/queryKeys";
 import ViewPlansDialog from "@/features/subscription/components/ViewPlansDialog";
 import { CustomDatePicker } from "@/shared/ui/CustomDatePicker";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +52,10 @@ import {
 } from "@/features/workout-sessions/workoutSessionApi";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { useIsMobile } from "@/shared/hooks/use-mobile";
+import {
+  getUserDashboardSectionFromPath,
+  getUserDashboardSectionPath,
+} from "@/shared/navigation/dashboard-navigation";
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -325,7 +320,8 @@ const UserDashboard = () => {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const locationState = (location.state as { activeSection?: string; checkInView?: CheckInView } | null) ?? null;
-  const requestedSection = navigationType === "POP" ? undefined : locationState?.activeSection;
+  const pathSection = getUserDashboardSectionFromPath(location.pathname);
+  const requestedSection = pathSection ?? (navigationType === "POP" ? undefined : locationState?.activeSection);
   const requestedCheckInView = navigationType === "POP" ? undefined : locationState?.checkInView;
   const [activeSection, setActiveSection] = useState<UserDashboardSection>(() => resolveSection(requestedSection));
   const [checkInView, setCheckInView] = useState<CheckInView>(requestedCheckInView ?? "scanner");
@@ -344,6 +340,26 @@ const UserDashboard = () => {
 
   // View Plans dialog state
   const [isViewPlansDialogOpen, setIsViewPlansDialogOpen] = useState(false);
+
+  const goToSection = useCallback((section: string, nextCheckInView?: CheckInView) => {
+    const resolvedSection = resolveSection(section);
+
+    if (resolvedSection === "profile") {
+      navigate("/profile");
+      return;
+    }
+
+    if (resolvedSection === "checkin") {
+      setCheckInView(nextCheckInView ?? "scanner");
+    }
+
+    setActiveSection(resolvedSection);
+
+    const targetPath = getUserDashboardSectionPath(resolvedSection);
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (!requestedSection) return;
@@ -441,7 +457,7 @@ const UserDashboard = () => {
     queryKey: checkInQueryKeys.active(),
     queryFn: getMyCheckInsApi,
     enabled: isHomeVisible,
-    refetchInterval: 10000,
+    refetchInterval: 5_000,
   });
 
   const activeCheckIn = useMemo(() => {
@@ -476,9 +492,9 @@ const UserDashboard = () => {
 
   const checkOutMutation = useMutation({
     mutationFn: (checkInId: string) => checkOutMyCheckInApi(checkInId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: checkInQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.all });
+    onSuccess: async (response) => {
+      syncCheckInVisitCache(queryClient, response);
+      await refreshCheckInState(queryClient);
       toast.success("Checked out successfully");
     },
     onError: (error) => {
@@ -787,11 +803,11 @@ const UserDashboard = () => {
       return;
     }
 
-    setActiveSection("routines");
+    goToSection("routines");
   };
 
   const handleOpenRoutinesSection = () => {
-    setActiveSection("routines");
+    goToSection("routines");
   };
 
   const handlePauseOrResume = () => {
@@ -964,8 +980,7 @@ const UserDashboard = () => {
                   <div
                     className="relative flex min-h-[196px] flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-3xl border border-orange-600/10 bg-[rgba(45,26,15,0.6)] lg:min-h-[198px]"
                     onClick={() => {
-                      setCheckInView("scanner");
-                      setActiveSection("checkin");
+                      goToSection("checkin");
                     }}
                     title="Click to Check In"
                   >
@@ -980,17 +995,14 @@ const UserDashboard = () => {
                   <div className="grid grid-cols-2 gap-3 lg:gap-2.5">
                     <button
                       type="button"
-                      onClick={() => {
-                        setCheckInView("scanner");
-                        setActiveSection("checkin");
-                      }}
+                      onClick={() => goToSection("checkin")}
                       className="btn-fire flex items-center justify-center gap-2.5 rounded-[14px] px-4 py-4 text-sm font-black text-white lg:py-3.5 lg:text-[13px]"
                     >
                       <Maximize2 className="h-[18px] w-[18px]" /> Check-In
                     </button>
                     <button
                       type="button"
-                      onClick={() => setActiveSection("gyms")}
+                      onClick={() => goToSection("gyms")}
                       className="btn-ghost flex items-center justify-center gap-2.5 rounded-[14px] border border-white/15 px-4 py-4 text-sm font-black text-white lg:py-3.5 lg:text-[13px]"
                     >
                       <Search className="h-[18px] w-[18px]" /> Find Gyms
@@ -1460,8 +1472,7 @@ const UserDashboard = () => {
           <Suspense fallback={<DashboardSectionFallback label="Loading gyms..." />}>
             <GymsScreen
               onSwitchToCheckIn={() => {
-                setCheckInView("scanner");
-                setActiveSection("checkin");
+                goToSection("checkin");
               }}
             />
           </Suspense>
@@ -1481,7 +1492,7 @@ const UserDashboard = () => {
       case "workouts":
         return (
           <Suspense fallback={<DashboardSectionFallback label="Loading workouts..." />}>
-            <WorkoutsSection onOpenRoutines={() => setActiveSection("routines")} />
+            <WorkoutsSection onOpenRoutines={() => goToSection("routines")} />
           </Suspense>
         );
       case "notifications":
@@ -1496,8 +1507,7 @@ const UserDashboard = () => {
             <CheckInScreen
               initialView={checkInView}
               onBack={() => {
-                setCheckInView("scanner");
-                setActiveSection("home");
+                goToSection("home");
               }}
             />
           </Suspense>
@@ -1523,14 +1533,7 @@ const UserDashboard = () => {
           : "default"
       }
       onSectionChange={(section) => {
-        if (section === "profile") {
-          navigate("/profile");
-          return;
-        }
-        if (section === "checkin") {
-          setCheckInView("scanner");
-        }
-        setActiveSection(resolveSection(section));
+        goToSection(section);
       }}
     >
       {renderContent()}

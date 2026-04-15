@@ -1,4 +1,3 @@
-import { Button } from "@/shared/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/shared/ui/toggle-group";
@@ -15,11 +14,24 @@ const Navbar = () => {
     : undefined;
 
   const navLinks = [
-    { name: "Find Gyms", href: "#gyms" },
+    { name: "Find Gyms", href: "/gyms" },
     { name: "Features", href: "#features" },
     { name: "Pricing", href: "#pricing" },
     { name: "About", href: "#about" },
   ];
+
+  const handleNavLinkClick = (href: string) => {
+    if (href.startsWith("/")) {
+      navigate(href);
+    } else {
+      if (location.pathname === "/") {
+        window.location.hash = href;
+      } else {
+        navigate(`/${href}`);
+      }
+    }
+    setIsOpen(false);
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 overflow-x-clip border-b border-border bg-background">
@@ -36,13 +48,14 @@ const Navbar = () => {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => (
-              <a
+              <button
                 key={link.name}
-                href={link.href}
+                type="button"
+                onClick={() => handleNavLinkClick(link.href)}
                 className="text-muted-foreground hover:text-foreground transition-colors duration-300 font-medium"
               >
                 {link.name}
-              </a>
+              </button>
             ))}
           </div>
 
@@ -90,14 +103,14 @@ const Navbar = () => {
           <div className="animate-fade-in border-t border-border py-4 md:hidden">
             <div className="flex flex-col gap-4">
               {navLinks.map((link) => (
-                <a
+                <button
                   key={link.name}
-                  href={link.href}
+                  type="button"
+                  onClick={() => handleNavLinkClick(link.href)}
                   className="text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
-                  onClick={() => setIsOpen(false)}
                 >
                   {link.name}
-                </a>
+                </button>
               ))}
               <div className="flex flex-col gap-2 border-t border-border pt-4">
                 <ToggleGroup

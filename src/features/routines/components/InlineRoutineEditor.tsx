@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Save,
@@ -62,6 +63,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/ui/alert-dialog";
+import { resolveFloatingMenuPosition } from "@/features/routines/components/floatingMenuPosition";
 
 const ROUTINE_GOAL_OPTIONS = [
   { value: "general", label: "General Fitness" },
@@ -69,6 +71,8 @@ const ROUTINE_GOAL_OPTIONS = [
   { value: "hypertrophy", label: "Hypertrophy" },
   { value: "endurance", label: "Endurance" },
 ] as const;
+
+const DAY_ACTION_MENU_HEIGHT = 130;
 
 // ============================================
 // SORTABLE DAY ROW (for display order reordering)
@@ -96,6 +100,12 @@ function SortableDayRow({
   });
 
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+
+  const closeMenu = useCallback(() => {
+    setShowMenu(false);
+    setMenuPosition(null);
+  }, []);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -166,55 +176,66 @@ function SortableDayRow({
 
           {/* Three-dot Menu */}
           <div className={`relative flex-shrink-0 ${showMenu ? "z-[60]" : ""}`}>
-            {showMenu && (
-              <div
-                className="fixed inset-0 z-[9998]"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setShowMenu(false);
-                }}
-              />
-            )}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setShowMenu((current) => !current);
+
+                if (showMenu) {
+                  closeMenu();
+                  return;
+                }
+
+                const rect = e.currentTarget.getBoundingClientRect();
+                setMenuPosition(resolveFloatingMenuPosition(rect, DAY_ACTION_MENU_HEIGHT));
+                setShowMenu(true);
               }}
               className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
             >
               <MoreVertical className="h-5 w-5" />
             </button>
 
-            {showMenu && (
-              <div
-                className="absolute right-0 top-full z-[9999] mt-2 w-48 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    onEdit();
-                    setShowMenu(false);
+            {showMenu && menuPosition && createPortal(
+              <>
+                <div
+                  className="fixed inset-0 z-[9998]"
+                  onMouseDown={(event) => {
+                    event.stopPropagation();
+                    closeMenu();
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/5"
+                />
+                <div
+                  className="fixed z-[9999] w-48 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
+                  style={{ top: menuPosition.top, right: menuPosition.right }}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  <Edit2 className="h-4 w-4" />
-                  Edit Workout
-                </button>
-                <div className="my-1 border-t border-white/5" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    onDelete();
-                    setShowMenu(false);
-                  }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Workout
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEdit();
+                      closeMenu();
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/5"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Edit Workout
+                  </button>
+                  <div className="my-1 border-t border-white/5" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDelete();
+                      closeMenu();
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Workout
+                  </button>
+                </div>
+              </>,
+              document.body
             )}
           </div>
         </div>
@@ -639,4 +660,3 @@ export default function InlineRoutineEditor({
     </div>
   );
 }
-

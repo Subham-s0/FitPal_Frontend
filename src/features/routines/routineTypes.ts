@@ -486,8 +486,7 @@ export function createDefaultSet(setOrder: number, targetRestSeconds: number = 9
 }
 
 export function createExerciseFromLibrary(
-  exercise: ExerciseLibrarySummaryResponse | CustomExerciseResponse,
-  exerciseOrder: number = 0
+  exercise: ExerciseLibrarySummaryResponse | CustomExerciseResponse
 ): RoutineExercise {
   const isCustom = "customExerciseId" in exercise;
   return {
@@ -521,8 +520,7 @@ export interface ExercisePickerItem {
 }
 
 export function createExerciseFromPickerItem(
-  exercise: ExercisePickerItem,
-  exerciseOrder: number = 0
+  exercise: ExercisePickerItem
 ): RoutineExercise {
   return {
     id: createUuid(),

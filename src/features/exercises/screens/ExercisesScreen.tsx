@@ -46,7 +46,6 @@ import type {
   ExerciseTrendRange,
   ExerciseType,
   UserExerciseHistoryItemResponse,
-  UserExerciseMetricRecordResponse,
   UserExerciseTrendPointResponse,
 } from "@/features/exercises/model";
 

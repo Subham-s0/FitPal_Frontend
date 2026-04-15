@@ -24,8 +24,8 @@ export function QuickStats({ profile, compact = false }: QuickStatsProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/5 bg-[#111] transition-all duration-300",
-        compact ? "p-3 sm:p-4" : "p-4 sm:p-6"
+        "rounded-[22px] border table-border user-surface shadow-sm transition-all duration-300",
+        compact ? "p-3 sm:p-4" : "p-5 sm:p-6"
       )}
     >
       <p
@@ -39,7 +39,7 @@ export function QuickStats({ profile, compact = false }: QuickStatsProps) {
       <div className={cn("grid gap-2", compact ? "grid-cols-2" : "grid-cols-2 gap-3")}>
         <div
           className={cn(
-            "rounded-xl border border-white/5 bg-black/30 text-center transition-all duration-200 hover:border-orange-500/20",
+            "rounded-[14px] border table-border user-surface-soft text-center transition-all duration-200 hover:border-orange-500/20",
             compact ? "p-2 sm:p-2.5" : "p-3 sm:p-4"
           )}
         >
@@ -62,7 +62,7 @@ export function QuickStats({ profile, compact = false }: QuickStatsProps) {
         </div>
         <div
           className={cn(
-            "rounded-xl border border-white/5 bg-black/30 text-center transition-all duration-200 hover:border-orange-500/20",
+            "rounded-[14px] border table-border user-surface-soft text-center transition-all duration-200 hover:border-orange-500/20",
             compact ? "p-2 sm:p-2.5" : "p-3 sm:p-4"
           )}
         >

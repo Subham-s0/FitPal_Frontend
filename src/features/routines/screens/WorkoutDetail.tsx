@@ -120,11 +120,6 @@ function clampNumericInput(value: string, maxDigits: number, allowDecimal: boole
   return `${cappedWhole}.${cappedFraction}`;
 }
 
-function getInputWidth(value: string, minCh: number, maxCh: number): string {
-  const chars = Math.min(Math.max(value.length + 1, minCh), maxCh);
-  return `${chars}ch`;
-}
-
 function getExerciseSummaryStats(
   exercise: RoutineExercise,
   fields: ReturnType<typeof getVisibleSetFields>
@@ -642,7 +637,6 @@ const WorkoutDetail = ({
   routineId,
   dayId,
   onBack,
-  onEditRoutineDays,
   startInEditMode = false,
 }: WorkoutDetailProps) => {
   const [editMode, setEditMode] = useState(startInEditMode);
@@ -795,10 +789,7 @@ const WorkoutDetail = ({
     const appendExercise = (secondaryMuscles: string[]) => {
       setLocalDay((prev) => {
         if (!prev) return prev;
-        const newExercise = createExerciseFromPickerItem(
-          { ...exerciseItem, secondaryMuscles },
-          prev.exercises.length
-        );
+        const newExercise = createExerciseFromPickerItem({ ...exerciseItem, secondaryMuscles });
         return { ...prev, exercises: [...prev.exercises, newExercise] };
       });
     };
@@ -1011,8 +1002,6 @@ const WorkoutDetail = ({
   }
 
   const totalSets = exercisesToShow.reduce((sum, ex) => sum + ex.sets.length, 0);
-  const workoutDayDescription = (editMode ? localDay.description : day.description)?.trim() ?? "";
-
   // ============================================
   // RENDER — two-column layout
   //   LEFT:  scrollable area with header, exercises (view) or muscle dist + exercises (edit)
@@ -1291,4 +1280,3 @@ const WorkoutDetail = ({
 };
 
 export default WorkoutDetail;
-

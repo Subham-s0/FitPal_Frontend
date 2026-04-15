@@ -1,4 +1,3 @@
-import axios from "axios";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
@@ -28,7 +27,7 @@ import {
 } from "@/features/profile/api";
 import { getMySubscriptionApi, selectMySubscriptionApi } from "@/features/subscription/api";
 import { authStore } from "@/features/auth/store";
-import { getApiErrorMessage } from "@/shared/api/client";
+import { getApiErrorCode, getApiErrorMessage } from "@/shared/api/client";
 import type { BillingCycle, UserSubscriptionResponse } from "@/features/subscription/model";
 import type {
   FitnessLevel, Gender, PrimaryFitnessFocus,
@@ -37,7 +36,7 @@ import type {
 import {
   PROFILE_IMAGE_FILE_INPUT_ACCEPT,
   PROFILE_IMAGE_MAX_BYTES,
-  isAllowedProfileImageMimeType,
+  isAllowedProfileImageFile,
 } from "@/features/profile/profileImageUpload";
 import { CustomDatePicker } from "@/shared/ui/CustomDatePicker";
 import { CustomSelect } from "@/shared/ui/CustomSelect";
@@ -209,13 +208,6 @@ const ProfileSetup = () => {
       && normalizePlanType(selectedSubscription.planType) === selectedPlan
       && selectedSubscription.billingCycle === toApiBillingCycle(billingCycle)
   );
-  const baseAmount = selectedSubscriptionMatchesSelection
-    ? selectedSubscription?.baseAmount ?? 0
-    : selectedPlanDetails
-      ? billingCycle === "yearly"
-        ? selectedPlanDetails.yearlyBaseAmount
-        : selectedPlanDetails.monthlyPrice
-      : 0;
   const discountAmount = selectedSubscriptionMatchesSelection
     ? selectedSubscription?.discountAmount ?? 0
     : selectedPlanDetails
@@ -362,6 +354,8 @@ const ProfileSetup = () => {
       if (!firstName && !lastName) {
         nextErrors.firstName = "Add your first name or last name";
       } else {
+        if (firstName.length > 100) nextErrors.firstName = "At most 100 characters";
+        if (lastName.length > 100) nextErrors.lastName = "At most 100 characters";
         if (firstName && firstName.length < 2) nextErrors.firstName = "At least 2 characters";
         if (lastName && lastName.length < 2) nextErrors.lastName = "At least 2 characters";
       }
@@ -423,7 +417,15 @@ const ProfileSetup = () => {
     else if (step === 3) { payload.height = userData.height ? Number(userData.height) : undefined; payload.weight = userData.weight ? Number(userData.weight) : undefined; payload.fitnessLevel = (userData.fitnessLevel || undefined) as FitnessLevel | undefined; payload.primaryFitnessFocus = (userData.primaryFocus || undefined) as PrimaryFitnessFocus | undefined; }
     setIsSavingStep(true);
     try { const response = await patchOnboardingProfileApi(payload); syncAuthOnboardingStatus(response); return true; }
-    catch (error) { toast.error(getApiErrorMessage(error, "Failed to save step")); return false; }
+    catch (error) {
+      if (step === 1 && getApiErrorCode(error) === "DUPLICATE_USERNAME") {
+        setUserErrors((prev) => ({ ...prev, username: "Username is already taken" }));
+        toast.error("Username is already taken");
+        return false;
+      }
+      toast.error(getApiErrorMessage(error, "Failed to save step"));
+      return false;
+    }
     finally { setIsSavingStep(false); }
   };
 
@@ -512,7 +514,7 @@ const ProfileSetup = () => {
   const handlePhotoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!isAllowedProfileImageMimeType(file.type)) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Only JPEG or PNG allowed" })); event.target.value = ""; return; }
+    if (!isAllowedProfileImageFile(file)) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Only JPEG or PNG allowed" })); event.target.value = ""; return; }
     if (file.size > PROFILE_IMAGE_MAX_BYTES) { setUserErrors((prev) => ({ ...prev, profileImageUrl: "Max 5 MB" })); event.target.value = ""; return; }
     setIsUploadingPhoto(true);
     try { const profile = await uploadProfileImageApi(file); setProfileImageStateFromProfile(profile); syncAuthOnboardingStatus(profile); setIsProfileImageLoadFailed(false); clearError("profileImageUrl"); toast.success("Photo uploaded"); }
@@ -594,13 +596,13 @@ const ProfileSetup = () => {
         <div className="flex flex-col lg:grid lg:h-full lg:min-h-full lg:grid-rows-[auto_minmax(0,1fr)]">
           <SectionLabel className="!mb-3">Personal Information</SectionLabel>
           <div className="flex flex-1 flex-col gap-2.5 lg:h-full lg:justify-between">
-            <Field label="Username" error={userErrors.username}><TextInput type="text" placeholder="Username" value={userData.username} onChange={(e) => { setUser({ username: e.target.value }); clearError("username"); }} /></Field>
+            <Field label="Username" error={userErrors.username}><TextInput type="text" placeholder="Username" maxLength={50} value={userData.username} onChange={(e) => { setUser({ username: e.target.value }); clearError("username"); }} /></Field>
             <Field label="Email"><TextInput type="email" value={auth.email || ""} readOnly disabled /></Field>
             <Field label="First name" error={userErrors.firstName}>
-              {firstNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.firstName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="First name" value={userData.firstName} onChange={(e) => { setUser({ firstName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
+              {firstNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.firstName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="First name" maxLength={100} value={userData.firstName} onChange={(e) => { setUser({ firstName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
             </Field>
             <Field label="Last name">
-              {lastNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.lastName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="Last name" value={userData.lastName} onChange={(e) => { setUser({ lastName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
+              {lastNameLocked ? <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0a0a0a] px-4 py-3 text-sm font-medium text-white">{userData.lastName}<span className="text-[10px] font-bold text-emerald-400">Google</span></div> : <TextInput type="text" placeholder="Last name" maxLength={100} value={userData.lastName} onChange={(e) => { setUser({ lastName: e.target.value }); clearError("firstName"); clearError("lastName"); }} />}
             </Field>
           </div>
         </div>

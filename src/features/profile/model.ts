@@ -241,38 +241,6 @@ export interface ProfileImageUpdateResponse {
   profileImageResourceType: string | null;
 }
 
-export interface ProfileInfoUpdateRequest {
-  userName: string;
-  firstName: string | null;
-  lastName: string | null;
-  phoneNo: string | null;
-  dob: string | null;
-  gender: Gender | null;
-  height: number | null;
-  weight: number | null;
-}
-
-export interface ProfileInfoUpdateResponse {
-  userName: string;
-  firstName: string | null;
-  lastName: string | null;
-  phoneNo: string | null;
-  dob: string | null;
-  gender: Gender | null;
-  height: number | null;
-  weight: number | null;
-}
-
-export interface ProfileGoalsUpdateRequest {
-  fitnessLevel: FitnessLevel;
-  primaryFitnessFocus: PrimaryFitnessFocus;
-}
-
-export interface ProfileGoalsUpdateResponse {
-  fitnessLevel: FitnessLevel | null;
-  primaryFitnessFocus: PrimaryFitnessFocus | null;
-}
-
 export interface ConfirmEmailVerificationRequest {
   otp: string;
 }

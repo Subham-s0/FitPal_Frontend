@@ -25,7 +25,6 @@ const TB_BASE =
 const TB_IDLE =
   "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-white/20 hover:text-white";
 
-const statCardClass = "rounded-2xl border table-border table-bg p-4";
 function formatPublishedAt(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -70,11 +69,6 @@ function StatsCard({
     tone === "emerald" ? "text-[9px] font-black uppercase tracking-[0.12em] text-emerald-400 sm:text-[10px]"
       : tone === "blue" ? "text-[9px] font-black uppercase tracking-[0.12em] text-sky-400 sm:text-[10px]"
         : "text-[9px] font-black uppercase tracking-[0.12em] text-orange-400 sm:text-[10px]";
-
-  const subColor =
-    tone === "emerald" ? "mt-0.5 text-[9px] text-emerald-500/50 sm:text-[10px]"
-      : tone === "blue" ? "mt-0.5 text-[9px] text-sky-500/50 sm:text-[10px]"
-        : "mt-0.5 text-[9px] text-orange-500/50 sm:text-[10px]";
 
   return (
     <div className={cardClass}>

@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
-import { Check, Timer, Trash2 } from "lucide-react";
+import { Timer, Trash2 } from "lucide-react";
 import { Checkbox } from "@/shared/ui/checkbox";
 import type { WorkoutSessionSetResponse, UpdateWorkoutSetRequest } from "@/features/workout-sessions/workoutSessionTypes";
 
@@ -74,11 +74,6 @@ function clampNumericInput(value: string, maxDigits: number, allowDecimal: boole
   const cappedFraction = digits.slice(cappedWhole.length);
 
   return `${cappedWhole}.${cappedFraction}`;
-}
-
-function getInputWidth(value: string, minCh: number, maxCh: number): string {
-  const chars = Math.min(Math.max(value.length + 1, minCh), maxCh);
-  return `${chars}ch`;
 }
 
 export default function WorkoutSetRow({

@@ -1,16 +1,16 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Gem, Target, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { getMyProfileApi } from "@/features/profile/api";
 import { profileQueryKeys } from "@/features/profile/queryKeys";
+import { aiRoutineQueryKeys } from "@/features/routines/aiRoutineApi";
 import { getMySubscriptionApi } from "@/features/subscription/api";
 import { getPlansApi } from "@/features/plans/api";
 import { plansQueryKeys } from "@/features/plans/queryKeys";
 import UserLayout from "@/features/user-dashboard/components/UserLayout";
 import UserSectionShell from "@/features/user-dashboard/components/UserSectionShell";
-import { useAuthState } from "@/features/auth/hooks";
 import { authStore } from "@/features/auth/store";
 import { cn } from "@/shared/lib/utils";
 import { ProfileImageSection } from "@/features/profile/components/ProfileImageSection";
@@ -53,7 +53,7 @@ const syncAuthStatus = (
 };
 
 const ProfileContainer = () => {
-  const auth = useAuthState();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -63,6 +63,7 @@ const ProfileContainer = () => {
   const profileQuery = useQuery({
     queryKey: profileQueryKeys.user(),
     queryFn: getMyProfileApi,
+    refetchOnMount: "always",
   });
 
   const subscriptionQuery = useQuery({
@@ -84,6 +85,14 @@ const ProfileContainer = () => {
     syncAuthStatus(profile);
   }, [profile]);
 
+  useEffect(() => {
+    if (activeTab !== "goals") {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: profileQueryKeys.user() });
+  }, [activeTab, queryClient]);
+
   const setTab = (tab: ProfileTab) => {
     navigate(
       {
@@ -97,6 +106,7 @@ const ProfileContainer = () => {
   const handleProfileUpdate = async () => {
     await profileQuery.refetch();
     await subscriptionQuery.refetch();
+    await queryClient.invalidateQueries({ queryKey: aiRoutineQueryKeys.bootstrap() });
   };
 
   if (profileQuery.isLoading) {

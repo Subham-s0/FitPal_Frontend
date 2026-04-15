@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Play,
-  Pause,
   CheckCircle2,
   SkipForward,
   Plus,
@@ -55,7 +53,6 @@ function formatElapsedTime(startedAt: string | null): string {
 function ExerciseCard({
   exercise,
   exerciseIndex,
-  routineLogId,
   onSetUpdate,
   onAddSet,
   isExpanded,
@@ -63,7 +60,6 @@ function ExerciseCard({
 }: {
   exercise: WorkoutSessionExerciseResponse;
   exerciseIndex: number;
-  routineLogId: string;
   onSetUpdate: (
     exerciseId: string,
     setId: string,
@@ -458,7 +454,6 @@ export default function ActiveWorkoutSession({
             key={exercise.routineLogExerciseId}
             exercise={exercise}
             exerciseIndex={idx}
-            routineLogId={session.routineLogId}
             onSetUpdate={handleSetUpdate}
             onAddSet={handleAddSet}
             isExpanded={expandedExercises.has(exercise.routineLogExerciseId)}

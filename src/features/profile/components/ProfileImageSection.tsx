@@ -8,7 +8,7 @@ import type { UserProfileResponse } from "@/features/profile/model";
 import {
   PROFILE_IMAGE_FILE_INPUT_ACCEPT,
   PROFILE_IMAGE_MAX_BYTES,
-  isAllowedProfileImageMimeType,
+  isAllowedProfileImageFile,
 } from "@/features/profile/profileImageUpload";
 
 interface ProfileImageSectionProps {
@@ -43,7 +43,7 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
     event.target.value = "";
     if (!file) return;
 
-    if (!isAllowedProfileImageMimeType(file.type)) {
+    if (!isAllowedProfileImageFile(file)) {
       toast.error("Upload a JPEG or PNG image");
       return;
     }
@@ -53,26 +53,23 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
       return;
     }
 
+    let preview: string | null = null;
     try {
       setIsUploading(true);
-      const preview = URL.createObjectURL(file);
+      preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
 
       await uploadProfileImageApi(file);
       toast.success("Profile image updated successfully");
       onUpdate();
-
-      // Clean up preview
-      URL.revokeObjectURL(preview);
       setPreviewUrl("");
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Failed to upload profile image"));
-      // Revert preview on error
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-        setPreviewUrl("");
-      }
+      setPreviewUrl("");
     } finally {
+      if (preview) {
+        URL.revokeObjectURL(preview);
+      }
       setIsUploading(false);
     }
   };
@@ -93,7 +90,7 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
   };
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#111] p-6 shadow-xl transition-all duration-300 hover:border-white/10 sm:p-8">
+    <div className="rounded-[22px] border table-border user-surface p-6 shadow-sm transition-all duration-300 hover:border-white/10 sm:p-8">
       <div className="relative mx-auto mb-5 h-28 w-28 sm:mb-6 sm:h-36 sm:w-36">
         <div className="absolute inset-0 animate-pulse-slow rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/10" />
         <div className="absolute inset-1 z-10 overflow-hidden rounded-full border-2 border-white/10 bg-[#0a0a0a]">

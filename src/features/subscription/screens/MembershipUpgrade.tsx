@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertTriangle,
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   ArrowUpRight,
   BadgeCheck,
@@ -15,15 +13,11 @@ import {
   Clock3,
   Crown,
   Eye,
-  Gem,
   PauseCircle,
   PlayCircle,
   RefreshCw,
   Search,
-  ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
-  Wallet,
   Workflow,
   X,
 } from "lucide-react";
@@ -66,7 +60,6 @@ import ViewPlansDialog from "@/features/subscription/components/ViewPlansDialog"
 import type { PlanResponse } from "@/features/plans/model";
 import type {
   BillingCycle,
-  SubscriptionPauseHistoryItemResponse,
   SubscriptionPauseHistoryStatus,
   SubscriptionStatus,
   UserSubscriptionHistoryItemResponse,
@@ -1303,15 +1296,6 @@ const MembershipUpgrade = () => {
     const clampedValue = Math.min(PAUSE_DAYS_MAX, Math.max(PAUSE_DAYS_MIN, normalizedValue));
     setPauseDays(clampedValue);
     setPauseDaysError("");
-  };
-
-  const goToRenewPaymentStep = () => {
-    if (!selectedPlanDetails) {
-      toast.error("Choose a membership plan before continuing.");
-      return;
-    }
-
-    setRenewActionStep("payment");
   };
 
   const syncMembershipState = (response: UserSubscriptionResponse) => {

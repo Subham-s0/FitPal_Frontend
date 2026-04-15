@@ -196,7 +196,6 @@ function PreviewDayCard({
 
 export default function AiRoutinePreviewPanel({
   previewRoutine,
-  previewResponse,
   onImport,
   importPending,
 }: AiRoutinePreviewPanelProps) {

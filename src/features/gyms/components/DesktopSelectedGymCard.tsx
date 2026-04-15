@@ -16,6 +16,9 @@ interface DesktopSelectedGymCardProps {
   onViewProfile: () => void;
   onCheckIn: () => void;
   onToggleSaved: () => void;
+  showSaveAction?: boolean;
+  checkInActionLabel?: string;
+  canUseCheckInAction?: (gym: GymRecommendationItem) => boolean;
 }
 
 const DesktopSelectedGymCard = ({
@@ -25,9 +28,13 @@ const DesktopSelectedGymCard = ({
   onViewProfile,
   onCheckIn,
   onToggleSaved,
+  showSaveAction = true,
+  checkInActionLabel = "Check In",
+  canUseCheckInAction = canCheckInAtGym,
 }: DesktopSelectedGymCardProps) => {
   if (!gym) return null;
   const previewImageUrl = getGymPreviewImageUrl(gym);
+  const showCheckInAction = canUseCheckInAction(gym);
 
   return (
     <div className="absolute bottom-6 right-6 z-[1001] hidden w-[360px] overflow-hidden rounded-2xl border border-border/50 user-surface shadow-2xl transition-all md:block">
@@ -52,17 +59,19 @@ const DesktopSelectedGymCard = ({
             </p>
           </div>
           <div className="-mr-1 flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={onToggleSaved}
-              className={`rounded-full border p-2 transition-colors ${
-                isSaved
-                  ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
-                  : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
-              }`}
-            >
-              <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
-            </button>
+            {showSaveAction && (
+              <button
+                type="button"
+                onClick={onToggleSaved}
+                className={`rounded-full border p-2 transition-colors ${
+                  isSaved
+                    ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
+                    : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
+                }`}
+              >
+                <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -128,14 +137,14 @@ const DesktopSelectedGymCard = ({
           >
             View Profile
           </button>
-          {canCheckInAtGym(gym) && (
+          {showCheckInAction && (
             <button
               type="button"
               onClick={onCheckIn}
               className="btn-fire flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-[10px] text-white"
             >
               <QrCode size={13} />
-              Check In
+              {checkInActionLabel}
             </button>
           )}
         </div>

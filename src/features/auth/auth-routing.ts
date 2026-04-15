@@ -7,6 +7,7 @@ export interface AuthRoutingState {
 }
 
 export const ADMIN_DASHBOARD_ROUTE = "/admin/dashboard";
+export const GYM_DASHBOARD_ROUTE = "/gym/dashboard";
 export const PROFILE_SETUP_ROUTE = "/profile-setup";
 export const USER_PROFILE_SETUP_ROUTE = "/user-profile-setup";
 export const GYM_PROFILE_SETUP_ROUTE = "/gym-profile-setup";
@@ -32,7 +33,7 @@ export function getPostAuthRoute(state: AuthRoutingState) {
   }
 
   if (role === "GYM") {
-    return state.profileCompleted ? "/dashboard" : PROFILE_SETUP_ROUTE;
+    return state.profileCompleted ? GYM_DASHBOARD_ROUTE : PROFILE_SETUP_ROUTE;
   }
 
   if (role === "USER") {

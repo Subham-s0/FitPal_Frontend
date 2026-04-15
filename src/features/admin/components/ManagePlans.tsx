@@ -32,7 +32,6 @@ import type { PlanResponse, PlanType, AccessTier } from "@/features/plans/model"
 import { plansQueryKeys } from "@/features/plans/queryKeys";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { Button } from "@/shared/ui/button";
-import { Checkbox } from "@/shared/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,7 +67,6 @@ import {
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { Textarea } from "@/shared/ui/textarea";
-import { ScrollArea } from "@/shared/ui/scroll-area";
 import { cn } from "@/shared/lib/utils";
 
 const FIRE = "var(--gradient-fire)";

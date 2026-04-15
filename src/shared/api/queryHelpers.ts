@@ -44,7 +44,7 @@ const QUERY_KEYS = {
  * - dashboard: summary (workout card, activity)
  * - routines: settings (next workout info)
  */
-export async function invalidateWorkoutSessionRelated(routineLogId?: string) {
+export async function invalidateWorkoutSessionRelated(_routineLogId?: string) {
   const invalidations = [
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.workoutSessions }),
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard }),
@@ -65,7 +65,7 @@ export async function invalidateWorkoutSessionRelated(routineLogId?: string) {
  * - dashboard: summary (upcoming workout card, heatmap)
  * - workout-sessions: today (if upcoming workout changed)
  */
-export async function invalidateRoutineRelated(routineId?: string) {
+export async function invalidateRoutineRelated(_routineId?: string) {
   const invalidations = [
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.routines }),
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard }),
@@ -83,7 +83,7 @@ export async function invalidateRoutineRelated(routineId?: string) {
  * - workout-sessions: detail (session may show routine link)
  * - dashboard: summary (upcoming workout may change)
  */
-export async function invalidateSyncToRoutine(routineLogId: string, routineId?: string) {
+export async function invalidateSyncToRoutine(routineLogId: string, _routineId?: string) {
   const invalidations = [
     queryClient.invalidateQueries({ queryKey: QUERY_KEYS.routines }),
     queryClient.invalidateQueries({ 

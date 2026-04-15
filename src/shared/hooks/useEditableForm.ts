@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
 
-export interface UseEditableFormOptions<T extends Record<string, unknown>> {
+type FormKey<T extends object> = Extract<keyof T, string>;
+
+export interface UseEditableFormOptions<T extends object> {
   /** Function to create the initial form state from the source data */
   createForm: () => T;
   /** Optional callback when form is saved successfully */
   onSaveSuccess?: () => void;
   /** Form validation function, returns errors object */
-  validate?: (form: T) => Partial<Record<keyof T, string>>;
+  validate?: (form: T) => Partial<Record<FormKey<T>, string>>;
 }
 
-export interface UseEditableFormReturn<T extends Record<string, unknown>> {
+export interface UseEditableFormReturn<T extends object> {
   /** Current form state */
   form: T;
   /** Whether the form is in editing mode */
@@ -21,9 +23,9 @@ export interface UseEditableFormReturn<T extends Record<string, unknown>> {
   /** Whether the discard confirmation dialog is open */
   isDiscardDialogOpen: boolean;
   /** Current validation errors */
-  errors: Partial<Record<keyof T, string>>;
+  errors: Partial<Record<FormKey<T>, string>>;
   /** Update a single form field */
-  updateField: <K extends keyof T>(field: K, value: T[K]) => void;
+  updateField: <K extends FormKey<T>>(field: K, value: T[K]) => void;
   /** Enter edit mode */
   handleEdit: () => void;
   /** Save the form (async, handles validation) */
@@ -34,6 +36,8 @@ export interface UseEditableFormReturn<T extends Record<string, unknown>> {
   handleConfirmDiscard: () => void;
   /** Set discard dialog open state */
   setIsDiscardDialogOpen: (open: boolean) => void;
+  /** Clear one or more field errors */
+  clearErrors: (...fields: FormKey<T>[]) => void;
   /** Reset form to match source data */
   resetForm: () => void;
 }
@@ -42,7 +46,7 @@ export interface UseEditableFormReturn<T extends Record<string, unknown>> {
  * A reusable hook for managing editable form state with validation,
  * dirty tracking, and discard confirmation.
  */
-export function useEditableForm<T extends Record<string, unknown>>({
+export function useEditableForm<T extends object>({
   createForm,
   onSaveSuccess,
   validate,
@@ -53,7 +57,7 @@ export function useEditableForm<T extends Record<string, unknown>>({
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   const [form, setForm] = useState<T>(createForm);
   const [originalForm, setOriginalForm] = useState<T>(createForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof T, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<FormKey<T>, string>>>({});
 
   // Sync form with source data when not editing
   useEffect(() => {
@@ -66,7 +70,7 @@ export function useEditableForm<T extends Record<string, unknown>>({
     }
   }, [createForm, isEditing]);
 
-  const updateField = useCallback(<K extends keyof T>(field: K, value: T[K]) => {
+  const updateField = useCallback(<K extends FormKey<T>>(field: K, value: T[K]) => {
     setForm((current) => ({ ...current, [field]: value }));
     setIsDirty(true);
     setErrors((currentErrors) => {
@@ -125,6 +129,27 @@ export function useEditableForm<T extends Record<string, unknown>>({
     setIsDiscardDialogOpen(false);
   }, [originalForm]);
 
+  const clearErrors = useCallback((...fields: FormKey<T>[]) => {
+    if (fields.length === 0) {
+      setErrors({});
+      return;
+    }
+
+    setErrors((currentErrors) => {
+      let changed = false;
+      const nextErrors = { ...currentErrors };
+
+      for (const field of fields) {
+        if (nextErrors[field]) {
+          delete nextErrors[field];
+          changed = true;
+        }
+      }
+
+      return changed ? nextErrors : currentErrors;
+    });
+  }, []);
+
   const resetForm = useCallback(() => {
     const newForm = createForm();
     setForm(newForm);
@@ -146,6 +171,7 @@ export function useEditableForm<T extends Record<string, unknown>>({
     handleCancel,
     handleConfirmDiscard,
     setIsDiscardDialogOpen,
+    clearErrors,
     resetForm,
   };
 }

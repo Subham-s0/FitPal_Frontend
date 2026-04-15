@@ -193,14 +193,6 @@ function getHeatVisual(score: number) {
   };
 }
 
-function getFireTone(score: number) {
-  const heatVisual = getHeatVisual(score);
-  return {
-    gradient: heatVisual.barGradient,
-    opacity: 1,
-  };
-}
-
 function getOverlayOpacity(score: number, _expanded = false) {
   return getHeatTone(score).overlayOpacity;
 }

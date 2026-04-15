@@ -103,6 +103,25 @@ export function ToggleGroup<T extends string>({
   formatLabel,
   className,
 }: ToggleGroupProps<T>) {
+  const sizeClasses = {
+    sm: "px-2.5 py-1 text-[11px]",
+    md: "px-3.5 py-1.5 text-[12px]",
+    lg: "px-4 py-2 text-[13px]",
+  };
+  const variantClasses = {
+    default: (active: boolean) =>
+      active
+        ? "bg-orange-500 text-white"
+        : "text-zinc-400 hover:text-white hover:bg-white/[0.03] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]",
+    pill: (active: boolean) =>
+      active
+        ? "bg-orange-500/10 text-orange-400"
+        : "text-zinc-400 hover:text-white hover:bg-white/[0.03] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]",
+    minimal: (active: boolean) =>
+      active
+        ? "text-orange-400"
+        : "text-zinc-400 hover:text-white hover:bg-white/[0.03]",
+  };
   const opts = options.map((opt) =>
     typeof opt === "string" ? { value: opt, label: opt } : opt
   );
@@ -121,12 +140,11 @@ export function ToggleGroup<T extends string>({
           type="button"
           onClick={() => onValueChange(opt.value)}
           className={cn(
-            "relative rounded-full px-3.5 py-1.5 text-[12px] font-bold",
+            "relative rounded-full font-bold",
             "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
             "transform-gpu will-change-transform",
-            value === opt.value
-              ? "bg-orange-500 text-white"
-              : "text-zinc-400 hover:text-white hover:bg-white/[0.03] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
+            sizeClasses[size],
+            variantClasses[variant](value === opt.value)
           )}
         >
           {formatLabel ? formatLabel(opt.value) : opt.label}

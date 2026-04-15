@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthState } from "@/features/auth/hooks";
+import Navbar from "@/features/marketing/components/Navbar";
 import {
   createGymReviewApi,
   deleteMyGymReviewApi,
@@ -142,11 +143,6 @@ const formatOperatingWindow = (opensAt: string | null, closesAt: string | null) 
   return `${formatTimeLabel(opensAt)} - ${formatTimeLabel(closesAt)}`;
 };
 
-const formatAccessMode = (mode: string | null) => {
-  if (!mode) return "-";
-  return mode.replace(/_/g, " ");
-};
-
 const formatDistance = (distanceMeters: number | null) => {
   if (distanceMeters == null) {
     return "No location";
@@ -206,8 +202,9 @@ const GymProfile = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.CircleMarker | null>(null);
+  const isAuthenticated = Boolean(auth.accessToken);
   const roleValue = auth.role ?? "USER";
-  const dashboardRole = getDashboardRole(roleValue);
+  const dashboardRole = isAuthenticated ? getDashboardRole(roleValue) : null;
   const activeSection = dashboardRole === "GYM" ? "home" : "gyms";
   const gymId = Number(id);
 
@@ -263,10 +260,15 @@ const GymProfile = () => {
     reviewsFilter === "5_STAR" ? 5 : reviewsFilter === "4_STAR" ? 4 : undefined;
 
   const profileQuery = useQuery({
-    queryKey: gymsQueryKeys.profileView(gymId, viewerCoords?.lat, viewerCoords?.lng),
+    queryKey: gymsQueryKeys.profileView(
+      gymId,
+      viewerCoords?.lat,
+      viewerCoords?.lng,
+      isAuthenticated && dashboardRole === "USER" ? "member" : "public"
+    ),
     enabled: Number.isFinite(gymId) && gymId > 0,
     queryFn: async () => {
-      if (dashboardRole === "USER") {
+      if (isAuthenticated && dashboardRole === "USER") {
         try {
           return await getUserGymProfileViewApi(
             gymId,
@@ -310,7 +312,7 @@ const GymProfile = () => {
 
   const myReviewQuery = useQuery({
     queryKey: gymsQueryKeys.myReview(gymId),
-    enabled: dashboardRole === "USER" && Number.isFinite(gymId) && gymId > 0,
+    enabled: isAuthenticated && dashboardRole === "USER" && Number.isFinite(gymId) && gymId > 0,
     queryFn: () => getMyGymReviewApi(gymId),
     retry: false,
   });
@@ -356,9 +358,13 @@ const GymProfile = () => {
   const isDeletingReview = deleteReviewMutation.isPending;
   const isReviewsLoading =
     communityReviewsQuery.isFetching ||
-    (dashboardRole === "USER" && myReviewQuery.isFetching && myReviewQuery.data === undefined);
+    (isAuthenticated && dashboardRole === "USER" && myReviewQuery.isFetching && myReviewQuery.data === undefined);
 
-  const canCheckIn = Boolean(profile?.checkInEnabled && profileView?.accessibleByCurrentUser);
+  const canSaveGym = isAuthenticated && dashboardRole === "USER";
+  const canWriteReview = isAuthenticated && dashboardRole === "USER";
+  const canCheckIn = isAuthenticated
+    ? Boolean(profile?.checkInEnabled && profileView?.accessibleByCurrentUser)
+    : Boolean(profile?.checkInEnabled);
   const gallery = useMemo(
     () => (profile ? buildGallery(profile) : []),
     [profile]
@@ -644,6 +650,11 @@ const GymProfile = () => {
   };
 
   const handleSidebarChange = (section: string) => {
+    if (!isAuthenticated) {
+      navigate("/gyms");
+      return;
+    }
+
     if (dashboardRole === "ADMIN") {
       navigate("/admin/dashboard", { state: { activeSection: section } });
       return;
@@ -658,6 +669,11 @@ const GymProfile = () => {
   };
 
   const handleBackToList = () => {
+    if (!isAuthenticated) {
+      navigate("/gyms");
+      return;
+    }
+
     if (dashboardRole === "ADMIN") {
       navigate("/admin/dashboard", { state: { activeSection: "gyms" } });
       return;
@@ -848,31 +864,39 @@ const GymProfile = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void handleToggleSave()}
-                        disabled={isSaving}
-                        className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                          isSaved
-                            ? "border-orange-600 bg-orange-500 text-white hover:bg-orange-600"
-                            : "border-white/20 bg-[#171717] text-white hover:border-orange-400/60 hover:bg-[#1f1f1f]"
-                        }`}
-                      >
-                        {isSaving ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
-                        )}
-                        {isSaved ? "Saved" : "Save Gym"}
-                      </button>
+                      {canSaveGym && (
+                        <button
+                          type="button"
+                          onClick={() => void handleToggleSave()}
+                          disabled={isSaving}
+                          className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                            isSaved
+                              ? "border-orange-600 bg-orange-500 text-white hover:bg-orange-600"
+                              : "border-white/20 bg-[#171717] text-white hover:border-orange-400/60 hover:bg-[#1f1f1f]"
+                          }`}
+                        >
+                          {isSaving ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Bookmark className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`} />
+                          )}
+                          {isSaved ? "Saved" : "Save Gym"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={!canCheckIn}
-                        onClick={() => navigate("/dashboard", { state: { activeSection: "checkin", checkInView: "scanner" } })}
+                        onClick={() => {
+                          if (isAuthenticated) {
+                            navigate("/dashboard", { state: { activeSection: "checkin", checkInView: "scanner" } });
+                          } else {
+                            navigate("/signup");
+                          }
+                        }}
                         className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-500/40 bg-transparent px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-emerald-400 shadow-[inset_0_0_12px_rgba(16,185,129,0.2)] transition-all hover:bg-emerald-500/10 hover:border-emerald-500/60 hover:shadow-[inset_0_0_16px_rgba(16,185,129,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        Check In
+                        {isAuthenticated ? "Check In" : "Get Started"}
                       </button>
                     </div>
                   </div>
@@ -946,7 +970,7 @@ const GymProfile = () => {
                         <span className="text-lg font-black">{profile.rating?.toFixed(1) ?? "-"}</span>
                         <span className="text-xs font-bold text-gray-400">({profile.reviewCount})</span>
                       </div>
-                      {!showReviewForm && !myReview && (
+                      {canWriteReview && !showReviewForm && !myReview && (
                         <button
                           type="button"
                           onClick={openCreateReviewForm}
@@ -1344,6 +1368,17 @@ const GymProfile = () => {
         ) : null}
       </div>
     );
+
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-[#050505] text-white">
+        <Navbar />
+        <div className="mx-auto max-w-7xl px-4 pb-10 pt-20 sm:pt-24 md:pt-28">
+          {pageContent}
+        </div>
+      </main>
+    );
+  }
 
   // Use UserLayout for USER role (has mobile bottom nav), DefaultLayout for others
   if (dashboardRole === "USER") {

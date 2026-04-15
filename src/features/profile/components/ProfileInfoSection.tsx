@@ -1,8 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
-import { getApiErrorMessage } from "@/shared/api/client";
-import { updateProfileInfoApi } from "@/features/profile/api";
+import { getApiErrorCode, getApiErrorMessage } from "@/shared/api/client";
+import { patchMyProfileDetailsApi } from "@/features/profile/api";
 import { CustomDatePicker } from "@/shared/ui/CustomDatePicker";
 import { CustomSelect } from "@/shared/ui/CustomSelect";
 import {
@@ -21,6 +21,8 @@ import {
 } from "@/shared/ui/alert-dialog";
 import type { Gender, UserProfileResponse } from "@/features/profile/model";
 import {
+  validateAtLeastOneName,
+  validateName,
   validatePastDate,
   validatePhone,
   validateUsername,
@@ -64,10 +66,19 @@ const createInfoForm = (profile: UserProfileResponse): ProfileInfoFormState => (
 const validateInfoForm = (form: ProfileInfoFormState): Partial<Record<keyof ProfileInfoFormState, string>> => {
   const errors: Partial<Record<keyof ProfileInfoFormState, string>> = {};
   const usernameError = validateUsername(form.username);
+  const firstNameError = validateName(form.firstName, "First name");
+  const lastNameError = validateName(form.lastName, "Last name");
+  const namePresenceError = validateAtLeastOneName(form.firstName, form.lastName);
   const phoneError = validatePhone(form.phone);
   const dobError = validatePastDate(form.dob);
 
   if (usernameError) errors.username = usernameError;
+  if (firstNameError) errors.firstName = firstNameError;
+  if (lastNameError) errors.lastName = lastNameError;
+  if (namePresenceError) {
+    errors.firstName = namePresenceError;
+    errors.lastName = namePresenceError;
+  }
   if (phoneError) errors.phone = phoneError;
   if (dobError) errors.dob = dobError;
 
@@ -76,6 +87,7 @@ const validateInfoForm = (form: ProfileInfoFormState): Partial<Record<keyof Prof
 
 export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProps) {
   const createForm = useCallback(() => createInfoForm(profile), [profile]);
+  const [usernameServerError, setUsernameServerError] = useState<string | null>(null);
   
   const {
     form,
@@ -90,6 +102,7 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
     handleCancel,
     handleConfirmDiscard,
     setIsDiscardDialogOpen,
+    clearErrors,
   } = useEditableForm({
     createForm,
     validate: validateInfoForm,
@@ -97,7 +110,7 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
 
   const onSave = () =>
     handleSave(async () => {
-      await updateProfileInfoApi({
+      await patchMyProfileDetailsApi({
         userName: form.username.trim(),
         firstName: form.firstName.trim() || null,
         lastName: form.lastName.trim() || null,
@@ -106,17 +119,25 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
         gender: (form.gender || null) as Gender | null,
         height: profile.height ?? null,
         weight: profile.weight ?? null,
+        fitnessLevel: profile.fitnessLevel ?? null,
+        primaryFitnessFocus: profile.primaryFitnessFocus ?? null,
       });
+      setUsernameServerError(null);
       toast.success("Profile information updated successfully");
       onUpdate();
     }).catch((error) => {
+      if (getApiErrorCode(error) === "DUPLICATE_USERNAME") {
+        setUsernameServerError("Username is already taken");
+        toast.error("Username is already taken");
+        return;
+      }
       toast.error(getApiErrorMessage(error, "Failed to update profile information"));
     });
 
   return (
     <>
-      <div className="rounded-2xl border border-white/5 bg-gradient-to-br from-[#111] to-[#0a0a0a] p-4 sm:p-6">
-        <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-4">
+      <div className="rounded-[22px] border table-border user-surface shadow-sm p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between border-b table-border-cell pb-4">
           <h3 className="border-l-2 border-orange-500 pl-3 text-sm font-black uppercase tracking-widest text-white">
             Personal Information
           </h3>
@@ -137,38 +158,62 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
               <Field
                 label="Username"
-                error={errors.username}
+                error={errors.username ?? usernameServerError ?? undefined}
                 labelFor="profile-username"
                 errorId="profile-username-error"
               >
                 <TextInput
                   id="profile-username"
                   aria-label="Username"
-                  aria-describedby={errors.username ? "profile-username-error" : undefined}
+                  aria-describedby={errors.username || usernameServerError ? "profile-username-error" : undefined}
+                  maxLength={50}
                   value={form.username}
                   disabled={!isEditing}
-                  onChange={(e) => updateField("username", e.target.value)}
+                  onChange={(e) => {
+                    updateField("username", e.target.value);
+                    setUsernameServerError(null);
+                  }}
                 />
               </Field>
               <Field label="Email" labelFor="profile-email">
                 <TextInput id="profile-email" aria-label="Email" value={profile.email} disabled />
               </Field>
-              <Field label="First Name" labelFor="profile-first-name">
+              <Field
+                label="First Name"
+                error={errors.firstName}
+                labelFor="profile-first-name"
+                errorId="profile-first-name-error"
+              >
                 <TextInput
                   id="profile-first-name"
                   aria-label="First name"
+                  aria-describedby={errors.firstName ? "profile-first-name-error" : undefined}
+                  maxLength={100}
                   value={form.firstName}
                   disabled={!isEditing}
-                  onChange={(e) => updateField("firstName", e.target.value)}
+                  onChange={(e) => {
+                    updateField("firstName", e.target.value);
+                    clearErrors("firstName", "lastName");
+                  }}
                 />
               </Field>
-              <Field label="Last Name" labelFor="profile-last-name">
+              <Field
+                label="Last Name"
+                error={errors.lastName}
+                labelFor="profile-last-name"
+                errorId="profile-last-name-error"
+              >
                 <TextInput
                   id="profile-last-name"
                   aria-label="Last name"
+                  aria-describedby={errors.lastName ? "profile-last-name-error" : undefined}
+                  maxLength={100}
                   value={form.lastName}
                   disabled={!isEditing}
-                  onChange={(e) => updateField("lastName", e.target.value)}
+                  onChange={(e) => {
+                    updateField("lastName", e.target.value);
+                    clearErrors("firstName", "lastName");
+                  }}
                 />
               </Field>
               <Field
@@ -223,7 +268,7 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
         </div>
 
         {isEditing && (
-          <div className="mt-6 flex justify-end gap-3 border-t border-white/5 pt-5">
+          <div className="mt-6 flex justify-end gap-3 border-t table-border-cell pt-5">
             <button
               type="button"
               onClick={handleCancel}
@@ -251,25 +296,25 @@ export function ProfileInfoSection({ profile, onUpdate }: ProfileInfoSectionProp
       </div>
 
       <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
-        <AlertDialogContent className="rounded-[20px] border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+        <AlertDialogContent className="rounded-[22px] border table-border user-surface text-white shadow-xl">
           <AlertDialogHeader>
-            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-[14px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)]">
-              <X className="h-5 w-5 text-orange-300" strokeWidth={1.8} />
+            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-[14px] border border-orange-500/20 bg-orange-500/10">
+              <X className="h-5 w-5 text-orange-400" strokeWidth={1.8} />
             </div>
             <AlertDialogTitle className="text-[17px] font-black tracking-tight">
               Discard changes
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[12px] leading-relaxed text-[hsl(0,0%,55%)]">
+            <AlertDialogDescription className="text-[12px] leading-relaxed table-text-muted">
               You have unsaved changes to your profile information. Discard them?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="mt-0 flex flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)] py-2.5 text-[11px] font-black uppercase tracking-wider text-[hsl(0,0%,55%)] hover:border-white/20 hover:text-white">
+            <AlertDialogCancel className="mt-0 flex flex-1 items-center justify-center gap-1.5 rounded-[10px] border table-border user-surface-soft py-2.5 text-[11px] font-black uppercase tracking-wider text-slate-300 hover:border-white/20 hover:text-white">
               Keep Editing
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDiscard}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-orange-600 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition-all hover:bg-orange-500"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-gradient-to-r from-orange-500 to-orange-600 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:shadow-orange-500/30 hover:-translate-y-0.5"
             >
               Discard
             </AlertDialogAction>

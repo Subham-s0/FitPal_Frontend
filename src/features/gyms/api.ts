@@ -20,6 +20,17 @@ export async function getUserGymDiscoverApi(
   });
 }
 
+export async function getPublicGymDiscoverApi(
+  params: UserGymDiscoverRequest = {}
+): Promise<UserGymDiscoverPageResponse> {
+  return getApiData<UserGymDiscoverPageResponse>("/public/gyms/discover", {
+    params: {
+      ...params,
+      savedOnly: undefined,
+    },
+  });
+}
+
 export async function getMySavedGymsApi(): Promise<SavedGymResponse[]> {
   return getApiData<SavedGymResponse[]>("/users/me/saved-gyms");
 }
@@ -37,7 +48,7 @@ export async function unsaveMyGymApi(gymId: number): Promise<void> {
 }
 
 export async function getPublicGymProfileApi(gymId: number): Promise<PublicGymProfileResponse> {
-  return getApiData<PublicGymProfileResponse>(`/gyms/${gymId}`);
+  return getApiData<PublicGymProfileResponse>(`/public/gyms/${gymId}`);
 }
 
 export interface GetPublicGymReviewsParams {
@@ -52,7 +63,7 @@ export async function getPublicGymReviewsApi(
   gymId: number,
   params: GetPublicGymReviewsParams = {}
 ): Promise<PublicGymReviewPageResponse> {
-  return getApiData<PublicGymReviewPageResponse>(`/gyms/${gymId}/reviews`, {
+  return getApiData<PublicGymReviewPageResponse>(`/public/gyms/${gymId}/reviews`, {
     params,
   });
 }

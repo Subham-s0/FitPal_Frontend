@@ -10,6 +10,7 @@ export const gymsQueryKeys = {
   discoverLists: () => [...gymsQueryKeys.all, "discover"] as const,
 
   discover: (params: {
+    audience?: "member" | "public";
     query?: string;
     mode?: RecommendationMode;
     status?: GymStatusFilter;
@@ -20,6 +21,7 @@ export const gymsQueryKeys = {
   }) =>
     [
       ...gymsQueryKeys.discoverLists(),
+      params.audience ?? "member",
       params.query ?? "",
       params.mode ?? "show-all",
       params.status ?? "all",
@@ -33,8 +35,8 @@ export const gymsQueryKeys = {
 
   profileViews: (gymId: number) => [...gymsQueryKeys.all, "profile-view", gymId] as const,
 
-  profileView: (gymId: number, lat?: number, lng?: number) =>
-    [...gymsQueryKeys.profileViews(gymId), lat ?? null, lng ?? null] as const,
+  profileView: (gymId: number, lat?: number, lng?: number, audience: "member" | "public" = "member") =>
+    [...gymsQueryKeys.profileViews(gymId), audience, lat ?? null, lng ?? null] as const,
 
   publicProfiles: (gymId: number) => [...gymsQueryKeys.all, "public-profile", gymId] as const,
 

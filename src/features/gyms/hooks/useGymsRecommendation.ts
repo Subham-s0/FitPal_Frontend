@@ -1,7 +1,13 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMySavedGymCountApi, getUserGymDiscoverApi, saveMyGymApi, unsaveMyGymApi } from "@/features/gyms/api";
-import type { UserGymDiscoverRequest } from "@/features/gyms/model";
+import {
+  getMySavedGymCountApi,
+  getPublicGymDiscoverApi,
+  getUserGymDiscoverApi,
+  saveMyGymApi,
+  unsaveMyGymApi,
+} from "@/features/gyms/api";
+import type { UserGymDiscoverPageResponse, UserGymDiscoverRequest } from "@/features/gyms/model";
 import { gymsQueryKeys } from "@/features/gyms/queryKeys";
 import type {
   GymRecommendationItem,
@@ -14,9 +20,15 @@ import type {
 
 type RequestedLocationMode = Exclude<RecommendationMode, "show-all">;
 type Coordinates = { lat: number; lng: number };
+type GymsRecommendationAudience = "member" | "public";
+type DiscoverApi = (request: UserGymDiscoverRequest) => Promise<UserGymDiscoverPageResponse>;
 
 const DISCOVER_PAGE_SIZE = 100;
 const LOCATION_REFRESH_THRESHOLD_METERS = 50;
+
+export interface UseGymsRecommendationOptions {
+  audience?: GymsRecommendationAudience;
+}
 
 export interface GymsRecommendationState {
   locationPermission: LocationPermissionState;
@@ -62,8 +74,11 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function fetchAllDiscoverGyms(request: UserGymDiscoverRequest): Promise<GymRecommendationItem[]> {
-  const firstPage = await getUserGymDiscoverApi({
+async function fetchAllDiscoverGyms(
+  request: UserGymDiscoverRequest,
+  discoverApi: DiscoverApi
+): Promise<GymRecommendationItem[]> {
+  const firstPage = await discoverApi({
     ...request,
     page: 0,
     size: DISCOVER_PAGE_SIZE,
@@ -75,7 +90,7 @@ async function fetchAllDiscoverGyms(request: UserGymDiscoverRequest): Promise<Gy
 
   const remainingPages = await Promise.all(
     Array.from({ length: firstPage.totalPages - 1 }, (_, index) =>
-      getUserGymDiscoverApi({
+      discoverApi({
         ...request,
         page: index + 1,
         size: DISCOVER_PAGE_SIZE,
@@ -140,7 +155,11 @@ function isPermissionDeniedError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === 1;
 }
 
-export function useGymsRecommendation(): GymsRecommendationState & GymsRecommendationActions {
+export function useGymsRecommendation(
+  options: UseGymsRecommendationOptions = {}
+): GymsRecommendationState & GymsRecommendationActions {
+  const audience = options.audience ?? "member";
+  const isPublicAudience = audience === "public";
   const [locationPermission, setLocationPermission] = useState<LocationPermissionState>("loading");
   const [userCoords, setUserCoords] = useState<Coordinates | null>(null);
   const [mode, setModeRaw] = useState<RecommendationMode>("show-all");
@@ -164,21 +183,23 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
       query: query || undefined,
       mode,
       status: statusFilter,
-      savedOnly: showSavedOnly || undefined,
+      savedOnly: !isPublicAudience && showSavedOnly ? true : undefined,
       sort: sortMode,
       lat: userCoords?.lat,
       lng: userCoords?.lng,
     };
-  }, [deferredSearchQuery, mode, showSavedOnly, sortMode, statusFilter, userCoords?.lat, userCoords?.lng]);
+  }, [deferredSearchQuery, isPublicAudience, mode, showSavedOnly, sortMode, statusFilter, userCoords?.lat, userCoords?.lng]);
 
   const savedCountQuery = useQuery({
     queryKey: gymsQueryKeys.savedCount(),
     queryFn: getMySavedGymCountApi,
+    enabled: !isPublicAudience,
     staleTime: 30_000,
   });
 
   const discoverQuery = useQuery({
     queryKey: gymsQueryKeys.discover({
+      audience,
       query: discoverRequest.query,
       mode: discoverRequest.mode,
       status: discoverRequest.status,
@@ -187,7 +208,11 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
       lat: discoverRequest.lat,
       lng: discoverRequest.lng,
     }),
-    queryFn: () => fetchAllDiscoverGyms(discoverRequest),
+    queryFn: () =>
+      fetchAllDiscoverGyms(
+        discoverRequest,
+        isPublicAudience ? getPublicGymDiscoverApi : getUserGymDiscoverApi
+      ),
     enabled: mode === "show-all" || Boolean(userCoords),
     staleTime: 30_000,
   });
@@ -305,10 +330,20 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
   }, [locationPermission, mode, userCoords]);
 
   useEffect(() => {
+    if (isPublicAudience) {
+      setSavedGymCount(0);
+      return;
+    }
+
     if (typeof savedCountQuery.data?.count === "number") {
       setSavedGymCount(savedCountQuery.data.count);
     }
-  }, [savedCountQuery.data?.count]);
+  }, [isPublicAudience, savedCountQuery.data?.count]);
+
+  useEffect(() => {
+    if (!isPublicAudience) return;
+    setShowSavedOnly(false);
+  }, [isPublicAudience]);
 
   useEffect(() => {
     if (discoverQuery.data) {
@@ -439,6 +474,8 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
 
   const toggleSavedGym = useCallback(
     (gymId: number) => {
+      if (isPublicAudience) return;
+
       const currentGym = gyms.find((gym) => gym.gymId === gymId);
       if (!currentGym) return;
 
@@ -461,12 +498,13 @@ export function useGymsRecommendation(): GymsRecommendationState & GymsRecommend
         }
       );
     },
-    [gyms, savedGymCount, showSavedOnly, toggleSavedMutation]
+    [gyms, isPublicAudience, savedGymCount, showSavedOnly, toggleSavedMutation]
   );
 
   const toggleSavedOnly = useCallback(() => {
+    if (isPublicAudience) return;
     setShowSavedOnly((current) => !current);
-  }, []);
+  }, [isPublicAudience]);
 
   const resetFilters = useCallback(() => {
     setShowSavedOnly(false);

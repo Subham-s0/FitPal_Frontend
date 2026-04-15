@@ -11,12 +11,8 @@ import type {
   GymPhotoResponse,
   GymProfileResponse,
   GymProfileSetupStatusResponse,
-  ProfileGoalsUpdateRequest,
-  ProfileGoalsUpdateResponse,
   ProfileImageUpdateRequest,
   ProfileImageUpdateResponse,
-  ProfileInfoUpdateRequest,
-  ProfileInfoUpdateResponse,
   UpdateGymBasicsStepRequest,
   UpdateGymLocationStepRequest,
   UpdateGymPayoutStepRequest,
@@ -75,10 +71,20 @@ export async function deleteGymLogoApi(): Promise<GymProfileResponse> {
   return deleteApiData<GymProfileResponse>("/gyms/me/profile/logo");
 }
 
-/** POST /api/gyms/me/profile/verify-registered-email */
-export async function verifyGymRegisteredEmailApi(): Promise<GymProfileSetupStatusResponse> {
+/** POST /api/gyms/me/profile/email-verification/request */
+export async function requestGymRegisteredEmailVerificationApi(): Promise<OtpDispatchResponse> {
+  return postApiData<OtpDispatchResponse>(
+    "/gyms/me/profile/email-verification/request"
+  );
+}
+
+/** POST /api/gyms/me/profile/email-verification/confirm */
+export async function confirmGymRegisteredEmailVerificationApi(
+  payload: ConfirmEmailVerificationRequest
+): Promise<GymProfileSetupStatusResponse> {
   return postApiData<GymProfileSetupStatusResponse>(
-    "/gyms/me/profile/verify-registered-email"
+    "/gyms/me/profile/email-verification/confirm",
+    payload
   );
 }
 
@@ -247,26 +253,6 @@ export async function updateProfileImageMetadataApi(
 ): Promise<ProfileImageUpdateResponse> {
   return patchApiData<ProfileImageUpdateResponse>(
     "/users/me/profile/image/metadata",
-    payload
-  );
-}
-
-/** PATCH /api/users/me/profile/info */
-export async function updateProfileInfoApi(
-  payload: ProfileInfoUpdateRequest
-): Promise<ProfileInfoUpdateResponse> {
-  return patchApiData<ProfileInfoUpdateResponse>(
-    "/users/me/profile/info",
-    payload
-  );
-}
-
-/** PATCH /api/users/me/profile/goals */
-export async function updateProfileGoalsApi(
-  payload: ProfileGoalsUpdateRequest
-): Promise<ProfileGoalsUpdateResponse> {
-  return patchApiData<ProfileGoalsUpdateResponse>(
-    "/users/me/profile/goals",
     payload
   );
 }

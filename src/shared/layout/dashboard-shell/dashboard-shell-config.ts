@@ -11,7 +11,6 @@ import {
   Megaphone,
   MessageSquare,
   QrCode,
-  Settings,
   Users,
 } from "lucide-react";
 import { getDisplayNameFromEmail as getDisplayNameFromEmailFromAvatar } from "@/shared/lib/avatar";

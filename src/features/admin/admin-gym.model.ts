@@ -128,6 +128,13 @@ export interface AdminGymPhotosReviewRequest {
 
 export interface UpdateGymApprovalRequest {
   approved: boolean;
+  allowEmailFailure?: boolean;
+}
+
+export interface UpdateGymApprovalResponse {
+  profile: GymProfileResponse;
+  emailSent: boolean;
+  warningMessage: string | null;
 }
 
 export interface UpdateGymCheckInAccessModeRequest {

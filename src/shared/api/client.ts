@@ -176,4 +176,31 @@ export function getApiErrorMessage(
   return fallback;
 }
 
+export function getApiErrorCode(error: unknown): string | null {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+
+  const extractCodeFromPayload = (payload: unknown): string | null => {
+    if (!isRecord(payload)) {
+      return null;
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+      return payload.error;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, "data")) {
+      return extractCodeFromPayload(payload.data);
+    }
+
+    return null;
+  };
+
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    return extractCodeFromPayload(error.response?.data);
+  }
+
+  return null;
+}
+
 export default apiClient;

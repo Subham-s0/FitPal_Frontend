@@ -26,28 +26,6 @@ interface UpcomingSessionProps {
   onOpenRoutines?: () => void;
 }
 
-type PlannedExercise = PlannedWorkoutSessionResponse["exercises"][number];
-
-function formatPlannedDuration(seconds: number | null): string {
-  if (seconds === null) return "";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function formatPlannedTarget(exercise: PlannedExercise): string {
-  const firstSet = exercise.sets[0];
-  if (!firstSet) return "No target";
-
-  const parts: string[] = [];
-  if (firstSet.targetReps !== null) parts.push(`${firstSet.targetReps} reps`);
-  if (firstSet.targetWeight !== null) parts.push(`${firstSet.targetWeight} kg`);
-  if (firstSet.targetDurationSeconds !== null) parts.push(formatPlannedDuration(firstSet.targetDurationSeconds));
-  if (firstSet.targetDistance !== null) parts.push(`${firstSet.targetDistance} m`);
-
-  return parts.length > 0 ? parts.join(" | ") : "No target";
-}
-
 function toHeatmapExercises(exercises: PlannedWorkoutSessionResponse["exercises"]) {
   return exercises.map((exercise, exerciseIndex) => ({
     primaryMuscles: exercise.primaryMuscles ?? [],

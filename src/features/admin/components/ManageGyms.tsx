@@ -8,7 +8,7 @@ import {
   Camera, Check, CheckCircle,
   ChevronDown, Eye,
   Loader2, MoreHorizontal,
-  RefreshCcw, RotateCcw, Save, Search,
+  RefreshCcw, Save, Search,
   Shield, SlidersHorizontal,
   Trash2, X, XCircle, Zap,
 } from "lucide-react";
@@ -79,6 +79,7 @@ const REQUIRED_DOCS = ["REGISTRATION_CERTIFICATE", "LICENSE"] as const;
 const DEFAULT_MAP_CENTER: [number, number] = [27.7172, 85.324];
 const DEFAULT_MAP_ZOOM = 15;
 const EMPTY_MAP_ZOOM = 13;
+const APPROVAL_EMAIL_FAILURE_CODES = new Set(["EMAIL_NOT_CONFIGURED", "EMAIL_SEND_FAILED"]);
 
 // Using CSS variables from index.css for table theming:
 // table-bg, table-bg-alt, table-bg-hover, table-bg-expanded
@@ -179,6 +180,30 @@ function getBlockers(r: AdminGymReviewResponse | null): string[] {
   if (!r.photos.length)
     b.push("At least one gym photo is required.");
   return b;
+}
+
+function extractApiErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const response = (error as { response?: unknown }).response;
+  if (!response || typeof response !== "object") {
+    return null;
+  }
+
+  const data = (response as { data?: unknown }).data;
+  if (!data || typeof data !== "object") {
+    return null;
+  }
+
+  const code = (data as { error?: unknown }).error;
+  return typeof code === "string" ? code : null;
+}
+
+function isApprovalEmailFailure(error: unknown): boolean {
+  const code = extractApiErrorCode(error);
+  return code !== null && APPROVAL_EMAIL_FAILURE_CODES.has(code);
 }
 
 // ─── Sort ─────────────────────────────────────────────────────────────────────
@@ -284,19 +309,6 @@ function DI({ label, children }: { label: string; children: React.ReactNode }) {
         <span className="text-[11px] table-text-muted font-medium flex-shrink-0 pr-2">{label}</span>
         <span className="text-[11px] font-semibold text-white text-right break-words min-w-0">{children}</span>
       </div>
-  );
-}
-
-function DIInput({ value, onChange, type = "text", step }: {
-  value: string | number; onChange: (v: string) => void;
-  type?: string; step?: string;
-}) {
-  return (
-      <input
-          type={type} step={step} value={value ?? ""}
-          onChange={e => onChange(e.target.value)}
-          className="px-[9px] py-[5px] table-input-bg table-input-border border rounded-lg text-white text-[11px] text-right outline-none focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)] transition-all w-full max-w-[160px]"
-      />
   );
 }
 
@@ -1114,6 +1126,7 @@ export default function ManageGyms() {
   const [expandedId, setExpandedId]       = useState<number | null>(null);
   const [draftReview, setDraftReview]     = useState<AdminGymReviewResponse | null>(null);
   const [pendingDecision, setPending]     = useState<PendingDecision | null>(null);
+  const [emailFallbackDecision, setEmailFallbackDecision] = useState<PendingDecision | null>(null);
   const [sortIdx, setSortIdx]             = useState(0);
   const [filterOpen, setFilterOpen]       = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -1233,16 +1246,38 @@ export default function ManageGyms() {
   });
 
   const appMut = useMutation({
-    mutationFn: ({ gymId, approved }: { gymId: number; approved: boolean }) =>
-        patchAdminGymApprovalApi(gymId, { approved }),
-    onSuccess: (_, v) => {
+    mutationFn: ({ gymId, approved, allowEmailFailure }: {
+      gymId: number;
+      gymName: string;
+      approved: boolean;
+      allowEmailFailure?: boolean;
+    }) => patchAdminGymApprovalApi(gymId, { approved, allowEmailFailure }),
+    onSuccess: (response, v) => {
       qc.invalidateQueries({ queryKey: ["admin-gyms"] });
       qc.invalidateQueries({ queryKey: ["admin-gym-counts"] });
       qc.invalidateQueries({ queryKey: ["admin-gym-review", v.gymId] });
-      setExpandedId(null); setDraftReview(null); setPending(null);
+      setExpandedId(null);
+      setDraftReview(null);
+      setPending(null);
+      setEmailFallbackDecision(null);
       toast.success(v.approved ? "Gym approved" : "Gym rejected");
+      if (!response.emailSent) {
+        toast.warning(response.warningMessage ?? "Approval was saved, but email delivery failed.");
+      }
     },
-    onError: e => toast.error(getApiErrorMessage(e, "Failed to update approval")),
+    onError: (e, v) => {
+      if (!v.allowEmailFailure && isApprovalEmailFailure(e)) {
+        setPending(null);
+        setEmailFallbackDecision({
+          gymId: v.gymId,
+          gymName: v.gymName,
+          approved: v.approved,
+        });
+        toast.error("Email service failed. Confirm to continue without email.");
+        return;
+      }
+      toast.error(getApiErrorMessage(e, "Failed to update approval"));
+    },
   });
 
   const isMutating = locMut.isPending || accMut.isPending || docMut.isPending
@@ -1883,7 +1918,12 @@ export default function ManageGyms() {
                   onClick={e => {
                     if (!pendingDecision) return;
                     e.preventDefault();
-                    appMut.mutate({ gymId: pendingDecision.gymId, approved: pendingDecision.approved });
+                    appMut.mutate({
+                      gymId: pendingDecision.gymId,
+                      gymName: pendingDecision.gymName,
+                      approved: pendingDecision.approved,
+                      allowEmailFailure: false,
+                    });
                   }}
                   className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[11px] font-black uppercase tracking-wider transition-all ${
                       pendingDecision?.approved ? "bg-green-400 text-[#071a0f] hover:bg-green-300" : "bg-red-500 text-white hover:bg-red-400"
@@ -1894,6 +1934,47 @@ export default function ManageGyms() {
                         ? <Check   className="w-3.5 h-3.5" strokeWidth={2.5} />
                         : <XCircle className="w-3.5 h-3.5" />}
                 {pendingDecision?.approved ? "Approve Gym" : "Reject Gym"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={emailFallbackDecision !== null} onOpenChange={open => !open && setEmailFallbackDecision(null)}>
+          <AlertDialogContent className="border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white rounded-[20px] shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+            <AlertDialogHeader>
+              <div className="w-12 h-12 rounded-[14px] flex items-center justify-center mb-1 bg-[hsl(0,0%,9%)] border border-[hsl(0,0%,18%)]">
+                <AlertCircle className="w-6 h-6 text-yellow-400" strokeWidth={1.8} />
+              </div>
+              <AlertDialogTitle className="text-[17px] font-black tracking-tight">
+                Email delivery failed
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-[12px] text-[hsl(0,0%,55%)] leading-relaxed">
+                {emailFallbackDecision?.approved
+                  ? `We could not send the approval email to ${emailFallbackDecision.gymName}. Do you want to approve anyway?`
+                  : `We could not send the rejection email to ${emailFallbackDecision?.gymName}. Do you want to reject anyway?`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2">
+              <AlertDialogCancel className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] bg-[hsl(0,0%,9%)] border border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:text-white hover:border-white/20 text-[11px] font-black uppercase tracking-wider">
+                <X className="w-3.5 h-3.5" strokeWidth={2.5} />Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={e => {
+                  if (!emailFallbackDecision) return;
+                  e.preventDefault();
+                  appMut.mutate({
+                    gymId: emailFallbackDecision.gymId,
+                    gymName: emailFallbackDecision.gymName,
+                    approved: emailFallbackDecision.approved,
+                    allowEmailFailure: true,
+                  });
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-[11px] font-black uppercase tracking-wider transition-all bg-yellow-400 text-[#261400] hover:bg-yellow-300"
+              >
+                {appMut.isPending
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                Continue anyway
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

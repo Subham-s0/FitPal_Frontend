@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -129,8 +129,27 @@ function createInitialForm(): AiRoutineFormState {
   };
 }
 
-function createFormFromBootstrap(_bootstrap: AiRoutineBootstrapResponse): AiRoutineFormState {
-  return createInitialForm();
+function createFormFromBootstrap(bootstrap: AiRoutineBootstrapResponse): AiRoutineFormState {
+  const form = createInitialForm();
+
+  if (bootstrap.profileSummary.primaryFitnessFocus) {
+    form.routineGoal = bootstrap.profileSummary.primaryFitnessFocus;
+  }
+
+  for (const lift of LIFT_ORDER) {
+    const snapshot = getLiftSnapshot(bootstrap, lift);
+    if (!snapshot) {
+      continue;
+    }
+
+    form.strengthInputs[lift] = {
+      enabled: false,
+      weight: String(snapshot.bestSetWeight),
+      reps: String(snapshot.bestSetReps),
+    };
+  }
+
+  return form;
 }
 
 function formatGoal(value: PrimaryFitnessFocus | null | undefined): string {
@@ -185,18 +204,23 @@ function formatMissingProfileField(field: string): string {
 function resolveProfileTabForMissingFields(
   missingFields: string[] | undefined
 ): "profile" | "goals" {
-  const firstMissingField = missingFields?.[0];
-
-  switch (firstMissingField) {
-    case "gender":
-      return "profile";
-    case "weight":
-    case "height":
-    case "fitnessLevel":
-    case "primaryFitnessFocus":
-    default:
-      return "goals";
+  if (!missingFields || missingFields.length === 0) {
+    return "goals";
   }
+
+  const hasGoalsFieldMissing = missingFields.some((field) =>
+    ["weight", "height", "fitnessLevel", "primaryFitnessFocus"].includes(field)
+  );
+
+  if (hasGoalsFieldMissing) {
+    return "goals";
+  }
+
+  if (missingFields.includes("gender")) {
+    return "profile";
+  }
+
+  return "goals";
 }
 
 function getLiftSnapshot(
@@ -275,7 +299,7 @@ function validateEquipmentField(prefs: EquipmentPreference[]): string | undefine
   return undefined;
 }
 
-function validateLiftField(lift: AiCanonicalLift, liftState: LiftFormState): string | undefined {
+function validateLiftField(liftState: LiftFormState): string | undefined {
   if (!liftState.enabled) {
     return undefined;
   }
@@ -302,7 +326,10 @@ export default function AiRoutineGenerationDialog({
   onGenerateRequest,
 }: AiRoutineGenerationDialogProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const dialogContentRef = useRef<HTMLDivElement | null>(null);
+  const hasUserEditedRef = useRef(false);
+  const hasHydratedFromBootstrapRef = useRef(false);
   const [form, setForm] = useState<AiRoutineFormState>(createInitialForm);
   const [errors, setErrors] = useState<AiRoutineFormErrors>({});
   const [wizardStep, setWizardStep] = useState(0);
@@ -319,21 +346,34 @@ export default function AiRoutineGenerationDialog({
     refetchOnWindowFocus: false,
   });
 
+  const markUserEdited = () => {
+    hasUserEditedRef.current = true;
+  };
+
   useEffect(() => {
     if (open) {
+      void queryClient.invalidateQueries({ queryKey: aiRoutineQueryKeys.bootstrap() });
+      hasUserEditedRef.current = false;
+      hasHydratedFromBootstrapRef.current = false;
       setWizardStep(0);
       setPreambleSeen(true);
       return;
     }
 
+    hasUserEditedRef.current = false;
+    hasHydratedFromBootstrapRef.current = false;
     setForm(createInitialForm());
     setErrors({});
     setWizardStep(0);
     setPreambleSeen(true);
-  }, [open]);
+  }, [open, queryClient]);
 
   useEffect(() => {
-    if (!open || !bootstrapQuery.data) {
+    if (!open || !bootstrapQuery.data || bootstrapQuery.isFetching) {
+      return;
+    }
+
+    if (hasHydratedFromBootstrapRef.current || hasUserEditedRef.current) {
       return;
     }
 
@@ -341,9 +381,11 @@ export default function AiRoutineGenerationDialog({
     setErrors({});
     setWizardStep(0);
     setPreambleSeen(true);
-  }, [bootstrapQuery.data, open]);
+    hasHydratedFromBootstrapRef.current = true;
+  }, [bootstrapQuery.data, bootstrapQuery.isFetching, open]);
 
   const bootstrap = bootstrapQuery.data;
+  const isBootstrapRefreshing = bootstrapQuery.isLoading || bootstrapQuery.isFetching;
   const missingManualLifts = useMemo(
     () => LIFT_ORDER.filter((lift) => bootstrap?.liftsMissingSnapshot.includes(lift)),
     [bootstrap]
@@ -365,6 +407,7 @@ export default function AiRoutineGenerationDialog({
   const totalQuestionSteps = submitStepIndex + 1;
 
   const updateLiftField = (lift: AiCanonicalLift, patch: Partial<LiftFormState>) => {
+    markUserEdited();
     setForm((prev) => ({
       ...prev,
       strengthInputs: {
@@ -383,6 +426,7 @@ export default function AiRoutineGenerationDialog({
   };
 
   const handleToggleEquipment = (equipment: EquipmentPreference, checked: boolean) => {
+    markUserEdited();
     setForm((prev) => {
       const next = new Set(prev.equipmentPreferences);
       if (checked) {
@@ -415,7 +459,7 @@ export default function AiRoutineGenerationDialog({
     }
 
     for (const lift of missingManualLifts) {
-      const liftErr = validateLiftField(lift, form.strengthInputs[lift]);
+      const liftErr = validateLiftField(form.strengthInputs[lift]);
       if (liftErr) {
         nextErrors.lifts = { ...(nextErrors.lifts ?? {}), [lift]: liftErr };
       }
@@ -492,7 +536,7 @@ export default function AiRoutineGenerationDialog({
       const liftIndex = wizardStep - 3;
       const lift = missingManualLifts[liftIndex];
       if (lift) {
-        const msg = validateLiftField(lift, form.strengthInputs[lift]);
+        const msg = validateLiftField(form.strengthInputs[lift]);
         if (msg) {
           setErrors((prev) => ({
             ...prev,
@@ -521,7 +565,7 @@ export default function AiRoutineGenerationDialog({
   const showWizardNav =
     bootstrap &&
     bootstrap.canGenerate &&
-    !bootstrapQuery.isLoading &&
+    !isBootstrapRefreshing &&
     !bootstrapQuery.isError;
 
   useEffect(() => {
@@ -598,6 +642,7 @@ export default function AiRoutineGenerationDialog({
     wizardStep,
     preambleSeen,
     bootstrapQuery.isLoading,
+    bootstrapQuery.isFetching,
     bootstrapQuery.isError,
     bootstrap?.canGenerate,
     missingManualLifts.length,
@@ -651,7 +696,7 @@ export default function AiRoutineGenerationDialog({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-3 sm:px-5 sm:py-4">
-          {bootstrapQuery.isLoading ? (
+          {isBootstrapRefreshing ? (
             <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-3 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/[0.05]">
                 <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
@@ -840,6 +885,7 @@ export default function AiRoutineGenerationDialog({
                           max={7}
                           value={form.daysPerWeek}
                           onChange={(event) => {
+                            markUserEdited();
                             setForm((prev) => ({ ...prev, daysPerWeek: event.target.value }));
                             setErrors((prev) => ({
                               ...prev,
@@ -863,7 +909,7 @@ export default function AiRoutineGenerationDialog({
                       number={2}
                       title="Equipment"
                       mobileDescription='Pick what you can use. "All equipment" includes every supported type in your library.'
-                      description="Pick what you can use. “All equipment” uses every equipment type available in your exercise library."
+                      description='Pick what you can use. "All equipment" uses every equipment type available in your exercise library.'
                     >
                       <div className="space-y-2">
                         {EQUIPMENT_OPTIONS.map((option) => {
@@ -918,6 +964,7 @@ export default function AiRoutineGenerationDialog({
                         <Select
                           value={form.routineGoal || PROFILE_DEFAULT_GOAL}
                           onValueChange={(value) => {
+                            markUserEdited();
                             setForm((prev) => ({
                               ...prev,
                               routineGoal:

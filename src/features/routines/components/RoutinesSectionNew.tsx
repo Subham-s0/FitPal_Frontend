@@ -1,4 +1,5 @@
-import { Suspense, lazy, useState, useCallback, useEffect, useMemo } from "react";
+import { Suspense, lazy, useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -90,6 +91,7 @@ import {
   workoutSessionQueryKeys,
 } from "@/features/workout-sessions/workoutSessionApi";
 import { getApiErrorMessage } from "@/shared/api/client";
+import { resolveFloatingMenuPosition } from "@/features/routines/components/floatingMenuPosition";
 
 const MuscleHeatmap = lazy(() => import("@/features/routines/components/MuscleHeatmap"));
 const InlineRoutineEditor = lazy(() => import("@/features/routines/components/InlineRoutineEditor"));
@@ -103,6 +105,10 @@ const RoutinePanelFallback = ({ label }: { label: string }) => (
     {label}
   </div>
 );
+
+const DAY_ACTION_MENU_HEIGHT = 146;
+const DAY_COPY_DIALOG_HEIGHT = 320;
+const ROUTINE_ACTION_MENU_HEIGHT = 192;
 
 // ============================================
 // SORTABLE DAY ROW (for reordering inside the card)
@@ -139,6 +145,19 @@ function SortableDayRow({
 
   const [showMenu, setShowMenu] = useState(false);
   const [showCopyDialog, setShowCopyDialog] = useState(false);
+  const [dayMenuPosition, setDayMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const dayMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  const closeDayOverlays = useCallback(() => {
+    setShowMenu(false);
+    setShowCopyDialog(false);
+    setDayMenuPosition(null);
+  }, []);
+
+  const closeCopyDialog = useCallback(() => {
+    setShowCopyDialog(false);
+    setDayMenuPosition(null);
+  }, []);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -149,17 +168,6 @@ function SortableDayRow({
 
   const exerciseCount = day.exercises.length;
   const setCount = day.exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    if (!showMenu && !showCopyDialog) return;
-    const handleClickOutside = () => {
-      setShowMenu(false);
-      setShowCopyDialog(false);
-    };
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
-  }, [showMenu, showCopyDialog]);
 
   return (
     <div ref={setNodeRef} style={style} className="group relative flex items-center gap-2">
@@ -244,24 +252,43 @@ function SortableDayRow({
         {/* Three-dot Menu - Same style as routine card */}
         <div className={`relative flex-shrink-0 ${showMenu || showCopyDialog ? "z-[60]" : ""}`}>
           <button
+            ref={dayMenuButtonRef}
             onClick={(e) => {
               e.stopPropagation();
-              setShowMenu(!showMenu);
+              if (showMenu) {
+                closeDayOverlays();
+                return;
+              }
+
+              const rect = e.currentTarget.getBoundingClientRect();
+              setDayMenuPosition(resolveFloatingMenuPosition(rect, DAY_ACTION_MENU_HEIGHT));
+              setShowCopyDialog(false);
+              setShowMenu(true);
             }}
             className="rounded-xl p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
           >
             <MoreVertical className="h-5 w-5" />
           </button>
 
-          {showMenu && (
+          {showMenu && dayMenuPosition && createPortal(
+            <>
+              <div
+                className="fixed inset-0 z-[9998]"
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  closeDayOverlays();
+                }}
+              />
             <div 
-              className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
+                className="fixed z-[9999] w-56 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
+                style={{ top: dayMenuPosition.top, right: dayMenuPosition.right }}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
             <button
               onClick={() => {
                 onEditDay(routineId, day.id);
-                setShowMenu(false);
+                closeDayOverlays();
               }}
               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/5"
             >
@@ -270,6 +297,12 @@ function SortableDayRow({
             </button>
             <button
               onClick={() => {
+                const anchorRect = dayMenuButtonRef.current?.getBoundingClientRect();
+                if (anchorRect) {
+                  setDayMenuPosition(
+                    resolveFloatingMenuPosition(anchorRect, DAY_COPY_DIALOG_HEIGHT)
+                  );
+                }
                 setShowMenu(false);
                 setShowCopyDialog(true);
               }}
@@ -282,7 +315,7 @@ function SortableDayRow({
             <button
               onClick={() => {
                 onDeleteDay(routineId, day.id);
-                setShowMenu(false);
+                closeDayOverlays();
               }}
               className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
             >
@@ -290,12 +323,24 @@ function SortableDayRow({
               Delete Workout
             </button>
           </div>
-        )}
+            </>,
+            document.body
+          )}
 
         {/* Copy Dialog */}
-        {showCopyDialog && (
+        {showCopyDialog && dayMenuPosition && createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[9998]"
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                closeCopyDialog();
+              }}
+            />
           <div 
-            className="absolute right-0 top-full z-[80] mt-1 w-64 rounded-2xl border border-white/10 bg-[#181818] p-4 shadow-xl"
+              className="fixed z-[9999] w-64 rounded-2xl border border-white/10 bg-[#181818] p-4 shadow-xl"
+              style={{ top: dayMenuPosition.top, right: dayMenuPosition.right }}
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-3 text-sm font-bold text-white">Copy to Routine</p>
@@ -305,7 +350,7 @@ function SortableDayRow({
                   key={r.id}
                   onClick={() => {
                     onCopyDay(routineId, day.id, r.id);
-                    setShowCopyDialog(false);
+                    closeCopyDialog();
                   }}
                   className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-white/5 ${
                     r.id === routineId ? "text-orange-500" : "text-white"
@@ -319,12 +364,16 @@ function SortableDayRow({
               ))}
             </div>
             <button
-              onClick={() => setShowCopyDialog(false)}
+              onClick={() => {
+                closeCopyDialog();
+              }}
               className="flow-button-secondary mt-3 w-full text-sm text-gray-300"
             >
               Cancel
             </button>
           </div>
+          </>,
+          document.body
         )}
       </div>
       {/* End of menu relative div */}
@@ -423,6 +472,7 @@ const RoutinesSection = ({
     () => new Set(initialExpandedRoutineId ? [initialExpandedRoutineId] : [])
   );
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [routineMenuPosition, setRoutineMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [pendingRoutineDeleteId, setPendingRoutineDeleteId] = useState<string | null>(null);
   const [pendingDayDelete, setPendingDayDelete] = useState<{
     routineId: string;
@@ -690,29 +740,40 @@ const RoutinesSection = ({
     setGeneratedRoutineExpanded((prev) => !prev);
   }, []);
 
+  const closeRoutineMenu = useCallback(() => {
+    setOpenMenuId(null);
+    setRoutineMenuPosition(null);
+  }, []);
+
   // Toggle menu
-  const toggleMenu = useCallback((routineId: string) => {
+  const toggleMenu = useCallback((routineId: string, anchor?: HTMLElement) => {
     if (openMenuId === routineId) {
-      setOpenMenuId(null);
+      closeRoutineMenu();
     } else {
+      if (anchor) {
+        const rect = anchor.getBoundingClientRect();
+        setRoutineMenuPosition(
+          resolveFloatingMenuPosition(rect, ROUTINE_ACTION_MENU_HEIGHT)
+        );
+      }
       setOpenMenuId(routineId);
     }
-  }, [openMenuId]);
+  }, [openMenuId, closeRoutineMenu]);
 
   // Handlers
   const handleEditRoutine = useCallback(
     (routineId: string) => {
-      setOpenMenuId(null);
+      closeRoutineMenu();
       // Use inline editor instead of navigating away
       setInlineEditRoutineId(routineId);
       setIsCreatingNewRoutine(false);
     },
-    []
+    [closeRoutineMenu]
   );
 
   const handleAddWorkoutDay = useCallback(
     async (routineId: string) => {
-      setOpenMenuId(null);
+      closeRoutineMenu();
       const routine = routines.find((r) => r.id === routineId);
       if (!routine) return;
 
@@ -740,7 +801,7 @@ const RoutinesSection = ({
 
       onEditDay?.(routineId, newDay.id);
     },
-    [routines, refreshRoutines, refreshRoutinesFromBackend, onEditDay]
+    [closeRoutineMenu, routines, refreshRoutines, refreshRoutinesFromBackend, onEditDay]
   );
 
   const handleNewRoutine = useCallback(async () => {
@@ -785,18 +846,18 @@ const RoutinesSection = ({
         toast.error(error instanceof Error ? error.message : "Failed to activate routine.");
         await refreshRoutinesFromBackend();
       } finally {
-        setOpenMenuId(null);
+        closeRoutineMenu();
       }
     },
-    [refreshRoutines, refreshRoutinesFromBackend]
+    [closeRoutineMenu, refreshRoutines, refreshRoutinesFromBackend]
   );
 
   const handleDeleteRoutine = useCallback(
     (routineId: string) => {
-      setOpenMenuId(null);
+      closeRoutineMenu();
       setPendingRoutineDeleteId(routineId);
     },
-    []
+    [closeRoutineMenu]
   );
 
   const handleConfirmDeleteRoutine = useCallback(async () => {
@@ -1515,18 +1576,25 @@ const RoutinesSection = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleMenu(routine.id);
+                        toggleMenu(routine.id, e.currentTarget);
                       }}
                       className="rounded-xl p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
                     >
                       <MoreVertical className="h-5 w-5" />
                     </button>
 
-                    {isMenuOpen && (
+                    {isMenuOpen && routineMenuPosition && createPortal(
                       <>
-                        <div className="fixed inset-0 z-[9998]" onClick={() => setOpenMenuId(null)} />
                         <div
-                          className="absolute right-0 top-full z-[9999] mt-2 w-56 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
+                          className="fixed inset-0 z-[9998]"
+                          onMouseDown={(event) => {
+                            event.stopPropagation();
+                            closeRoutineMenu();
+                          }}
+                        />
+                        <div
+                          className="fixed z-[9999] w-56 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
+                          style={{ top: routineMenuPosition.top, right: routineMenuPosition.right }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -1560,7 +1628,8 @@ const RoutinesSection = ({
                             Delete
                           </button>
                         </div>
-                      </>
+                      </>,
+                      document.body
                     )}
                   </div>
                 </div>

@@ -9,7 +9,7 @@ interface CheckInScreenProps {
   initialView?: CheckInView;
 }
 
-const CheckInScreen: React.FC<CheckInScreenProps> = ({ onBack, initialView = 'scanner' }) => {
+const CheckInScreen: React.FC<CheckInScreenProps> = ({ initialView = 'scanner' }) => {
   const [view, setView] = useState<CheckInView>(initialView);
 
   useEffect(() => {

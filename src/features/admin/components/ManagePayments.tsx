@@ -25,7 +25,6 @@ import {
   RefreshCcw,
   Search,
   SlidersHorizontal,
-  Wallet,
   X,
 } from "lucide-react";
 

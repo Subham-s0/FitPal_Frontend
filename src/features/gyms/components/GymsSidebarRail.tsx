@@ -39,6 +39,7 @@ interface GymsSidebarRailProps {
   totalPages: number;
   onPreviousPage: () => void;
   onNextPage: () => void;
+  allowSavedGyms?: boolean;
 }
 
 function DesktopGymLoadingCard() {
@@ -83,6 +84,7 @@ const GymsSidebarRail = ({
   totalPages,
   onPreviousPage,
   onNextPage,
+  allowSavedGyms = true,
 }: GymsSidebarRailProps) => {
   return (
     <div
@@ -126,6 +128,7 @@ const GymsSidebarRail = ({
             onSortModeChange={onSortModeChange}
             onToggleSavedOnly={onToggleSavedOnly}
             onResetFilters={onResetFilters}
+            allowSavedGyms={allowSavedGyms}
           />
         </div>
       </div>
@@ -150,6 +153,7 @@ const GymsSidebarRail = ({
               isSaved={gym.isSaved}
               onClick={() => onSelectGym(gym)}
               onToggleSaved={() => onToggleSavedGym(gym.gymId)}
+              showSaveAction={allowSavedGyms}
             />
           ))}
           {!isLoading && totalGymCount === 0 && (
@@ -200,12 +204,14 @@ function DesktopGymCard({
   isSaved,
   onClick,
   onToggleSaved,
+  showSaveAction,
 }: {
   gym: GymRecommendationItem;
   selected: boolean;
   isSaved: boolean;
   onClick: () => void;
   onToggleSaved: () => void;
+  showSaveAction: boolean;
 }) {
   const previewImageUrl = getGymPreviewImageUrl(gym);
 
@@ -274,21 +280,23 @@ function DesktopGymCard({
                     {gym.rating.toFixed(1)}
                   </span>
                 )}
-                <button
-                  type="button"
-                  aria-label={isSaved ? "Remove saved gym" : "Save gym"}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleSaved();
-                  }}
-                  className={`rounded-full border p-2 transition-colors ${
-                    isSaved
-                      ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
-                      : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
-                  }`}
-                >
-                  <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
-                </button>
+                {showSaveAction && (
+                  <button
+                    type="button"
+                    aria-label={isSaved ? "Remove saved gym" : "Save gym"}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleSaved();
+                    }}
+                    className={`rounded-full border p-2 transition-colors ${
+                      isSaved
+                        ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
+                        : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
+                    }`}
+                  >
+                    <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
+                  </button>
+                )}
               </div>
             </div>
           </div>

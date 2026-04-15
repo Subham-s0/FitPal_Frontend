@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import { useAuthState } from "@/features/auth";
 import {
   ADMIN_DASHBOARD_ROUTE,
+  GYM_DASHBOARD_ROUTE,
   PROFILE_SETUP_ROUTE,
   getPostAuthRoute,
   isProfileSetupRoute,
@@ -11,6 +12,7 @@ import {
 
 const Index = lazy(() => import("@/pages/Index"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const PublicGyms = lazy(() => import("@/pages/PublicGyms"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const LoginRegister = lazy(() => import("@/pages/LoginRegister"));
 const GymProfile = lazy(() => import("@/pages/gym/GymProfile"));
@@ -84,7 +86,7 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   }
 
   if (auth.profileCompleted && isSetupRoute) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={role === "GYM" ? GYM_DASHBOARD_ROUTE : "/dashboard"} replace />;
   }
 
   return <>{children}</>;
@@ -115,6 +117,20 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const GymsRoute = () => {
+  const auth = useAuthState();
+
+  if (!auth.accessToken) {
+    return <PublicGyms />;
+  }
+
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+};
+
 const resolveDocumentTitle = (pathname: string) => {
   if (pathname === "/") {
     return "FitPal";
@@ -138,6 +154,34 @@ const resolveDocumentTitle = (pathname: string) => {
 
   if (pathname === "/dashboard") {
     return "FitPal | Dashboard";
+  }
+
+  if (pathname === GYM_DASHBOARD_ROUTE) {
+    return "FitPal | Gym Dashboard";
+  }
+
+  if (pathname === "/gyms") {
+    return "FitPal | Gyms";
+  }
+
+  if (pathname === "/routines") {
+    return "FitPal | Routines";
+  }
+
+  if (pathname === "/exercises") {
+    return "FitPal | Exercises";
+  }
+
+  if (pathname === "/workouts") {
+    return "FitPal | Workouts";
+  }
+
+  if (pathname === "/notifications") {
+    return "FitPal | Notifications";
+  }
+
+  if (pathname === "/check-ins" || pathname === "/checkin") {
+    return "FitPal | Check-Ins";
   }
 
   if (pathname === "/profile") {
@@ -227,12 +271,16 @@ const AppRouter = () => (
           }
         />
         <Route
-          path="/gym/:id"
+          path={GYM_DASHBOARD_ROUTE}
           element={
             <ProtectedRoute>
-              <GymProfile />
+              <Dashboard />
             </ProtectedRoute>
           }
+        />
+        <Route
+          path="/gym/:id"
+          element={<GymProfile />}
         />
         <Route
           path="/dashboard"
@@ -242,6 +290,19 @@ const AppRouter = () => (
             </ProtectedRoute>
           }
         />
+        <Route path="/gyms" element={<GymsRoute />} />
+        {["/routines", "/exercises", "/workouts", "/notifications", "/check-ins"].map((path) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+        ))}
+        <Route path="/checkin" element={<Navigate to="/check-ins" replace />} />
         <Route
           path="/profile"
           element={

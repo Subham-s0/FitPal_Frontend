@@ -22,8 +22,6 @@ import {
   Clock,
   Plus,
   CheckCircle2,
-  SkipForward,
-  Dumbbell,
   Weight,
   ChevronDown,
   ChevronUp,
@@ -247,12 +245,10 @@ function RoutineOverviewPanel({
   routineName,
   routineId,
   currentDayId,
-  currentDayName,
 }: {
   routineName: string | null;
   routineId: string | null;
   currentDayId: string | null;
-  currentDayName: string | null;
 }) {
   const { data: routineDetail, isLoading, dataUpdatedAt } = useQuery({
     queryKey: routineQueryKeys.detail(routineId ?? ""),
@@ -263,13 +259,6 @@ function RoutineOverviewPanel({
   if (!routineId || !routineName) {
     return null;
   }
-
-  // Find current day's exercises for comparison
-  const currentDay = routineDetail?.days.find(d => d.routineDayId === currentDayId);
-  const currentDayExerciseCount = currentDay?.exercises.length ?? 0;
-  const currentDaySetCount = currentDay?.exercises.reduce(
-    (sum, ex) => sum + (ex.sets?.length ?? 0), 0
-  ) ?? 0;
 
   return (
     <div className="flow-panel rounded-2xl p-4">
@@ -345,8 +334,6 @@ function RoutineOverviewPanel({
 
 function SessionExerciseCard({
   exercise,
-  exerciseIndex,
-  routineLogId,
   hasRoutine,
   dragHandleProps,
   templateSetCounts,
@@ -361,8 +348,6 @@ function SessionExerciseCard({
   onOpenDetails,
 }: {
   exercise: WorkoutSessionExerciseResponse;
-  exerciseIndex: number;
-  routineLogId: string;
   hasRoutine: boolean;
   dragHandleProps?: {
     attributes: Record<string, unknown>;
@@ -568,8 +553,6 @@ function SessionExerciseCard({
 
 interface SortableExerciseCardProps {
   exercise: WorkoutSessionExerciseResponse;
-  exerciseIndex: number;
-  routineLogId: string;
   hasRoutine: boolean;
   templateSetCounts: Map<string, number>;
   onSetUpdate: (exerciseId: string, setId: string, updates: UpdateWorkoutSetRequest) => void;
@@ -1218,12 +1201,10 @@ export default function WorkoutSessionScreen() {
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="space-y-3">
-                      {session.exercises.map((exercise, idx) => (
+                      {session.exercises.map((exercise) => (
                         <SortableExerciseCard
                           key={exercise.routineLogExerciseId}
                           exercise={exercise}
-                          exerciseIndex={idx}
-                          routineLogId={session.routineLogId}
                           hasRoutine={!!session.routineId}
                           templateSetCounts={templateSetCounts}
                           onSetUpdate={handleSetUpdate}
@@ -1297,7 +1278,6 @@ export default function WorkoutSessionScreen() {
                   routineName={session.routineName}
                   routineId={session.routineId}
                   currentDayId={session.routineDayId}
-                  currentDayName={session.routineDayName}
                 />
               </div>
             )}

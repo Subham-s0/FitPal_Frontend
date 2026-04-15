@@ -10,9 +10,11 @@ import { toast } from "sonner";
 import { getApiErrorMessage } from "@/shared/api/client";
 import { resolveAvatarUrl } from "@/shared/lib/avatar";
 import { DefaultLayout } from "@/shared/layout/dashboard-shell";
+import { useOtpCountdown } from "@/shared/hooks/useOtpCountdown";
 import { NumberInput } from "@/shared/ui/number-input";
 import { TimeInput } from "@/shared/ui/time-picker";
 import {
+  confirmGymRegisteredEmailVerificationApi,
   deleteGymLogoApi,
   deleteUploadedAssetApi,
   deleteGymDocumentApi,
@@ -24,13 +26,13 @@ import {
   patchGymBasicsStepApi,
   patchGymLocationStepApi,
   patchGymPayoutStepApi,
+  requestGymRegisteredEmailVerificationApi,
   submitGymReviewSubmissionApi,
   uploadDocumentFileApi,
   uploadGymLogoApi,
   uploadImageFileApi,
   updateGymPhotoApi,
   upsertGymDocumentApi,
-  verifyGymRegisteredEmailApi,
 } from "@/features/profile/api";
 import { useAuthState } from "@/features/auth/hooks";
 import type {
@@ -233,6 +235,13 @@ type GymFieldKey =
   | "photos";
 
 type GymFieldErrors = Partial<Record<GymFieldKey, string>>;
+
+type GymAuthOnboardingState = {
+  profileCompleted: boolean;
+  registeredEmailVerified: boolean;
+  submittedForReview: boolean;
+  approved: boolean;
+};
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -934,7 +943,11 @@ const FitPalGymSetup: FC = () => {
   const [gymApprovalStatus, setGymApprovalStatus] = useState<GymApprovalStatus>("DRAFT");
 
   const [gymEmailVerified, setGymEmailVerified] = useState(false);
-  const [verifying,        setVerifying]        = useState(false);
+  const [isRequestingVerification, setIsRequestingVerification] = useState(false);
+  const [isConfirmingVerification, setIsConfirmingVerification] = useState(false);
+  const [showVerificationInput, setShowVerificationInput] = useState(false);
+  const [verificationOtp, setVerificationOtp] = useState("");
+  const [verificationError, setVerificationError] = useState("");
   const [gymName,          setGymName]          = useState("");
   const [gymType,          setGymType]          = useState<ApiGymType | null>(null);
   const [gymRegNo,         setGymRegNo]         = useState("");
@@ -966,6 +979,7 @@ const FitPalGymSetup: FC = () => {
     { type: "LICENSE",                  fileName: "", uploaded: false },
   ]);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
+  const verificationOtpCountdown = useOtpCountdown();
 
   const setupQuery = useQuery({
     queryKey: gymQueryKeys.setup(),
@@ -1082,7 +1096,7 @@ const FitPalGymSetup: FC = () => {
     }), []);
 
   const syncAuthOnboardingStatus = useCallback((
-    profile: Pick<GymProfileResponse, "profileCompleted" | "registeredEmailVerified" | "submittedForReview" | "approved">,
+    profile: GymAuthOnboardingState,
   ) => {
     authStore.updateOnboardingStatus({
       profileCompleted: profile.profileCompleted,
@@ -1514,16 +1528,50 @@ const FitPalGymSetup: FC = () => {
     setStep(REVIEW_SUBMIT_STEP_INDEX);
   };
 
-  const verifyEmail = async () => {
-    if (verifying || isBusy) return;
-    setVerifying(true);
+  const requestEmailVerification = async () => {
+    if (isRequestingVerification || isBusy) return;
+    setIsRequestingVerification(true);
     try {
-      const status = await verifyGymRegisteredEmailApi();
+      const response = await requestGymRegisteredEmailVerificationApi();
+      verificationOtpCountdown.start(response.expiresInSeconds);
+      setShowVerificationInput(true);
+      setVerificationOtp("");
+      setVerificationError("");
+      setStepError(null);
+      toast.success("Verification code sent to your registered email");
+    } catch (error) {
+      setStepError(getApiErrorMessage(error, "Failed to send verification code"));
+    } finally {
+      setIsRequestingVerification(false);
+    }
+  };
+
+  const confirmEmailVerification = async () => {
+    if (isConfirmingVerification || !verificationOtpCountdown.isActive) return;
+    if (verificationOtp.trim().length !== 6) {
+      setVerificationError("Enter the 6-digit OTP");
+      return;
+    }
+
+    setIsConfirmingVerification(true);
+    try {
+      const status = await confirmGymRegisteredEmailVerificationApi({ otp: verificationOtp.trim() });
       setGymEmailVerified(status.registeredEmailVerified);
+      setGymApprovalStatus(status.approvalStatus);
+      syncAuthOnboardingStatus(status);
+      setShowVerificationInput(false);
+      setVerificationOtp("");
+      setVerificationError("");
+      verificationOtpCountdown.reset();
       void invalidateGymSetupQueries();
+      clearFieldError("gymEmailVerified");
+      setStepError(null);
       toast.success("Registered email verified");
-    } catch (error) { setStepError(getApiErrorMessage(error, "Failed to verify registered email")); }
-    finally { setVerifying(false); }
+    } catch (error) {
+      setVerificationError(getApiErrorMessage(error, "Failed to verify email"));
+    } finally {
+      setIsConfirmingVerification(false);
+    }
   };
 
   const openEditSubmission = () => { setStepError(null); setStep(DOCUMENTS_STEP_INDEX); };
@@ -1804,11 +1852,82 @@ const FitPalGymSetup: FC = () => {
                 <div style={{ fontSize: 12, color: gymEmailVerified ? "#4ade80" : "#9ca3af", overflow: "hidden", textOverflow: "ellipsis" }}>{authEmail}</div>
               </div>
               {!gymEmailVerified && (
-                <button type="button" onClick={verifyEmail} disabled={verifying} className="av-btn" style={{ margin: 0 }}>
-                  {verifying ? "..." : "Verify"}
+                <button
+                  type="button"
+                  onClick={requestEmailVerification}
+                  disabled={isRequestingVerification || (showVerificationInput && verificationOtpCountdown.isActive)}
+                  className="av-btn"
+                  style={{ margin: 0, minWidth: 108 }}
+                >
+                  {isRequestingVerification
+                    ? "Sending..."
+                    : showVerificationInput
+                      ? verificationOtpCountdown.isActive
+                        ? `Resend ${verificationOtpCountdown.formattedTime}`
+                        : "Resend OTP"
+                      : "Verify"}
                 </button>
               )}
             </div>
+            {!gymEmailVerified && showVerificationInput && (
+              <div style={{ display: "grid", gap: 10, padding: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,.06)", borderRadius: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: ".09em", color: "#f97316", marginBottom: 6 }}>
+                    Email Verification OTP
+                  </div>
+                  <p style={{ fontSize: 11, lineHeight: 1.6, color: "#9ca3af" }}>
+                    We sent a 6-digit code to <span style={{ color: "#e5e7eb" }}>{authEmail}</span>.
+                    {" "}
+                    {verificationOtpCountdown.isActive
+                      ? `Code expires in ${verificationOtpCountdown.formattedTime}.`
+                      : "Code expired. Request a new OTP to continue."}
+                  </p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                  className="sm:flex-row sm:items-end">
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: 10, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--text-d)", marginBottom: 6 }}>
+                      Enter OTP
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="6-digit code"
+                      value={verificationOtp}
+                      onChange={(event) => {
+                        setVerificationOtp(event.target.value.replace(/\D/g, "").slice(0, 6));
+                        setVerificationError("");
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "12px 14px",
+                        borderRadius: 12,
+                        border: `1px solid ${verificationError ? "rgba(239,68,68,.45)" : "rgba(255,255,255,.08)"}`,
+                        background: "rgba(0,0,0,.24)",
+                        color: "#fff",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        letterSpacing: ".28em",
+                        outline: "none",
+                      }}
+                    />
+                    {verificationError && (
+                      <p style={{ marginTop: 6, fontSize: 11, color: "#fca5a5" }}>{verificationError}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={confirmEmailVerification}
+                    disabled={isConfirmingVerification || !verificationOtpCountdown.isActive}
+                    className="av-btn"
+                    style={{ margin: 0, minWidth: 140, opacity: isConfirmingVerification || !verificationOtpCountdown.isActive ? 0.65 : 1 }}
+                  >
+                    {isConfirmingVerification ? "Verifying..." : "Confirm OTP"}
+                  </button>
+                </div>
+              </div>
+            )}
             <FieldError message={fieldErrors.gymEmailVerified} />
           </div>
 

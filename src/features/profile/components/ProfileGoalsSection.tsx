@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/shared/api/client";
-import { updateProfileGoalsApi, updateProfileInfoApi } from "@/features/profile/api";
+import { patchMyProfileDetailsApi } from "@/features/profile/api";
 import { NumberInput } from "@/shared/ui/number-input";
 import {
   Field,
@@ -104,29 +104,28 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
     validate: validateGoalsForm,
   });
 
+  const hasMissingRequiredGoals = !form.fitnessLevel || !form.primaryFocus;
+
   const onSave = () => {
-    if (!profile.userName?.trim()) {
+    const normalizedUserName = profile.userName?.trim();
+    if (!normalizedUserName) {
       toast.error("Set a username before updating body metrics");
       return;
     }
 
     handleSave(async () => {
-      await Promise.all([
-        updateProfileInfoApi({
-          userName: profile.userName,
-          firstName: profile.firstName ?? null,
-          lastName: profile.lastName ?? null,
-          phoneNo: profile.phoneNo ?? null,
-          dob: profile.dob ?? null,
-          gender: profile.gender ?? null,
-          height: form.height ? Number(form.height) : null,
-          weight: form.weight ? Number(form.weight) : null,
-        }),
-        updateProfileGoalsApi({
-          fitnessLevel: form.fitnessLevel as FitnessLevel,
-          primaryFitnessFocus: form.primaryFocus as PrimaryFitnessFocus,
-        }),
-      ]);
+      await patchMyProfileDetailsApi({
+        userName: normalizedUserName,
+        firstName: profile.firstName ?? null,
+        lastName: profile.lastName ?? null,
+        phoneNo: profile.phoneNo ?? null,
+        dob: profile.dob ?? null,
+        gender: profile.gender ?? null,
+        height: form.height ? Number(form.height) : null,
+        weight: form.weight ? Number(form.weight) : null,
+        fitnessLevel: (form.fitnessLevel || null) as FitnessLevel | null,
+        primaryFitnessFocus: (form.primaryFocus || null) as PrimaryFitnessFocus | null,
+      });
       toast.success("Fitness goals updated successfully");
       onUpdate();
     }).catch((error) => {
@@ -136,8 +135,8 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
 
   return (
     <>
-      <div className="rounded-2xl border border-white/5 bg-gradient-to-br from-[#111] to-[#0a0a0a] p-4 sm:p-6">
-        <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-4">
+      <div className="rounded-[22px] border table-border user-surface shadow-sm p-5 sm:p-6">
+        <div className="mb-4 flex items-center justify-between border-b table-border-cell pb-4">
           <h3 className="border-l-2 border-orange-500 pl-3 text-sm font-black uppercase tracking-widest text-white">
             Fitness Goals & Metrics
           </h3>
@@ -198,42 +197,46 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
 
           <div>
             <SectionLabel>Fitness Level</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {FITNESS_LEVEL_OPTIONS.map((option) => (
-                <Pill
-                  key={option.value}
-                  label={option.label}
-                  selected={form.fitnessLevel === option.value}
-                  onClick={() => {
-                    if (!isEditing) return;
-                    updateField(
-                      "fitnessLevel",
-                      form.fitnessLevel === option.value ? "" : option.value
-                    );
-                  }}
-                />
-              ))}
-            </div>
+            <Field label="Current Level" error={errors.fitnessLevel}>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {FITNESS_LEVEL_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={form.fitnessLevel === option.value}
+                    onClick={() => {
+                      if (!isEditing) return;
+                      updateField(
+                        "fitnessLevel",
+                        form.fitnessLevel === option.value ? "" : option.value
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+            </Field>
           </div>
 
           <div>
             <SectionLabel>Primary Focus</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {FITNESS_FOCUS_OPTIONS.map((option) => (
-                <Pill
-                  key={option.value}
-                  label={option.label}
-                  selected={form.primaryFocus === option.value}
-                  onClick={() => {
-                    if (!isEditing) return;
-                    updateField(
-                      "primaryFocus",
-                      form.primaryFocus === option.value ? "" : option.value
-                    );
-                  }}
-                />
-              ))}
-            </div>
+            <Field label="What do you want to achieve?" error={errors.primaryFocus}>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {FITNESS_FOCUS_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={form.primaryFocus === option.value}
+                    onClick={() => {
+                      if (!isEditing) return;
+                      updateField(
+                        "primaryFocus",
+                        form.primaryFocus === option.value ? "" : option.value
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+            </Field>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -263,7 +266,7 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
         </div>
 
         {isEditing && (
-          <div className="mt-6 flex justify-end gap-3 border-t border-white/5 pt-5">
+          <div className="mt-6 flex justify-end gap-3 border-t table-border-cell pt-5">
             <button
               type="button"
               onClick={handleCancel}
@@ -276,7 +279,7 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
             <button
               type="button"
               onClick={onSave}
-              disabled={isSaving || !isDirty}
+              disabled={isSaving || (!isDirty && !hasMissingRequiredGoals)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-orange-500/25 transition-all duration-200 hover:shadow-orange-500/40 disabled:opacity-50"
             >
               {isSaving ? (
@@ -291,25 +294,25 @@ export function ProfileGoalsSection({ profile, onUpdate }: ProfileGoalsSectionPr
       </div>
 
       <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
-        <AlertDialogContent className="rounded-[20px] border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
+        <AlertDialogContent className="rounded-[22px] border table-border user-surface text-white shadow-xl">
           <AlertDialogHeader>
-            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-[14px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)]">
-              <X className="h-5 w-5 text-orange-300" strokeWidth={1.8} />
+            <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-[14px] border border-orange-500/20 bg-orange-500/10">
+              <X className="h-5 w-5 text-orange-400" strokeWidth={1.8} />
             </div>
             <AlertDialogTitle className="text-[17px] font-black tracking-tight">
               Discard changes
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[12px] leading-relaxed text-[hsl(0,0%,55%)]">
+            <AlertDialogDescription className="text-[12px] leading-relaxed table-text-muted">
               You have unsaved changes to your fitness goals. Discard them?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel className="mt-0 flex flex-1 items-center justify-center gap-1.5 rounded-[10px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)] py-2.5 text-[11px] font-black uppercase tracking-wider text-[hsl(0,0%,55%)] hover:border-white/20 hover:text-white">
+            <AlertDialogCancel className="mt-0 flex flex-1 items-center justify-center gap-1.5 rounded-[10px] border table-border user-surface-soft py-2.5 text-[11px] font-black uppercase tracking-wider text-slate-300 hover:border-white/20 hover:text-white">
               Keep Editing
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDiscard}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-orange-600 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition-all hover:bg-orange-500"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-gradient-to-r from-orange-500 to-orange-600 py-2.5 text-[11px] font-black uppercase tracking-wider text-white shadow-lg transition-all hover:shadow-orange-500/30 hover:-translate-y-0.5"
             >
               Discard
             </AlertDialogAction>

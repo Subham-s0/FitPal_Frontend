@@ -20,12 +20,14 @@ import {
 
 interface GymsScreenProps {
   onSwitchToCheckIn: (gymId?: number) => void;
+  variant?: "member" | "public";
 }
 
 const ITEMS_PER_PAGE = 4;
 
-const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
-  const state = useGymsRecommendation();
+const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) => {
+  const isPublicVariant = variant === "public";
+  const state = useGymsRecommendation({ audience: isPublicVariant ? "public" : "member" });
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const locationEnabled = state.locationPermission === "granted" && !!state.userCoords;
@@ -34,6 +36,10 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
     state.locationPermission !== "loading" &&
     state.locationPermission !== "granted";
   const selectedGymSaved = state.selectedGym?.isSaved ?? false;
+  const allowSavedGyms = !isPublicVariant;
+  const checkInActionLabel = isPublicVariant ? "Get Started" : "Check In";
+  const canUseCheckInAction = (gym: GymRecommendationItem) =>
+    isPublicVariant ? gym.checkInEnabled : gym.checkInEnabled && gym.accessibleByCurrentUser;
   const totalPages = Math.max(1, Math.ceil(state.filteredGyms.length / ITEMS_PER_PAGE));
   const pagedGyms = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -95,6 +101,7 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
         totalPages={totalPages}
         onPreviousPage={() => setCurrentPage((page) => Math.max(1, page - 1))}
         onNextPage={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+        allowSavedGyms={allowSavedGyms}
       />
 
       <div className="relative flex-1 overflow-hidden bg-[#0a0a0a]">
@@ -139,6 +146,7 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
               onSortModeChange={state.setSortMode}
               onToggleSavedOnly={state.toggleSavedOnly}
               onResetFilters={state.resetFilters}
+              allowSavedGyms={allowSavedGyms}
             />
           </div>
 
@@ -167,6 +175,9 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
           onViewProfile={() => state.selectedGym && navigate(`/gym/${state.selectedGym.gymId}`)}
           onCheckIn={() => state.selectedGym && onSwitchToCheckIn(state.selectedGym.gymId)}
           onToggleSaved={() => state.selectedGym && state.toggleSavedGym(state.selectedGym.gymId)}
+          showSaveAction={allowSavedGyms}
+          checkInActionLabel={checkInActionLabel}
+          canUseCheckInAction={canUseCheckInAction}
         />
 
         {!state.selectedGym && (
@@ -187,6 +198,7 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
                     isSaved={gym.isSaved}
                     onClick={() => state.selectGym(gym)}
                     onToggleSaved={() => state.toggleSavedGym(gym.gymId)}
+                    showSaveAction={allowSavedGyms}
                   />
                 ))
               )}
@@ -210,6 +222,9 @@ const GymsScreen = ({ onSwitchToCheckIn }: GymsScreenProps) => {
           onCheckIn={(gymId) => onSwitchToCheckIn(gymId)}
           isSaved={selectedGymSaved}
           onToggleSaved={() => state.selectedGym && state.toggleSavedGym(state.selectedGym.gymId)}
+          showSaveAction={allowSavedGyms}
+          checkInActionLabel={checkInActionLabel}
+          canUseCheckInAction={canUseCheckInAction}
         />
       </div>
 
@@ -234,11 +249,13 @@ function MobileGymCard({
   isSaved,
   onClick,
   onToggleSaved,
+  showSaveAction,
 }: {
   gym: GymRecommendationItem;
   isSaved: boolean;
   onClick: () => void;
   onToggleSaved: () => void;
+  showSaveAction: boolean;
 }) {
   const previewImageUrl = getGymPreviewImageUrl(gym);
 
@@ -266,20 +283,22 @@ function MobileGymCard({
             {getGymCityLabel(gym)}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleSaved();
-          }}
-          className={`rounded-full border p-2 transition-colors ${
-            isSaved
-              ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
-              : "border-white/10 bg-transparent text-slate-500 hover:bg-white/[0.04]"
-          }`}
-        >
-          <Bookmark size={12} className={isSaved ? "fill-current" : ""} />
-        </button>
+        {showSaveAction && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleSaved();
+            }}
+            className={`rounded-full border p-2 transition-colors ${
+              isSaved
+                ? "border-orange-500/30 bg-orange-500/12 text-orange-400"
+                : "border-white/10 bg-transparent text-slate-500 hover:bg-white/[0.04]"
+            }`}
+          >
+            <Bookmark size={12} className={isSaved ? "fill-current" : ""} />
+          </button>
+        )}
       </div>
       <div className="flex items-center gap-2 text-[9px] font-bold">
         <span className="text-orange-500">{formatGymDistance(gym.distanceMeters)}</span>

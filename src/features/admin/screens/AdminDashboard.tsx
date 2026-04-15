@@ -2,10 +2,6 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
-  AlertTriangle,
-  Bell,
-  Loader2,
-  TrendingDown,
   TrendingUp,
   Users,
   Wallet,
@@ -15,8 +11,6 @@ import {
   BarChart3,
   Zap,
   Clock,
-  ShieldAlert,
-  Timer,
 } from "lucide-react";
 import {
   Area,
@@ -24,9 +18,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -853,7 +844,7 @@ function DashboardHome() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
-                  {topGymsQ.data.map((g, i) => (
+                  {topGymsQ.data.map((g) => (
                     <tr key={g.gymId} className="transition-colors hover:bg-white/[0.02]">
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2.5">
@@ -880,6 +871,9 @@ function DashboardHome() {
                         <div className="inline-flex flex-col items-center gap-1">
                           <Badge c={g.eligible ? "green" : "red"}>{g.eligible ? "Eligible" : "Not eligible"}</Badge>
                           <span className="text-[10px] table-text-muted">Tier: {formatEnumLabel(g.eligibleTier)}</span>
+                          <span className="text-[10px] table-text-muted">
+                            Radius: {g.allowedCheckInRadiusMeters != null ? `${g.allowedCheckInRadiusMeters}m` : "-"}
+                          </span>
                         </div>
                       </td>
                       {topGymsRange !== "ALL_TIME" && (

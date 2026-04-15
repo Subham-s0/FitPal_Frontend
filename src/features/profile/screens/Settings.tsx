@@ -494,76 +494,6 @@ const SettingsScreen = () => {
         title={<>Account <span className="text-orange-500">Settings</span></>}
         description="Security, routine controls, and account shortcuts live here."
       >
-        <div className="mb-5 grid grid-cols-1 gap-3 xl:hidden sm:grid-cols-2">
-          <div className="rounded-[22px] border table-border user-surface shadow-sm p-4">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Account Status</p>
-                <p className="mt-1 text-[13px] font-bold text-white">Current account readiness</p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-orange-500/20 bg-orange-500/10">
-                <ShieldCheck className="h-4.5 w-4.5 text-orange-400" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              {accountStatusItems.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-2.5"
-                >
-                  <span className="text-[12px] font-semibold text-slate-300">{item.label}</span>
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]",
-                      item.active ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
-                    )}
-                  >
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[22px] border table-border user-surface shadow-sm p-4">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Quick Links</p>
-                <p className="mt-1 text-[13px] font-bold text-white">Jump to the main user flows</p>
-              </div>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-orange-500/20 bg-orange-500/10">
-                <ArrowUpRight className="h-4 w-4 text-orange-400" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => navigate("/membership")}
-                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
-              >
-                Open Membership
-                <Gem className="h-3.5 w-3.5 text-orange-400" />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigateToUserDashboardSection(navigate, "routines")}
-                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
-              >
-                Routines Dashboard
-                <Dumbbell className="h-3.5 w-3.5 text-orange-400" />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigateToCheckInView(navigate, "logs")}
-                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
-              >
-                Check-In History
-                <Receipt className="h-3.5 w-3.5 text-orange-400" />
-              </button>
-            </div>
-          </div>
-        </div>
-
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[300px_1fr]">
           <aside className="hidden space-y-4 xl:block">
             <div className="rounded-[22px] border table-border user-surface shadow-sm p-5">
@@ -767,6 +697,78 @@ const SettingsScreen = () => {
               );
             })}
           </section>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 xl:hidden sm:grid-cols-2">
+          <div className="rounded-[22px] border table-border user-surface shadow-sm p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Account Status</p>
+                <p className="mt-1 text-[13px] font-bold text-white">Current account readiness</p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-orange-500/20 bg-orange-500/10">
+                <ShieldCheck className="h-4.5 w-4.5 text-orange-400" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              {accountStatusItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-2.5"
+                >
+                  <span className="text-[12px] font-semibold text-slate-300">{item.label}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] border",
+                      item.active
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                        : "bg-amber-500/10 border-amber-500/20 text-amber-300"
+                    )}
+                  >
+                    {item.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[22px] border table-border user-surface shadow-sm p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-400">Quick Links</p>
+                <p className="mt-1 text-[13px] font-bold text-white">Jump to the main user flows</p>
+              </div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-orange-500/20 bg-orange-500/10">
+                <ArrowUpRight className="h-4 w-4 text-orange-400" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => navigate("/membership")}
+                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+              >
+                Open Membership
+                <Gem className="h-3.5 w-3.5 text-orange-400" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigateToUserDashboardSection(navigate, "routines")}
+                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+              >
+                Routines Dashboard
+                <Dumbbell className="h-3.5 w-3.5 text-orange-400" />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigateToCheckInView(navigate, "logs")}
+                className="flex w-full items-center justify-between rounded-[14px] border table-border user-surface-soft px-3 py-3 text-left text-[12px] font-bold text-white transition-colors hover:border-orange-500/30 hover:bg-orange-500/[0.06]"
+              >
+                Check-In History
+                <Receipt className="h-3.5 w-3.5 text-orange-400" />
+              </button>
+            </div>
+          </div>
         </div>
       </UserSectionShell>
 

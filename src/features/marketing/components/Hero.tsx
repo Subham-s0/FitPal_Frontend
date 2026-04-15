@@ -1,5 +1,5 @@
 import { Button } from "@/shared/ui/button";
-import { MapPin, Search, ChevronRight, Sparkles } from "lucide-react";
+import { MapPin, ChevronRight, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
@@ -51,6 +51,7 @@ const Hero = () => {
                 size="lg"
                 variant="fire"
                 className="absolute right-2 top-2 bottom-2 px-8 rounded-full text-white font-bold"
+                onClick={() => navigate("/gyms")}
               >
                 Find
               </Button>

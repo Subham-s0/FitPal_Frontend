@@ -28,6 +28,7 @@ import {
   navigateToAdminDashboardSection,
   navigateToCheckInView,
   navigateToDashboardSectionForRole,
+  getDashboardPathForRole,
   navigateToUserDashboardSection,
 } from "@/shared/navigation/dashboard-navigation";
 import {
@@ -98,7 +99,7 @@ const DashboardNavbar = ({
   const pendingGymsCount = pendingGymsQuery.data?.pendingReview ?? 0;
   const pendingPayoutBatchesCount = pendingPayoutBatchesQuery.data?.totalItems ?? 0;
   const profilePhotoUrl = profileQuery.data?.profileImageUrl?.trim() || null;
-  const logoHref = dashboardRole === "ADMIN" ? "/admin/dashboard" : "/";
+  const logoHref = getDashboardPathForRole(roleValue);
 
   const dashboardSearchItems = [
     ...getDashboardNavItems(roleValue).map((item) => ({
@@ -117,7 +118,7 @@ const DashboardNavbar = ({
             description: "Manage gym details, branding, and onboarding data.",
             keywords: ["profile", "gym", "manage"],
             icon: Building2,
-            onSelect: () => navigateToUserDashboardSection(navigate, "gymProfile"),
+            onSelect: () => navigateToDashboardSectionForRole(navigate, roleValue, "gymProfile"),
           },
           {
             id: "settings",
@@ -125,7 +126,7 @@ const DashboardNavbar = ({
             description: "Open gym configuration and device preferences.",
             keywords: ["settings", "preferences", "config"],
             icon: Settings,
-            onSelect: () => navigateToUserDashboardSection(navigate, "settings"),
+            onSelect: () => navigateToDashboardSectionForRole(navigate, roleValue, "settings"),
           },
         ]
       : []),
@@ -253,7 +254,7 @@ const DashboardNavbar = ({
   };
 
   const handlePendingPayoutBatchesClick = () => {
-    navigateToUserDashboardSection(navigate, "revenue");
+    navigateToDashboardSectionForRole(navigate, roleValue, "revenue");
   };
 
   const handlePrimaryAction = () => {
@@ -263,7 +264,7 @@ const DashboardNavbar = ({
     }
 
     if (dashboardRole === "GYM") {
-      navigateToUserDashboardSection(navigate, "gymProfile");
+      navigateToDashboardSectionForRole(navigate, roleValue, "gymProfile");
       return;
     }
 
@@ -282,7 +283,7 @@ const DashboardNavbar = ({
     }
 
     if (dashboardRole === "GYM") {
-      navigateToUserDashboardSection(navigate, "gymProfile");
+      navigateToDashboardSectionForRole(navigate, roleValue, "gymProfile");
       return;
     }
 

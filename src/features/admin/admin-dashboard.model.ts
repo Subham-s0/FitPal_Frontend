@@ -102,6 +102,7 @@ export interface DashboardTopGymResponse {
   joinedAt: string | null;
   accessMode: string | null;
   eligibleTier: string | null;
+  allowedCheckInRadiusMeters: number | null;
   eligible: boolean;
 }
 
