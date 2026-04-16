@@ -99,6 +99,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/ui/table";
+import { navigateToUserDashboardSection } from "@/shared/navigation/dashboard-navigation";
 
 type PlanFrequency = "monthly" | "yearly";
 type PaymentMethodId = PaymentGateway;
@@ -857,6 +858,7 @@ const MembershipUpgrade = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const locationState = location.state as UpgradeMembershipLocationState | null;
+  const handleSectionChange = (section: string) => navigateToUserDashboardSection(navigate, section);
 
   const plansQuery = useQuery({ queryKey: plansQueryKeys.list(), queryFn: getPlansApi });
   const subscriptionQuery = useQuery({
@@ -1546,7 +1548,7 @@ const MembershipUpgrade = () => {
     return (
       <UserLayout
         activeSection="membership"
-        onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}
+        onSectionChange={handleSectionChange}
       >
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-orange-500/20 border-t-orange-500" />
@@ -1559,7 +1561,7 @@ const MembershipUpgrade = () => {
     return (
       <UserLayout
         activeSection="membership"
-        onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}
+        onSectionChange={handleSectionChange}
       >
         <div className="mx-auto max-w-2xl px-4 py-10">
           <div className="rounded-[1.8rem] border border-red-500/20 bg-red-500/5 p-6 text-center">
@@ -1604,7 +1606,7 @@ const MembershipUpgrade = () => {
   return (
     <UserLayout
       activeSection="membership"
-      onSectionChange={(section) => navigate("/dashboard", { state: { activeSection: section } })}
+      onSectionChange={handleSectionChange}
     >
       <UserSectionShell
         title={<>Member<span className="text-gradient-fire">ship</span></>}

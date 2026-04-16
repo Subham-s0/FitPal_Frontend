@@ -727,19 +727,19 @@ const ProfileSetup = () => {
 
   const renderPaymentStep = () => (
     <div className="animate-[screenFadeIn_0.2s_ease-out]">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
 
         {/* Left column */}
-        <div className="flex flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-4">
 
           {/* Section 1 — Selected Membership */}
-          <div className="rounded-[1.35rem] border border-white/8 bg-[#101010] p-5">
+          <div className="rounded-[1.35rem] border border-white/8 bg-[#101010] p-5 max-sm:p-4">
             <SectionLabel className="!mb-4">Selected Membership</SectionLabel>
             {selectedPlanDetails ? (
               <div className="rounded-2xl border border-orange-500/20 bg-[linear-gradient(135deg,rgba(120,63,23,0.18)_0%,rgba(15,15,15,0.8)_100%)] p-4">
-                <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="mb-4 flex items-start justify-between gap-3 max-sm:flex-col max-sm:items-start">
                   <div>
-                    <p className="text-lg font-black text-white">{selectedPlanDetails.name} Plan</p>
+                    <p className="break-words text-lg font-black text-white">{selectedPlanDetails.name} Plan</p>
                     <p className="mt-0.5 text-[11px] capitalize text-slate-400">Billed {billingCycle} · {currency}</p>
                   </div>
                   <span className="shrink-0 rounded-full border border-orange-500/20 bg-orange-500/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-orange-400">
@@ -762,7 +762,7 @@ const ProfileSetup = () => {
           </div>
 
           {/* Section 2 — Payment Method */}
-          <div className="rounded-[1.35rem] border border-white/8 bg-[#101010] p-5">
+          <div className="rounded-[1.35rem] border border-white/8 bg-[#101010] p-5 max-sm:p-4">
             <SectionLabel className="!mb-4">Payment Method</SectionLabel>
             <div className="space-y-3">
               {PAYMENT_METHODS.map((method) => {
@@ -791,19 +791,19 @@ const ProfileSetup = () => {
                     }}
                     disabled={!method.isAvailable}
                     className={cn(
-                      "flex w-full items-center gap-5 rounded-2xl border p-5 text-left transition-all",
+                      "flex w-full min-w-0 items-center gap-5 rounded-2xl border p-5 text-left transition-all max-sm:flex-col max-sm:items-start max-sm:gap-3 max-sm:p-4",
                       !method.isAvailable && "cursor-not-allowed opacity-60",
                       isSelected ? "border-orange-600 bg-orange-600/8" : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
                     )}
                   >
-                    <div className={cn("flex h-16 w-28 shrink-0 items-center justify-center rounded-2xl text-lg font-black", method.colorClass)}>
+                    <div className={cn("flex h-16 w-28 shrink-0 items-center justify-center rounded-2xl text-lg font-black max-sm:h-12 max-sm:w-20", method.colorClass)}>
                       {method.logoUrl ? (
-                        <img src={method.logoUrl} alt={method.name} className="h-12 w-24 object-contain" />
+                        <img src={method.logoUrl} alt={method.name} className="h-12 w-24 object-contain max-sm:h-8 max-sm:w-16" />
                       ) : (
                         method.badge
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 max-sm:w-full">
                       <div className="mb-1 flex items-center gap-2">
                         <p className="text-[15px] font-black leading-none text-white">{method.name}</p>
                         {!method.isAvailable && method.helperText && (
@@ -812,7 +812,7 @@ const ProfileSetup = () => {
                       </div>
                       <p className="text-[11px] leading-relaxed text-slate-400">{method.subtitle}</p>
                     </div>
-                    <div className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all", isSelected ? "border-orange-600 bg-orange-600/20" : "border-white/20")}>
+                    <div className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all max-sm:self-end", isSelected ? "border-orange-600 bg-orange-600/20" : "border-white/20")}>
                       {isSelected && <div className="h-2.5 w-2.5 rounded-full bg-orange-600" />}
                     </div>
                   </button>
@@ -847,15 +847,15 @@ const ProfileSetup = () => {
         </div>
 
         {/* Right column — Section 3: Order Summary */}
-        <div>
-          <div className="sticky top-4 flex flex-col gap-4">
-            <div className="rounded-[1.35rem] border border-white/8 bg-[#101010] p-5">
+        <div className="min-w-0">
+          <div className="flex flex-col gap-4 xl:sticky xl:top-4">
+            <div className="rounded-[1.35rem] border border-white/8 bg-[#101010] p-5 max-sm:p-4">
               <SectionLabel className="!mb-5">Order Summary</SectionLabel>
 
               {/* Line items */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[13px] text-slate-400">
+                  <span className="min-w-0 pr-3 text-[13px] text-slate-400">
                     {selectedPlanDetails?.name ?? "—"} Plan
                     <span className="ml-1.5 text-[11px] capitalize text-slate-600">({billingCycle})</span>
                   </span>
@@ -900,10 +900,10 @@ const ProfileSetup = () => {
 
                 <div className="my-1 h-px bg-white/8" />
 
-                <div className="flex items-end justify-between">
+                <div className="flex items-end justify-between gap-3 max-sm:flex-wrap max-sm:items-start">
                   <span className="text-[13px] font-black text-white">Total</span>
                   <div className="text-right">
-                    <p className="text-2xl font-black text-white">{currency} {formatCurrencyAmount(totalAmount)}</p>
+                    <p className="break-words text-2xl font-black text-white">{currency} {formatCurrencyAmount(totalAmount)}</p>
                     <p className="text-[10px] uppercase tracking-wider text-slate-500">inc. all taxes & fees</p>
                   </div>
                 </div>
