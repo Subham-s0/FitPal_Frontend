@@ -10,7 +10,15 @@
 export { default as apiClient, getApiErrorMessage, AUTH_STORAGE_KEY } from "./client";
 
 // API configuration
-export { apiBaseUrl, apiBasePath, backendOrigin, buildApiUrl, buildGoogleOAuthStartUrl } from "./config";
+export {
+  apiBaseUrl,
+  apiBasePath,
+  backendOrigin,
+  buildApiUrl,
+  buildGoogleOAuthStartUrl,
+  NGROK_SKIP_WARNING_HEADER,
+  shouldBypassNgrokBrowserWarning,
+} from "./config";
 
 // API contracts
 export type { ApiErrorResponse, ApiResponse, PageResponse } from "./model";

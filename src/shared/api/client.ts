@@ -1,6 +1,10 @@
 import axios, { AxiosHeaders } from "axios";
 import type { AxiosRequestConfig } from "axios";
-import { apiBaseUrl } from "@/shared/api/config";
+import {
+  apiBaseUrl,
+  NGROK_SKIP_WARNING_HEADER,
+  shouldBypassNgrokBrowserWarning,
+} from "@/shared/api/config";
 import type { ApiErrorResponse, ApiResponse } from "@/shared/api/model";
 import { authStore } from "@/features/auth/store";
 import { AUTH_STORAGE_KEY } from "@/features/auth/storage";
@@ -14,15 +18,17 @@ const apiClient = axios.create({
 // ── Request: attach JWT if available ──────────────────────────────────────
 apiClient.interceptors.request.use((config) => {
   const accessToken = authStore.getSnapshot().accessToken;
+  const headers = AxiosHeaders.from(config.headers);
 
-  if (!accessToken) {
-    return config;
+  if (shouldBypassNgrokBrowserWarning) {
+    headers.set(NGROK_SKIP_WARNING_HEADER, "true");
   }
 
-  const headers = AxiosHeaders.from(config.headers);
-  headers.set("Authorization", `Bearer ${accessToken}`);
-  config.headers = headers;
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
 
+  config.headers = headers;
   return config;
 });
 

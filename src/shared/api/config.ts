@@ -19,6 +19,12 @@ const API_BASE_PATH = normalizePath(import.meta.env.VITE_API_BASE_PATH) || "/api
 const BACKEND_ORIGIN = normalizeOrigin(import.meta.env.VITE_BACKEND_ORIGIN);
 const API_PROXY_TARGET = normalizeOrigin(import.meta.env.VITE_API_PROXY_TARGET);
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
+const PROD_BACKEND_ORIGIN = "https://api.fitpal.com";
+const HOSTED_FRONTEND_HOSTS = new Set([
+  "fitpalnepal.com",
+  "www.fitpalnepal.com",
+  "fitpal-nepal.vercel.app",
+]);
 
 const isLoopbackHost = (hostname: string) => LOOPBACK_HOSTS.has(hostname.toLowerCase());
 
@@ -45,13 +51,41 @@ const resolveReachableOrigin = (origin: string) => {
   }
 };
 
-const RUNTIME_BACKEND_ORIGIN = resolveReachableOrigin(BACKEND_ORIGIN);
+const resolveDefaultBackendOrigin = () => {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const hostname = window.location.hostname.toLowerCase();
+  if (HOSTED_FRONTEND_HOSTS.has(hostname)) {
+    return PROD_BACKEND_ORIGIN;
+  }
+
+  return "";
+};
+
+const isNgrokOrigin = (origin: string) => {
+  if (!origin) {
+    return false;
+  }
+
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+    return hostname.endsWith(".ngrok-free.dev") || hostname.endsWith(".ngrok.io");
+  } catch {
+    return false;
+  }
+};
+
+const RUNTIME_BACKEND_ORIGIN = resolveReachableOrigin(BACKEND_ORIGIN || resolveDefaultBackendOrigin());
 
 export const apiBasePath = API_BASE_PATH;
 export const backendOrigin = RUNTIME_BACKEND_ORIGIN;
 export const apiBaseUrl = RUNTIME_BACKEND_ORIGIN
   ? `${RUNTIME_BACKEND_ORIGIN}${API_BASE_PATH}`
   : API_BASE_PATH;
+export const NGROK_SKIP_WARNING_HEADER = "ngrok-skip-browser-warning";
+export const shouldBypassNgrokBrowserWarning = isNgrokOrigin(RUNTIME_BACKEND_ORIGIN);
 
 export const buildApiUrl = (path = "") => {
   const normalizedPath = normalizePath(path);
