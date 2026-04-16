@@ -2,12 +2,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAuthState } from "@/features/auth/hooks";
 import { authStore } from "@/features/auth/store";
-import {
-  buildApiUrl,
-  queryClient,
-  NGROK_SKIP_WARNING_HEADER,
-  shouldBypassNgrokBrowserWarning,
-} from "@/shared/api";
+import { buildApiUrl, queryClient } from "@/shared/api";
 import type { AccountNotificationResponse } from "./model";
 import { notificationQueryKeys } from "./queryKeys";
 
@@ -111,9 +106,6 @@ export function useNotificationStream(enabled = true) {
           headers: {
             Accept: "text/event-stream",
             Authorization: `Bearer ${auth.accessToken}`,
-            ...(shouldBypassNgrokBrowserWarning
-              ? { [NGROK_SKIP_WARNING_HEADER]: "true" }
-              : {}),
           },
           signal: controller.signal,
           credentials: "include",
