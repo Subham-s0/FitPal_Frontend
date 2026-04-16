@@ -106,6 +106,9 @@ export function useNotificationStream(enabled = true) {
           headers: {
             Accept: "text/event-stream",
             Authorization: `Bearer ${auth.accessToken}`,
+            // Prevent ngrok free interstitial HTML (ERR_NGROK_6024) from breaking CORS.
+            // This header is harmless for normal origins.
+            "ngrok-skip-browser-warning": "true",
           },
           signal: controller.signal,
           credentials: "include",

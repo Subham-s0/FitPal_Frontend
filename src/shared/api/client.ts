@@ -14,13 +14,27 @@ const apiClient = axios.create({
 // ── Request: attach JWT if available ──────────────────────────────────────
 apiClient.interceptors.request.use((config) => {
   const accessToken = authStore.getSnapshot().accessToken;
+  const headers = AxiosHeaders.from(config.headers);
 
-  if (!accessToken) {
-    return config;
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
-  const headers = AxiosHeaders.from(config.headers);
-  headers.set("Authorization", `Bearer ${accessToken}`);
+  // ngrok free accounts show an HTML warning interstitial to browsers.
+  // That interstitial doesn't include CORS headers, so the browser blocks the response.
+  // Sending this header prevents the interstitial and lets the request reach the backend.
+  try {
+    const requestUrl = config.baseURL
+      ? new URL(config.url ?? "", config.baseURL).toString()
+      : config.url ?? "";
+
+    if (requestUrl.includes("ngrok-free.dev") || requestUrl.includes("ngrok.io")) {
+      headers.set("ngrok-skip-browser-warning", "true");
+    }
+  } catch {
+    // If URL parsing fails, just skip the ngrok header.
+  }
+
   config.headers = headers;
 
   return config;
