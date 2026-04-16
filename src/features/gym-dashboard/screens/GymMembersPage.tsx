@@ -89,11 +89,11 @@ function Pagination({
   onPageChange: (p: number) => void;
 }) {
   return (
-    <div className="flex items-center justify-between border-t border-white/[0.08] px-4 py-3">
+    <div className="dashboard-mobile-pagination flex items-center justify-between border-t border-white/[0.08] px-4 py-3">
       <p className="text-[12px] text-zinc-500">
         Page {page + 1} of {Math.max(totalPages, 1)}
       </p>
-      <div className="flex items-center gap-1.5">
+      <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
         <button
           type="button"
           className="rounded-full border border-white/10 bg-white/[0.03] px-3.5 py-1.5 text-[11px] font-bold text-zinc-400 transition-all hover:border-orange-500/30 hover:text-orange-400 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -102,7 +102,7 @@ function Pagination({
         >
           Prev
         </button>
-        <span className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-[11px] font-semibold text-white">
+        <span className="dashboard-mobile-page-pill rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-[11px] font-semibold text-white">
           {page + 1}
         </span>
         <button
@@ -240,7 +240,7 @@ const GymMembersPage: FC = () => {
   ];
 
   return (
-    <div className="max-w-[1600px] animate-fade-in space-y-5 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page max-w-[1600px] animate-fade-in space-y-5 font-['Outfit',system-ui,sans-serif]">
       {/*  Header + Time Window Filter  */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -496,8 +496,8 @@ const GymMembersPage: FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-2 flex-wrap border-t border-white/[0.08] px-5 py-3">
-          <div className="relative flex-1 max-w-[300px]">
+        <div className="dashboard-mobile-toolbar flex items-center justify-between gap-2 flex-wrap border-t border-white/[0.08] px-5 py-3">
+          <div className="dashboard-mobile-search relative flex-1 max-w-[300px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500" />
             <Input
               value={checkinNamePrefix}
@@ -509,7 +509,7 @@ const GymMembersPage: FC = () => {
               placeholder="Search member..."
             />
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="dashboard-mobile-actions flex items-center gap-2 flex-shrink-0">
             <div ref={checkinFilterRef} className="relative">
               <button
                 type="button"
@@ -623,7 +623,8 @@ const GymMembersPage: FC = () => {
           <p className="px-5 py-8 text-sm text-red-300">{getApiErrorMessage(checkinsTableQ.error, "Failed to load check-in log")}</p>
         ) : (
           <>
-            <Table className="w-full border-collapse">
+            <div className="dashboard-mobile-table-scroll">
+              <Table className="min-w-[860px] w-full border-collapse">
               <TableHeader>
                 <TableRow className="bg-white/[0.02] border-b border-white/[0.08] hover:bg-transparent">
                   {["Member", "Checked In", "Checked Out", "Tier", "Status", "Deny Reason"].map((h) => (
@@ -686,7 +687,8 @@ const GymMembersPage: FC = () => {
                   })
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
             <Pagination
               page={checkinsTableQ.data?.page ?? 0}
               totalPages={checkinsTableQ.data?.totalPages ?? 1}

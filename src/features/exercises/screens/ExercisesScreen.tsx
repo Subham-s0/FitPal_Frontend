@@ -827,7 +827,7 @@ const ExercisesScreen = () => {
             backgroundSize: "48px 48px",
           }}
         />
-        <div className="relative z-10 px-4 py-5 md:px-8 md:py-9">
+        <div className="relative z-10 px-4 pb-28 pt-5 md:px-8 md:pb-9 md:pt-9">
           {/* Header */}
           <header className="mb-6 text-center md:mb-8 md:text-left">
             <h1 className="text-2xl font-black uppercase leading-none tracking-tight text-white md:text-4xl">

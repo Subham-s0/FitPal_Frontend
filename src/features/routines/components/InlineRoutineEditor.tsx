@@ -95,12 +95,22 @@ function SortableDayRow({
   onDelete,
   onOpenExerciseDetails,
 }: SortableDayRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: day.id,
   });
 
   const [showMenu, setShowMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
 
   const closeMenu = useCallback(() => {
     setShowMenu(false);
@@ -165,7 +175,7 @@ function SortableDayRow({
                 >
                   {getExerciseInitials(ex.name)}
                 </div>
-              )
+              ),
             )}
             {day.exercises.length > 4 && (
               <span className="ml-1 text-[10px] font-bold text-gray-500">
@@ -187,7 +197,9 @@ function SortableDayRow({
                 }
 
                 const rect = e.currentTarget.getBoundingClientRect();
-                setMenuPosition(resolveFloatingMenuPosition(rect, DAY_ACTION_MENU_HEIGHT));
+                setMenuPosition(
+                  resolveFloatingMenuPosition(rect, DAY_ACTION_MENU_HEIGHT),
+                );
                 setShowMenu(true);
               }}
               className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-white/5 hover:text-white"
@@ -195,48 +207,50 @@ function SortableDayRow({
               <MoreVertical className="h-5 w-5" />
             </button>
 
-            {showMenu && menuPosition && createPortal(
-              <>
-                <div
-                  className="fixed inset-0 z-[9998]"
-                  onMouseDown={(event) => {
-                    event.stopPropagation();
-                    closeMenu();
-                  }}
-                />
-                <div
-                  className="fixed z-[9999] w-48 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
-                  style={{ top: menuPosition.top, right: menuPosition.right }}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onEdit();
+            {showMenu &&
+              menuPosition &&
+              createPortal(
+                <>
+                  <div
+                    className="fixed inset-0 z-[9998]"
+                    onMouseDown={(event) => {
+                      event.stopPropagation();
                       closeMenu();
                     }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/5"
+                  />
+                  <div
+                    className="fixed z-[9999] w-48 rounded-2xl border border-white/10 bg-[#181818] py-2 shadow-xl"
+                    style={{ top: menuPosition.top, right: menuPosition.right }}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    <Edit2 className="h-4 w-4" />
-                    Edit Workout
-                  </button>
-                  <div className="my-1 border-t border-white/5" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDelete();
-                      closeMenu();
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Workout
-                  </button>
-                </div>
-              </>,
-              document.body
-            )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onEdit();
+                        closeMenu();
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-white transition-colors hover:bg-white/5"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      Edit Workout
+                    </button>
+                    <div className="my-1 border-t border-white/5" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onDelete();
+                        closeMenu();
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete Workout
+                    </button>
+                  </div>
+                </>,
+                document.body,
+              )}
           </div>
         </div>
       </div>
@@ -251,7 +265,9 @@ function SortableDayRow({
             <p className="text-xs text-gray-500">No exercises added yet</p>
           ) : (
             <div className="space-y-2">
-              <p className="text-[10px] font-bold uppercase text-gray-500">Exercises:</p>
+              <p className="text-[10px] font-bold uppercase text-gray-500">
+                Exercises:
+              </p>
               {day.exercises.map((ex, index) => (
                 <button
                   key={ex.id}
@@ -263,7 +279,9 @@ function SortableDayRow({
                     {index + 1}
                   </span>
                   <span>{ex.name}</span>
-                  <span className="text-gray-500">&bull; {ex.sets.length} sets</span>
+                  <span className="text-gray-500">
+                    &bull; {ex.sets.length} sets
+                  </span>
                 </button>
               ))}
             </div>
@@ -296,7 +314,9 @@ export default function InlineRoutineEditor({
   // State
   const [routine, setRoutine] = useState<Routine>(() => {
     if (routineId) {
-      return getRoutine(routineId) || { ...createDefaultRoutine(), id: routineId };
+      return (
+        getRoutine(routineId) || { ...createDefaultRoutine(), id: routineId }
+      );
     }
     return createDefaultRoutine();
   });
@@ -304,15 +324,20 @@ export default function InlineRoutineEditor({
   const [isDirty, setIsDirty] = useState(isNewRoutine);
   const [showDays, setShowDays] = useState(true);
   const [expandedDayId, setExpandedDayId] = useState<string | null>(null);
-  const [selectedExerciseDetail, setSelectedExerciseDetail] = useState<ExerciseDetailPreview | null>(null);
+  const [selectedExerciseDetail, setSelectedExerciseDetail] =
+    useState<ExerciseDetailPreview | null>(null);
   const [isExerciseDetailOpen, setIsExerciseDetailOpen] = useState(false);
-  const [pendingDeleteDayId, setPendingDeleteDayId] = useState<string | null>(null);
+  const [pendingDeleteDayId, setPendingDeleteDayId] = useState<string | null>(
+    null,
+  );
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
 
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   // Handlers
@@ -337,7 +362,10 @@ export default function InlineRoutineEditor({
 
   const handleAddDay = useCallback(async () => {
     const nextOrder = routine.days.length + 1;
-    const newDay = createDefaultDay(generateDefaultWorkoutDayName(routine.days), nextOrder);
+    const newDay = createDefaultDay(
+      generateDefaultWorkoutDayName(routine.days),
+      nextOrder,
+    );
     const days = normalizeDayOrder([...routine.days, newDay]);
     const persistedRoutineId = routineId || routine.id;
     const nextRoutine = { ...routine, id: persistedRoutineId, days };
@@ -350,12 +378,16 @@ export default function InlineRoutineEditor({
     if (onEditDay) {
       try {
         if (getRoutine(persistedRoutineId)) {
-          await updateRoutine(persistedRoutineId, nextRoutine, { sync: "none" });
+          await updateRoutine(persistedRoutineId, nextRoutine, {
+            sync: "none",
+          });
         } else {
           await addRoutine(nextRoutine, { sync: "none" });
         }
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to add workout day.");
+        toast.error(
+          error instanceof Error ? error.message : "Failed to add workout day.",
+        );
         return;
       }
       onEditDay(persistedRoutineId, newDay.id);
@@ -377,37 +409,50 @@ export default function InlineRoutineEditor({
     setIsDirty(true);
   }, [pendingDeleteDayId]);
 
-  const handleEditDay = useCallback(async (dayId: string) => {
-    // Persist the current draft locally, then open the day editor immediately.
-    const persistedRoutineId = routineId || routine.id;
-    try {
-      if (getRoutine(persistedRoutineId)) {
-        await updateRoutine(
-          persistedRoutineId,
-          { ...routine, id: persistedRoutineId },
-          { sync: "none" }
+  const handleEditDay = useCallback(
+    async (dayId: string) => {
+      // Persist the current draft locally, then open the day editor immediately.
+      const persistedRoutineId = routineId || routine.id;
+      try {
+        if (getRoutine(persistedRoutineId)) {
+          await updateRoutine(
+            persistedRoutineId,
+            { ...routine, id: persistedRoutineId },
+            { sync: "none" },
+          );
+        } else {
+          await addRoutine(
+            { ...routine, id: persistedRoutineId },
+            { sync: "none" },
+          );
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to open workout day.",
         );
-      } else {
-        await addRoutine(
-          { ...routine, id: persistedRoutineId },
-          { sync: "none" }
-        );
+        return;
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to open workout day.");
-      return;
-    }
-    onEditDay?.(persistedRoutineId, dayId);
-  }, [routineId, routine, onEditDay]);
+      onEditDay?.(persistedRoutineId, dayId);
+    },
+    [routineId, routine, onEditDay],
+  );
 
-  const handleOpenExerciseDetails = useCallback((exercise: WorkoutDay["exercises"][number]) => {
-    setSelectedExerciseDetail(createExerciseDetailPreviewFromRoutineExercise(exercise));
-    setIsExerciseDetailOpen(true);
-  }, []);
+  const handleOpenExerciseDetails = useCallback(
+    (exercise: WorkoutDay["exercises"][number]) => {
+      setSelectedExerciseDetail(
+        createExerciseDetailPreviewFromRoutineExercise(exercise),
+      );
+      setIsExerciseDetailOpen(true);
+    },
+    [],
+  );
 
   const handleSave = useCallback(async () => {
     const validationError =
-      getRoutinePersistenceValidationError(routine) || getRoutineMinimumValidationError(routine);
+      getRoutinePersistenceValidationError(routine) ||
+      getRoutineMinimumValidationError(routine);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -417,18 +462,27 @@ export default function InlineRoutineEditor({
 
     try {
       if (getRoutine(persistedRoutineId)) {
-        await updateRoutine(persistedRoutineId, { ...routine, id: persistedRoutineId }, {
-          sync: "force",
-          throwOnSyncError: true,
-        });
+        await updateRoutine(
+          persistedRoutineId,
+          { ...routine, id: persistedRoutineId },
+          {
+            sync: "force",
+            throwOnSyncError: true,
+          },
+        );
       } else {
-        await addRoutine({ ...routine, id: persistedRoutineId }, {
-          sync: "force",
-          throwOnSyncError: true,
-        });
+        await addRoutine(
+          { ...routine, id: persistedRoutineId },
+          {
+            sync: "force",
+            throwOnSyncError: true,
+          },
+        );
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save routine.");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save routine.",
+      );
       return;
     }
 
@@ -450,7 +504,8 @@ export default function InlineRoutineEditor({
     onCancel();
   }, [onCancel]);
 
-  const pendingDeleteDay = routine.days.find((day) => day.id === pendingDeleteDayId) ?? null;
+  const pendingDeleteDay =
+    routine.days.find((day) => day.id === pendingDeleteDayId) ?? null;
 
   // ============================================
   // RENDER
@@ -482,26 +537,28 @@ export default function InlineRoutineEditor({
               <CustomSelect
                 options={[...ROUTINE_GOAL_OPTIONS]}
                 value={routine.goal}
-                onChange={(value) => handleUpdateRoutine({ goal: value as Routine["goal"] })}
+                onChange={(value) =>
+                  handleUpdateRoutine({ goal: value as Routine["goal"] })
+                }
                 className="h-11 rounded-2xl bg-white/[0.03] px-4 text-[11px] font-black uppercase tracking-[0.16em] text-white"
               />
             </label>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 lg:self-end">
+          <div className="mt-2 flex flex-row items-stretch justify-between gap-3 w-full lg:mt-0 lg:w-auto lg:self-end">
             <button
               onClick={handleCancel}
-              className="flow-button-secondary h-11 px-4 text-gray-300"
+              className="flow-button-secondary h-11 flex-none px-4 sm:px-6 whitespace-nowrap text-gray-300 text-[10px] sm:text-[11px]"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 mr-1 sm:mr-1.5" />
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={!isDirty}
-              className="flow-button-primary h-11 px-4 disabled:opacity-50"
+              className="flow-button-primary h-11 flex-none px-4 sm:px-6 whitespace-nowrap disabled:opacity-50 text-[10px] sm:text-[11px]"
             >
-              <Save className="h-4 w-4" />
+              <Save className="h-4 w-4 mr-1 sm:mr-1.5" />
               {isNewRoutine ? "Create Routine" : "Save Changes"}
             </button>
           </div>
@@ -520,9 +577,7 @@ export default function InlineRoutineEditor({
             ) : (
               <ChevronRight className="h-4 w-4 text-gray-500" />
             )}
-            <span className="flow-label text-sm">
-              Workout Days
-            </span>
+            <span className="flow-label text-sm">Workout Days</span>
             <span className="text-xs text-gray-600">
               ({routine.days.length} day{routine.days.length !== 1 ? "s" : ""})
             </span>
@@ -548,7 +603,9 @@ export default function InlineRoutineEditor({
           <>
             {routine.days.length === 0 ? (
               <div className="rounded-[1.5rem] border border-white/[0.06] user-surface-muted p-6 text-center">
-                <p className="mb-3 text-xs text-gray-500">No workout days yet</p>
+                <p className="mb-3 text-xs text-gray-500">
+                  No workout days yet
+                </p>
                 <button
                   onClick={handleAddDay}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-600/20 bg-orange-600/10 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.22em] text-orange-400 transition-all hover:border-orange-500/40 hover:bg-orange-600/20 hover:text-white"
@@ -575,7 +632,11 @@ export default function InlineRoutineEditor({
                           key={day.id}
                           day={day}
                           isExpanded={expandedDayId === day.id}
-                          onToggleExpand={() => setExpandedDayId(expandedDayId === day.id ? null : day.id)}
+                          onToggleExpand={() =>
+                            setExpandedDayId(
+                              expandedDayId === day.id ? null : day.id,
+                            )
+                          }
                           onEdit={() => handleEditDay(day.id)}
                           onDelete={() => handleDeleteDay(day.id)}
                           onOpenExerciseDetails={handleOpenExerciseDetails}
@@ -631,7 +692,10 @@ export default function InlineRoutineEditor({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
+      <AlertDialog
+        open={isDiscardDialogOpen}
+        onOpenChange={setIsDiscardDialogOpen}
+      >
         <AlertDialogContent className="rounded-[20px] border-[hsl(0,0%,18%)] bg-[hsl(0,0%,7%)] text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)]">
           <AlertDialogHeader>
             <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-[14px] border border-[hsl(0,0%,18%)] bg-[hsl(0,0%,9%)]">
@@ -641,7 +705,8 @@ export default function InlineRoutineEditor({
               Discard changes
             </AlertDialogTitle>
             <AlertDialogDescription className="text-[12px] leading-relaxed text-[hsl(0,0%,55%)]">
-              You have unsaved routine changes. Leave this editor and discard them?
+              You have unsaved routine changes. Leave this editor and discard
+              them?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
@@ -650,7 +715,7 @@ export default function InlineRoutineEditor({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDiscardChanges}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-orange-600 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition-all hover:bg-orange-500"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-[10px] bg-[linear-gradient(135deg,#FF6A00,#FF9500)] py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition-all hover:brightness-110"
             >
               Discard
             </AlertDialogAction>

@@ -702,16 +702,16 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
               </div>
             ) : (
               <>
-                <div className="rounded-2xl border border-white/[0.06] user-surface-soft p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                <div className="rounded-2xl border border-white/[0.06] user-surface-soft p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                     Sessions (Completed vs Skipped)
                   </p>
                   <div className="mt-3 h-60">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={insightChartData}>
+                      <BarChart data={insightChartData} margin={{ top: 10, right: 5, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                         <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} width={30} tickMargin={2} />
                         <Tooltip
                           cursor={{ fill: "rgba(255,255,255,0.03)" }}
                           contentStyle={{
@@ -728,16 +728,16 @@ export default function WorkoutsSection({ onOpenRoutines }: WorkoutsSectionProps
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/[0.06] user-surface-soft p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+                <div className="rounded-2xl border border-white/[0.06] user-surface-soft p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
                     Sets and Volume
                   </p>
                   <div className="mt-3 h-60">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={insightChartData}>
+                      <BarChart data={insightChartData} margin={{ top: 10, right: 5, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
                         <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis allowDecimals={false} tick={{ fill: "#737373", fontSize: 11 }} axisLine={false} tickLine={false} width={30} tickMargin={2} />
                         <Tooltip
                           cursor={{ fill: "rgba(255,255,255,0.03)" }}
                           contentStyle={{

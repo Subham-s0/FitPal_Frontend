@@ -463,158 +463,140 @@ const ExerciseCard = ({
       )}
 
       {/* Sets Table */}
-      {editMode ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr className="border-b border-white/5">
-                <th className="pb-1 pr-1.5 text-left font-bold text-gray-500 sm:pb-1.5 sm:pr-2">Set</th>
+      <div className="overflow-x-auto">
+        <table className="w-full text-[11px]">
+          <thead>
+            <tr className="border-b border-white/5">
+              <th className="pb-1 pr-1.5 text-left font-bold text-gray-500 sm:pb-1.5 sm:pr-2">Set</th>
+              {fields.weight && (
+                <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">
+                  {fields.weightLabel || "Weight"}
+                </th>
+              )}
+              {fields.reps && (
+                <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Reps</th>
+              )}
+              {fields.duration && (
+                <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Time</th>
+              )}
+              {fields.distance && (
+                <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Dist</th>
+              )}
+              {editMode && <th className="w-7 pb-1 sm:pb-1.5"></th>}
+            </tr>
+          </thead>
+          <tbody>
+            {exercise.sets.map((set, index) => (
+              <tr key={set.id} className="border-b border-white/[0.02]">
+                <td className="py-0.5 pr-1 font-bold text-white sm:py-1 sm:pr-2">{index + 1}</td>
                 {fields.weight && (
-                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">
-                    {fields.weightLabel || "Weight"}
-                  </th>
+                  <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
+                    {editMode ? (
+                      <input
+                        type="number"
+                        value={set.targetWeight ?? ""}
+                        onChange={(e) => {
+                          const nextValue = clampNumericInput(e.target.value, 5, true);
+                          onUpdateSet?.(exercise.id, set.id, {
+                            targetWeight: nextValue ? parseFloat(nextValue) : null,
+                          });
+                        }}
+                        placeholder="-"
+                        className="flow-input w-[4.5rem] rounded-lg px-1.5 py-0.5 text-center text-[10px] sm:text-[11px]"
+                      />
+                    ) : (
+                      <span className="text-gray-400">
+                        {set.targetWeight ? `${set.targetWeight} kg` : "-"}
+                      </span>
+                    )}
+                  </td>
                 )}
                 {fields.reps && (
-                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Reps</th>
+                  <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
+                    {editMode ? (
+                      <input
+                        type="number"
+                        value={set.targetReps ?? ""}
+                        onChange={(e) => {
+                          const nextValue = clampNumericInput(e.target.value, 3, false);
+                          onUpdateSet?.(exercise.id, set.id, {
+                            targetReps: nextValue ? parseInt(nextValue, 10) : null,
+                          });
+                        }}
+                        placeholder="-"
+                        className="flow-input w-16 rounded-lg px-1.5 py-0.5 text-center text-[10px] sm:text-[11px]"
+                      />
+                    ) : (
+                      <span className="text-gray-400">{set.targetReps || "-"}</span>
+                    )}
+                  </td>
                 )}
                 {fields.duration && (
-                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Time</th>
+                  <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
+                    {editMode ? (
+                      <input
+                        type="number"
+                        value={set.targetDurationSeconds ?? ""}
+                        onChange={(e) =>
+                          onUpdateSet?.(exercise.id, set.id, {
+                            targetDurationSeconds: e.target.value
+                              ? parseInt(e.target.value, 10)
+                              : null,
+                          })
+                        }
+                        placeholder="-"
+                        className="flow-input w-14 rounded-lg px-1 py-0.5 text-[10px] sm:w-14 sm:px-1.5 sm:text-[11px]"
+                      />
+                    ) : (
+                      <span className="text-gray-400">
+                        {set.targetDurationSeconds
+                          ? `${Math.floor(set.targetDurationSeconds / 60)}:${(
+                            set.targetDurationSeconds % 60
+                          )
+                            .toString()
+                            .padStart(2, "0")}`
+                          : "-"}
+                      </span>
+                    )}
+                  </td>
                 )}
                 {fields.distance && (
-                  <th className="px-0.5 pb-1 text-left font-bold text-gray-500 sm:px-1.5 sm:pb-1.5">Dist</th>
+                  <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
+                    {editMode ? (
+                      <input
+                        type="number"
+                        value={set.targetDistance ?? ""}
+                        onChange={(e) =>
+                          onUpdateSet?.(exercise.id, set.id, {
+                            targetDistance: e.target.value ? parseFloat(e.target.value) : null,
+                          })
+                        }
+                        placeholder="-"
+                        className="flow-input w-14 rounded-lg px-1 py-0.5 text-[10px] sm:w-14 sm:px-1.5 sm:text-[11px]"
+                      />
+                    ) : (
+                      <span className="text-gray-400">
+                        {set.targetDistance ? `${set.targetDistance} m` : "-"}
+                      </span>
+                    )}
+                  </td>
                 )}
-                {editMode && <th className="w-7 pb-1 sm:pb-1.5"></th>}
+                {editMode && (
+                  <td className="py-0.5 pl-1 sm:py-1 sm:pl-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onRemoveSet?.(exercise.id, set.id)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                )}
               </tr>
-            </thead>
-            <tbody>
-              {exercise.sets.map((set, index) => (
-                <tr key={set.id} className="border-b border-white/[0.02]">
-                  <td className="py-0.5 pr-1 font-bold text-white sm:py-1 sm:pr-2">{index + 1}</td>
-                  {fields.weight && (
-                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
-                      {editMode ? (
-                        <input
-                          type="number"
-                          value={set.targetWeight ?? ""}
-                          onChange={(e) => {
-                            const nextValue = clampNumericInput(e.target.value, 5, true);
-                            onUpdateSet?.(exercise.id, set.id, {
-                              targetWeight: nextValue ? parseFloat(nextValue) : null,
-                            });
-                          }}
-                          placeholder="-"
-                          className="flow-input w-[4.5rem] rounded-lg px-1.5 py-0.5 text-center text-[10px] sm:text-[11px]"
-                        />
-                      ) : (
-                        <span className="text-gray-400">
-                          {set.targetWeight ? `${set.targetWeight} kg` : "-"}
-                        </span>
-                      )}
-                    </td>
-                  )}
-                  {fields.reps && (
-                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
-                      {editMode ? (
-                        <input
-                          type="number"
-                          value={set.targetReps ?? ""}
-                          onChange={(e) => {
-                            const nextValue = clampNumericInput(e.target.value, 3, false);
-                            onUpdateSet?.(exercise.id, set.id, {
-                              targetReps: nextValue ? parseInt(nextValue, 10) : null,
-                            });
-                          }}
-                          placeholder="-"
-                          className="flow-input w-16 rounded-lg px-1.5 py-0.5 text-center text-[10px] sm:text-[11px]"
-                        />
-                      ) : (
-                        <span className="text-gray-400">{set.targetReps || "-"}</span>
-                      )}
-                    </td>
-                  )}
-                  {fields.duration && (
-                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
-                      {editMode ? (
-                        <input
-                          type="number"
-                          value={set.targetDurationSeconds ?? ""}
-                          onChange={(e) =>
-                            onUpdateSet?.(exercise.id, set.id, {
-                              targetDurationSeconds: e.target.value
-                                ? parseInt(e.target.value, 10)
-                                : null,
-                            })
-                          }
-                          placeholder="-"
-                          className="flow-input w-14 rounded-lg px-1 py-0.5 text-[10px] sm:w-14 sm:px-1.5 sm:text-[11px]"
-                        />
-                      ) : (
-                        <span className="text-gray-400">
-                          {set.targetDurationSeconds
-                            ? `${Math.floor(set.targetDurationSeconds / 60)}:${(
-                              set.targetDurationSeconds % 60
-                            )
-                              .toString()
-                              .padStart(2, "0")}`
-                            : "-"}
-                        </span>
-                      )}
-                    </td>
-                  )}
-                  {fields.distance && (
-                    <td className="px-0.5 py-0.5 sm:px-1.5 sm:py-1">
-                      {editMode ? (
-                        <input
-                          type="number"
-                          value={set.targetDistance ?? ""}
-                          onChange={(e) =>
-                            onUpdateSet?.(exercise.id, set.id, {
-                              targetDistance: e.target.value ? parseFloat(e.target.value) : null,
-                            })
-                          }
-                          placeholder="-"
-                          className="flow-input w-14 rounded-lg px-1 py-0.5 text-[10px] sm:w-14 sm:px-1.5 sm:text-[11px]"
-                        />
-                      ) : (
-                        <span className="text-gray-400">
-                          {set.targetDistance ? `${set.targetDistance} m` : "-"}
-                        </span>
-                      )}
-                    </td>
-                  )}
-                  {editMode && (
-                    <td className="py-0.5 pl-1 sm:py-1 sm:pl-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onRemoveSet?.(exercise.id, set.id)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-red-500/10 hover:text-red-400"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="mt-1 flex flex-wrap gap-1.5 sm:gap-2">
-          {summaryStats.map((stat) => (
-            <div
-              key={stat.label}
-              className="min-w-[80px] flex-1 rounded-xl sm:rounded-2xl border border-white/8 bg-white/[0.03] px-2.5 py-2 sm:px-3 sm:py-2.5"
-            >
-              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">
-                {stat.label}
-              </p>
-              <p className={`mt-0.5 sm:mt-1 text-sm sm:text-base font-black ${stat.valueClassName || "text-white"}`}>
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {editMode && (
         <button
@@ -1010,86 +992,84 @@ const WorkoutDetail = ({
   return (
     <div className="flow-shell flex h-full min-h-0 flex-col overflow-y-auto text-white lg:overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-0 flow-grid" />
-      <div className="relative z-10 flex min-h-full flex-col gap-6 px-5 pt-7 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:px-10 md:pt-10 md:pb-9 lg:min-h-0 lg:flex-1 lg:flex-row lg:pb-8">
+      <div className="relative z-10 flex min-h-full flex-col gap-6 px-4 py-4 pb-[calc(84px+env(safe-area-inset-bottom))] md:px-6 md:pb-8 lg:px-8 lg:py-6 lg:pb-8 lg:min-h-0 lg:flex-1 lg:flex-row">
 
         {/* ══ LEFT COLUMN — Scrollable, full width ══ */}
         <div className="min-w-0 lg:flex-1 lg:overflow-y-auto lg:pr-4 xl:pr-6">
           <div className="space-y-4 pb-6">
 
             {/* ── Header ── */}
-            <div className="space-y-2">
-              <p className="flow-label">{routine.name}</p>
+            <div className="space-y-4">
+              {/* Top Bar: Back | Edit/Save */}
+              <div className="flex items-center justify-between">
+                {!editMode ? (
+                  <button onClick={() => void handleBack()} className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </button>
+                ) : (
+                  <button onClick={() => void handleCancel()} className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300">
+                    Cancel
+                  </button>
+                )}
 
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  {editMode || isEditingName ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={localDay.name}
-                        onChange={(e) => setLocalDay({ ...localDay, name: e.target.value })}
-                        onBlur={handleCommitNameEdit}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleCommitNameEdit();
-                          if (e.key === "Escape") {
-                            setLocalDay({ ...localDay, name: day.name });
-                            setIsEditingName(false);
-                          }
-                        }}
-                        autoFocus
-                        className="flow-input min-w-0 px-3 py-1 text-xl font-black placeholder:text-gray-500"
-                        placeholder="Day name..."
-                      />
-                      {!editMode && (
-                        <button
-                          onClick={handleCommitNameEdit}
-                          className="flow-button-secondary flex-shrink-0 px-2.5 py-2 text-orange-400"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsEditingName(true)}
-                      className="group/name flex items-center gap-2 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
-                      title="Click to rename"
-                    >
-                      <h2 className="text-2xl font-black text-white transition-colors group-hover/name:text-orange-400">
-                        {localDay.name}
-                      </h2>
-                      <Edit3 className="h-4 w-4 text-gray-600 opacity-0 transition-opacity group-hover/name:opacity-100" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-shrink-0 items-center gap-2 pt-1 sm:pt-0">
-                  {editMode ? (
-                    <>
-                      <button onClick={() => void handleCancel()} className="flow-button-secondary">
-                        Cancel
-                      </button>
-                      <button onClick={handleSave} className="flow-button-primary">
-                        Save
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => void handleBack()}
-                        className="flow-button-secondary px-3 py-2 text-[11px] text-gray-300"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back
-                      </button>
-                      <button onClick={() => setEditMode(true)} className="flow-button-primary">
-                        <Edit3 className="h-4 w-4" />
-                        Edit
-                      </button>
-                    </>
-                  )}
-                </div>
+                {!editMode ? (
+                  <button onClick={() => setEditMode(true)} className="flow-button-primary">
+                    <Edit3 className="h-4 w-4" />
+                    Edit
+                  </button>
+                ) : (
+                  <button onClick={handleSave} className="flow-button-primary">
+                    <Check className="h-4 w-4" />
+                    Save
+                  </button>
+                )}
               </div>
+
+              {/* Title Section */}
+              <div className="min-w-0 flex-1">
+                <p className="flow-label mb-2">{routine.name}</p>
+                {editMode || isEditingName ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={localDay.name}
+                      onChange={(e) => setLocalDay({ ...localDay, name: e.target.value })}
+                      onBlur={handleCommitNameEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleCommitNameEdit();
+                        if (e.key === "Escape") {
+                          setLocalDay({ ...localDay, name: day.name });
+                          setIsEditingName(false);
+                        }
+                      }}
+                      autoFocus
+                      className="flow-input min-w-0 flex-1 px-3 py-1.5 text-base font-black placeholder:text-gray-500 sm:text-xl"
+                      placeholder="Day name..."
+                    />
+                    {!editMode && (
+                      <button
+                        onClick={handleCommitNameEdit}
+                        className="flow-button-secondary flex-shrink-0 px-2.5 py-2 text-orange-400"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsEditingName(true)}
+                    className="group/name flex items-center gap-2 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.03]"
+                    title="Click to rename"
+                  >
+                    <h2 className="text-xl font-black text-white transition-colors group-hover/name:text-orange-400 sm:text-2xl">
+                      {localDay.name}
+                    </h2>
+                    <Edit3 className="shrink-0 h-4 w-4 text-gray-600 opacity-0 transition-opacity group-hover/name:opacity-100" />
+                  </button>
+                )}
+              </div>
+
             </div>
 
             {/* ── Muscle Distribution (Edit Mode Only - at top) ── */}

@@ -448,7 +448,7 @@ export default function ManageUsers() {
   const dialogRole = detail?.role ?? summaryForDialog?.role;
 
   return (
-    <div className="space-y-5 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page space-y-5 font-['Outfit',system-ui,sans-serif]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-[32px] font-black tracking-tight text-white">
@@ -522,8 +522,8 @@ export default function ManageUsers() {
           );
         })}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="relative max-w-[300px] flex-1">
+      <div className="dashboard-mobile-toolbar flex flex-wrap items-center justify-between gap-2">
+        <div className="dashboard-mobile-search relative max-w-[300px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 table-text-muted" />
           <input
             value={searchInput}
@@ -532,7 +532,7 @@ export default function ManageUsers() {
             className="w-full rounded-full border table-border table-bg py-2 pl-9 pr-4 text-[13px] font-medium text-white placeholder:table-text-muted outline-none transition-all focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)]"
           />
         </div>
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+        <div className="dashboard-mobile-actions flex flex-shrink-0 flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setSortIdx((i) => (i + 1) % SORTS.length)}
@@ -627,7 +627,8 @@ export default function ManageUsers() {
       )}
 
       <div className="overflow-hidden rounded-[18px] border table-border table-bg">
-        <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <div className="dashboard-mobile-table-scroll">
+          <table className="min-w-[860px] w-full border-collapse" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="table-header-bg border-b table-border">
               {["User", "Role", "Status", "Email", "Created", "Account", "IDs", "Actions"].map((h, i) => (
@@ -732,14 +733,15 @@ export default function ManageUsers() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="dashboard-mobile-pagination flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[11px] table-text-muted">
           {debounced ? `Search: "${debounced}"` : "Use stat cards to filter by account type"}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="dashboard-mobile-pagination-actions flex items-center gap-2">
           <button
             type="button"
             disabled={page === 0 || usersQ.isFetching}
@@ -748,7 +750,7 @@ export default function ManageUsers() {
           >
             Previous
           </button>
-          <span className="rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
+          <span className="dashboard-mobile-page-pill rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
             Page {page + 1} of {totalPages}
           </span>
           <button

@@ -91,7 +91,7 @@ export default function ProfileRoutineSettings() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/dashboard", { state: { activeSection: "routines" } })}
+              onClick={() => navigate("/routines")}
               className="border-white/10 user-surface text-slate-200 hover:bg-white/5 hover:text-white"
             >
               Open Routines

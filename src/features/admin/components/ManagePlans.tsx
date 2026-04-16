@@ -289,7 +289,7 @@ const ManagePlans = () => {
   const hasError = plansQuery.isError || rulesQuery.isError;
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-mobile-page space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -301,7 +301,7 @@ const ManagePlans = () => {
           type="button"
           disabled={availablePlanTypesForCreate.length === 0 || isBusy || plansQuery.isError}
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-[0.9rem] bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 px-5 py-2.5 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-[0.9rem] bg-gradient-to-r from-yellow-400 via-orange-500 to-orange-600 px-5 py-2.5 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_14px_rgba(234,88,12,0.25)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Add Plan
@@ -327,12 +327,12 @@ const ManagePlans = () => {
           Loading…
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 md:grid-cols-2 xl:grid-cols-3">
           {(plansQuery.data ?? []).map((plan) => (
             <div
               key={plan.planId}
               className={cn(
-                "group relative flex flex-col rounded-[1.75rem] border transition-all duration-300 hover:-translate-y-1",
+                "group relative flex flex-col rounded-[1.4rem] border transition-all duration-300 hover:-translate-y-1 sm:rounded-[1.75rem]",
                 plan.mostPopular
                   ? "border-orange-500/50 bg-[linear-gradient(160deg,rgba(249,115,22,0.14),rgba(17,17,17,0.98))] plan-popular-inner-glow"
                   : "border-white/[0.08] bg-[#111] hover:border-orange-500/20 hover:shadow-[0_8px_32px_-8px_rgba(249,115,22,0.12)]",
@@ -382,7 +382,7 @@ const ManagePlans = () => {
               </div>
 
               {/* Card body */}
-              <div className="flex flex-1 flex-col p-6 pt-7">
+              <div className="flex flex-1 flex-col p-5 pt-6 sm:p-6 sm:pt-7">
                 {/* Badges */}
                 <div className="mb-3 flex flex-wrap items-center gap-1.5 pr-6">
                   <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-400">
@@ -399,13 +399,13 @@ const ManagePlans = () => {
                 </div>
 
                 {/* Name & description */}
-                <h3 className="mb-1 text-xl font-black uppercase tracking-tight text-white">{plan.name}</h3>
+                <h3 className="mb-1 text-lg font-black uppercase tracking-tight text-white sm:text-xl">{plan.name}</h3>
                 <p className="mb-4 text-xs leading-relaxed text-slate-500">{plan.description || "—"}</p>
 
                 {/* Price */}
                 <div className="mb-1 flex flex-wrap items-end gap-1">
                   <span className="text-xs font-bold text-slate-500">{plan.currency}</span>
-                  <span className="text-4xl font-black leading-none text-gradient-fire">
+                  <span className="text-3xl font-black leading-none text-gradient-fire sm:text-4xl">
                     {formatMoney(plan.monthlyPrice)}
                   </span>
                   <span className="mb-0.5 text-sm text-slate-500">/mo</span>
@@ -420,7 +420,7 @@ const ManagePlans = () => {
                 {/* Features */}
                 <ul className="mb-6 flex-1 space-y-2.5">
                   {plan.features.map((feature, idx) => (
-                    <li key={`${plan.planId}-f-${idx}`} className="flex items-start gap-2.5 text-sm text-slate-300">
+                    <li key={`${plan.planId}-f-${idx}`} className="flex items-start gap-2.5 text-[13px] text-slate-300 sm:text-sm">
                       <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-orange-500/15">
                         <CheckCircle2 className="h-3 w-3 text-orange-400" />
                       </div>
@@ -434,7 +434,7 @@ const ManagePlans = () => {
                   type="button"
                   onClick={() => openEdit(plan)}
                   className={cn(
-                    "mt-auto w-full rounded-[0.9rem] px-4 py-2.5 text-xs font-black uppercase tracking-[0.1em] transition-all duration-200",
+                    "mt-auto w-full rounded-[0.9rem] px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-200 sm:text-xs",
                     plan.mostPopular
                       ? "bg-[linear-gradient(135deg,#FF6A00,#FF9500)] text-white shadow-[0_6px_20px_-4px_rgba(249,115,22,0.4)] hover:-translate-y-0.5"
                       : "border border-orange-500/20 bg-orange-500/[0.07] text-orange-300 hover:bg-orange-500/15"
@@ -451,9 +451,9 @@ const ManagePlans = () => {
 
       {/* ── Create / Edit Dialog ───────────────────────────────── */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="flex flex-col overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0f0f0f] p-0 text-white sm:max-w-[520px] max-h-[calc(100dvh-3rem)] sm:max-h-[min(90vh,780px)]">
+        <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#0f0f0f] p-0 text-white sm:max-h-[min(90vh,780px)] sm:max-w-[520px]">
           {/* Header */}
-          <DialogHeader className="shrink-0 border-b border-white/[0.06] bg-[linear-gradient(135deg,rgba(249,115,22,0.09),transparent_50%)] px-5 py-4">
+          <DialogHeader className="shrink-0 border-b border-white/[0.06] bg-[linear-gradient(135deg,rgba(249,115,22,0.09),transparent_50%)] px-4 py-4 sm:px-5">
             <DialogTitle className="text-base font-black uppercase tracking-wide text-white">
               {formMode === "create" ? "Create Plan" : "Edit Plan"}
             </DialogTitle>
@@ -466,10 +466,10 @@ const ManagePlans = () => {
 
           {/* Scrollable body */}
           <div className="flex-1 min-h-0 overflow-y-auto custom-scroll">
-            <div className="grid gap-4 px-5 py-4">
+            <div className="grid gap-4 px-4 py-4 sm:px-5">
 
               {/* Row 1: Plan Type + Access Tier */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField label="Plan Type">
                   {formMode === "create" ? (
                     <Select
@@ -532,7 +532,7 @@ const ManagePlans = () => {
               </FormField>
 
               {/* Row: Monthly Price + Yearly Discount */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField label={`Monthly Price (${form.currency})`}>
                   <Input
                     type="number"
@@ -559,7 +559,7 @@ const ManagePlans = () => {
               </div>
 
               {/* Row: Monthly Term + Yearly Term */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <FormField label="Monthly Term (days)">
                   <Input
                     type="number"
@@ -581,7 +581,7 @@ const ManagePlans = () => {
               </div>
 
               {/* Most Popular + Active toggles */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setForm((p) => ({ ...p, mostPopular: !p.mostPopular }))}
@@ -637,7 +637,7 @@ const ManagePlans = () => {
                 </div>
                 <div className="space-y-2">
                   {form.featureRows.map((row, index) => (
-                    <div key={index} className="flex gap-2">
+                    <div key={index} className="flex flex-col gap-2 sm:flex-row">
                       <Input
                         value={row}
                         placeholder="Feature description"
@@ -649,7 +649,7 @@ const ManagePlans = () => {
                         onClick={() => removeFeatureRow(index)}
                         disabled={form.featureRows.length <= 1}
                         aria-label="Remove feature line"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[0.65rem] border border-white/10 bg-white/[0.03] text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30"
+                        className="flex h-9 w-full shrink-0 items-center justify-center rounded-[0.65rem] border border-white/10 bg-white/[0.03] text-slate-500 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:pointer-events-none disabled:opacity-30 sm:w-9"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -661,11 +661,11 @@ const ManagePlans = () => {
           </div>
 
           {/* Footer */}
-          <DialogFooter className="shrink-0 gap-2.5 border-t border-white/[0.06] bg-[#0f0f0f] px-5 py-3 sm:justify-between sm:space-x-0">
+          <DialogFooter className="shrink-0 gap-2.5 border-t border-white/[0.06] bg-[#0f0f0f] px-4 py-3 sm:justify-between sm:space-x-0 sm:px-5">
             <button
               type="button"
               onClick={() => setFormOpen(false)}
-              className="inline-flex items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-[0.08em] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white"
+              className="inline-flex w-full items-center justify-center rounded-[0.8rem] border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-black uppercase tracking-[0.08em] text-white/70 transition-colors hover:bg-white/[0.07] hover:text-white sm:w-auto"
             >
               Cancel
             </button>
@@ -673,7 +673,7 @@ const ManagePlans = () => {
               type="button"
               disabled={saveMutation.isPending}
               onClick={handleSaveForm}
-              className="inline-flex items-center justify-center gap-2 rounded-[0.8rem] bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-5 py-2 text-xs font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_16px_-4px_rgba(249,115,22,0.4)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-[0.8rem] bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-5 py-2 text-xs font-black uppercase tracking-[0.08em] text-white shadow-[0_4px_16px_-4px_rgba(249,115,22,0.4)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
               {formMode === "create" ? "Create Plan" : "Save Changes"}

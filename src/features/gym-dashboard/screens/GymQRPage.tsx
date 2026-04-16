@@ -354,7 +354,7 @@ const GymQRPage: FC = () => {
   );
 
   return (
-    <div className="max-w-[1600px] animate-fade-in space-y-5 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page max-w-[1600px] animate-fade-in space-y-5 font-['Outfit',system-ui,sans-serif]">
       {/*  Header  */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -822,8 +822,8 @@ const GymQRPage: FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center justify-between gap-2 flex-wrap border-t table-border px-5 py-3">
-          <div className="relative flex-1 max-w-[300px]">
+        <div className="dashboard-mobile-toolbar flex items-center justify-between gap-2 flex-wrap border-t table-border px-5 py-3">
+          <div className="dashboard-mobile-search relative flex-1 max-w-[300px]">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 table-text-muted pointer-events-none" />
             <Input
               value={search}
@@ -832,7 +832,7 @@ const GymQRPage: FC = () => {
               className="h-9 rounded-full border table-border table-bg pl-9 pr-3 text-[12px] text-white placeholder:table-text-muted focus-visible:ring-orange-500/30"
             />
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="dashboard-mobile-actions flex items-center gap-2 flex-shrink-0">
             <div ref={filterRef} className="relative">
               <button
                 type="button"
@@ -950,8 +950,8 @@ const GymQRPage: FC = () => {
           <p className="px-5 py-8 text-sm text-red-300">{getApiErrorMessage(tableQ.error, "Failed to load check-ins")}</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <Table className="w-full border-collapse">
+            <div className="dashboard-mobile-table-scroll overflow-x-auto">
+              <Table className="min-w-[780px] w-full border-collapse">
                 <TableHeader>
                   <TableRow className="table-header-bg border-b table-border hover:bg-transparent">
                     {["Member", "Checked In", "Checked Out", "Tier", "Status", "Deny Reason"].map((h) => (
@@ -1019,11 +1019,11 @@ const GymQRPage: FC = () => {
               </Table>
             </div>
             {/* Pagination */}
-            <div className="flex items-center justify-between border-t table-border px-5 py-3">
+            <div className="dashboard-mobile-pagination flex items-center justify-between border-t table-border px-5 py-3">
               <p className="text-[12px] table-text-muted">
                 Page {(tableQ.data?.page ?? 0) + 1} of {Math.max(1, tableQ.data?.totalPages ?? 1)}
               </p>
-              <div className="flex items-center gap-1.5">
+              <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
@@ -1032,7 +1032,7 @@ const GymQRPage: FC = () => {
                 >
                   Prev
                 </button>
-                <span className="rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
+                <span className="dashboard-mobile-page-pill rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
                   {(tableQ.data?.page ?? 0) + 1}
                 </span>
                 <button
@@ -1057,7 +1057,7 @@ const GymQRPage: FC = () => {
             <div className="h-px flex-1 bg-orange-500/10" />
           </div>
         </div>
-        <div className="flex gap-0 overflow-x-auto p-4">
+        <div className="dashboard-mobile-scroll-rail flex gap-0 overflow-x-auto p-4">
           {steps.map((s, i, arr) => (
             <div key={i} className="flex min-w-[140px] flex-1 items-stretch">
               <div className="flex-1 rounded-xl border table-border-row bg-white/[0.02] p-3 transition-all hover:bg-white/[0.04]">

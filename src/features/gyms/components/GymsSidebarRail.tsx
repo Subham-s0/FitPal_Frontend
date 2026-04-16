@@ -1,4 +1,13 @@
-import { Bookmark, ChevronLeft, ChevronRight, Loader2, MapPin, Navigation, Search, Star } from "lucide-react";
+import {
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  MapPin,
+  Navigation,
+  Search,
+  Star,
+} from "lucide-react";
 import type {
   GymRecommendationItem,
   GymSortMode,
@@ -40,6 +49,8 @@ interface GymsSidebarRailProps {
   onPreviousPage: () => void;
   onNextPage: () => void;
   allowSavedGyms?: boolean;
+  showOccupancy?: boolean;
+  showBestMatch?: boolean;
 }
 
 function DesktopGymLoadingCard() {
@@ -85,6 +96,8 @@ const GymsSidebarRail = ({
   onPreviousPage,
   onNextPage,
   allowSavedGyms = true,
+  showOccupancy = true,
+  showBestMatch = true,
 }: GymsSidebarRailProps) => {
   return (
     <div
@@ -110,10 +123,17 @@ const GymsSidebarRail = ({
       <div className="mb-4 shrink-0 px-6">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+            />
             <input
               type="text"
-              placeholder={showSavedOnly ? "Search saved gyms..." : "Search gyms by name or city..."}
+              placeholder={
+                showSavedOnly
+                  ? "Search saved gyms..."
+                  : "Search gyms by name or city..."
+              }
               value={searchQuery}
               onChange={(event) => onSearchQueryChange(event.target.value)}
               className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-3 pl-11 pr-4 text-sm font-medium text-white outline-none transition-colors placeholder:text-slate-500 focus:border-orange-600"
@@ -138,6 +158,7 @@ const GymsSidebarRail = ({
           active={mode}
           onChange={onModeChange}
           locationEnabled={locationEnabled}
+          showBestMatch={showBestMatch}
         />
       </div>
 
@@ -145,17 +166,20 @@ const GymsSidebarRail = ({
         <div className="flex flex-col gap-4">
           {isLoading ? (
             <DesktopGymLoadingCard />
-          ) : visibleGyms.map((gym) => (
-            <DesktopGymCard
-              key={gym.gymId}
-              gym={gym}
-              selected={selectedGymId === gym.gymId}
-              isSaved={gym.isSaved}
-              onClick={() => onSelectGym(gym)}
-              onToggleSaved={() => onToggleSavedGym(gym.gymId)}
-              showSaveAction={allowSavedGyms}
-            />
-          ))}
+          ) : (
+            visibleGyms.map((gym) => (
+              <DesktopGymCard
+                key={gym.gymId}
+                gym={gym}
+                selected={selectedGymId === gym.gymId}
+                isSaved={gym.isSaved}
+                onClick={() => onSelectGym(gym)}
+                onToggleSaved={() => onToggleSavedGym(gym.gymId)}
+                showSaveAction={allowSavedGyms}
+                showOccupancy={showOccupancy}
+              />
+            ))
+          )}
           {!isLoading && totalGymCount === 0 && (
             <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
               <MapPin size={32} className="mb-4 text-orange-500" />
@@ -163,7 +187,9 @@ const GymsSidebarRail = ({
                 {showSavedOnly ? "No saved gyms yet." : "No gyms found."}
               </p>
               <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                {showSavedOnly ? "Save a gym to see it here" : "Try a different search area"}
+                {showSavedOnly
+                  ? "Save a gym to see it here"
+                  : "Try a different search area"}
               </p>
             </div>
           )}
@@ -205,6 +231,7 @@ function DesktopGymCard({
   onClick,
   onToggleSaved,
   showSaveAction,
+  showOccupancy,
 }: {
   gym: GymRecommendationItem;
   selected: boolean;
@@ -212,6 +239,7 @@ function DesktopGymCard({
   onClick: () => void;
   onToggleSaved: () => void;
   showSaveAction: boolean;
+  showOccupancy: boolean;
 }) {
   const previewImageUrl = getGymPreviewImageUrl(gym);
 
@@ -294,7 +322,10 @@ function DesktopGymCard({
                         : "border-white/10 user-surface-muted text-slate-500 hover:text-white"
                     }`}
                   >
-                    <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
+                    <Bookmark
+                      size={14}
+                      className={isSaved ? "fill-current" : ""}
+                    />
                   </button>
                 )}
               </div>
@@ -302,7 +333,7 @@ function DesktopGymCard({
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3 text-[10px] font-bold">
-            {gym.occupancyPercent != null && (
+            {showOccupancy && gym.occupancyPercent != null && (
               <div className="rounded-lg bg-white/5 px-2 py-1">
                 <span className="text-slate-300">Occupancy </span>
                 <span className="text-white">{gym.occupancyPercent}%</span>

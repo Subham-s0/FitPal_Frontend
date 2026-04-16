@@ -245,7 +245,7 @@ function DashboardHome() {
   const planColors: Record<string, string> = { BASIC: "#f59e0b", PRO: "#ea580c", ELITE: "#e11d48" };
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-7">
+    <div className="dashboard-mobile-page mx-auto max-w-[1600px] space-y-7">
       {/* Header */}
       <div>
         <h1 className="text-[32px] font-black tracking-tight text-white">
@@ -256,7 +256,7 @@ function DashboardHome() {
       {/* ── PLATFORM SNAPSHOT ─────────────────────────────────── */}
       <div>
         <SectionLabel>Platform snapshot</SectionLabel>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="dashboard-mobile-compact-grid grid grid-cols-2 gap-3 xl:grid-cols-4">
           {snapshotQ.isLoading ? (
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)
           ) : snap ? (
@@ -830,7 +830,8 @@ function DashboardHome() {
             <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
           ) : topGymsQ.data && topGymsQ.data.length > 0 ? (
             <div className="overflow-hidden rounded-lg border border-white/[0.06]">
-              <table className="w-full text-left">
+              <div className="dashboard-mobile-table-scroll">
+                <table className="min-w-[760px] w-full text-left">
                 <thead>
                   <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                     <th className="px-3 py-2 text-[9px] font-black uppercase tracking-[0.1em] table-text-muted">Gym</th>
@@ -890,7 +891,8 @@ function DashboardHome() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           ) : (
             <p className="py-6 text-center text-xs table-text-muted">No gym data available</p>
@@ -1175,7 +1177,7 @@ const AdminDashboard = () => {
       onSectionChange={(section) => setActiveSection(resolveSection(section))}
       onPrimaryAction={() => setActiveSection("users")}
       onProfileClick={() => setActiveSection("home")}
-      contentClassName="px-4 py-6 sm:px-6 lg:px-8"
+      contentClassName="px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
     >
       {renderContent()}
     </DefaultLayout>

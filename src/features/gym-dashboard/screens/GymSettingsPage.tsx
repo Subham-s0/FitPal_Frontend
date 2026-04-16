@@ -105,9 +105,9 @@ function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[18px] border table-border table-bg-alt px-4 py-4">
+    <div className="rounded-[18px] border table-border table-bg-alt px-3.5 py-3.5 sm:px-4 sm:py-4">
       <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
-      <p className="mt-1.5 text-[14px] font-bold text-white">{value}</p>
+      <p className="mt-1.5 text-[13px] font-bold text-white sm:text-[14px]">{value}</p>
     </div>
   );
 }
@@ -150,20 +150,20 @@ function SectionCard({
         aria-expanded={active}
         onClick={onToggle}
         className={cn(
-          "flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors",
+          "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors sm:px-5 sm:py-4",
           !active && "hover:bg-white/[0.02]"
         )}
       >
         <div className="flex min-w-0 items-center gap-3.5">
           <div
             className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] border transition-colors",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border transition-colors sm:h-11 sm:w-11",
               active
                 ? "border-orange-500/30 bg-orange-500/15 text-orange-300"
                 : "table-border table-bg-alt text-slate-400"
             )}
           >
-            <Icon className="h-5 w-5" />
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
             <p className={cn("text-[13px] font-black uppercase tracking-[0.12em]", active ? "text-white" : "text-slate-200")}>
@@ -173,7 +173,7 @@ function SectionCard({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {badge}
           <span
             className={cn(
@@ -192,7 +192,7 @@ function SectionCard({
       </button>
 
       {active ? (
-        <div className="border-t table-border-cell table-bg-alt px-5 py-5">
+        <div className="border-t table-border-cell table-bg-alt px-4 py-4 sm:px-5 sm:py-5">
           {children}
         </div>
       ) : null}
@@ -257,7 +257,7 @@ const GymSettingsPage: FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="dashboard-mobile-page space-y-6 animate-fade-in">
       <div>
         <h1 className="text-[32px] font-black tracking-tight text-white">
           Gym <span style={fireStyle}>Settings</span>
@@ -272,7 +272,7 @@ const GymSettingsPage: FC = () => {
           onToggle={() => toggleSection("overview")}
           summary="Live snapshot"
         >
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             {overviewStats.map((item) => (
               <MetricCard key={item.label} label={item.label} value={item.value} />
             ))}

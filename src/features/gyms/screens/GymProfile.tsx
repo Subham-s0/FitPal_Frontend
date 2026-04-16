@@ -5,6 +5,8 @@ import axios from "axios";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
+  Activity,
+  ArrowRight,
   ArrowUpDown,
   Bookmark,
   ChevronDown,
@@ -22,6 +24,7 @@ import {
   SlidersHorizontal,
   Star,
   Trash2,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthState } from "@/features/auth/hooks";
@@ -365,6 +368,8 @@ const GymProfile = () => {
   const canCheckIn = isAuthenticated
     ? Boolean(profile?.checkInEnabled && profileView?.accessibleByCurrentUser)
     : Boolean(profile?.checkInEnabled);
+  const profileActionLabel = isAuthenticated ? "Check In" : "Get Started";
+  const ProfileActionIcon = isAuthenticated ? ShieldCheck : ArrowRight;
   const gallery = useMemo(
     () => (profile ? buildGallery(profile) : []),
     [profile]
@@ -895,8 +900,8 @@ const GymProfile = () => {
                         }}
                         className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-500/40 bg-transparent px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-emerald-400 shadow-[inset_0_0_12px_rgba(16,185,129,0.2)] transition-all hover:bg-emerald-500/10 hover:border-emerald-500/60 hover:shadow-[inset_0_0_16px_rgba(16,185,129,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        {isAuthenticated ? "Check In" : "Get Started"}
+                        <ProfileActionIcon className="h-3.5 w-3.5" />
+                        {profileActionLabel}
                       </button>
                     </div>
                   </div>
@@ -920,28 +925,73 @@ const GymProfile = () => {
                 </div>
 
                 <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Live Occupancy</h3>
-                  <div className="mt-4 flex items-end gap-3">
-                    <div>
-                      <p className="text-4xl font-black text-white">{profile.activeCheckIns ?? "-"}</p>
-                      <p className="text-[10px] font-bold uppercase text-gray-500">Active</p>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Current Activity</h3>
+
+                  {isAuthenticated && dashboardRole === "USER" ? (
+                    <>
+                      <div className="mt-4 flex items-end gap-3">
+                        <div>
+                          <p className="text-4xl font-black text-white">{profile.activeCheckIns ?? "-"}</p>
+                          <p className="text-[10px] font-bold uppercase text-gray-500">Active</p>
+                        </div>
+                        <div className="mb-1 text-3xl text-gray-700">/</div>
+                        <div>
+                          <p className="text-xl font-black text-gray-400">{profile.maxCapacity ?? "-"}</p>
+                          <p className="text-[10px] font-bold uppercase text-gray-500">Capacity</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {profile.occupancyLabel ? (
+                          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-orange-300">
+                            {profile.occupancyLabel}
+                          </span>
+                        ) : null}
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]",
+                            profile.currentlyOpen
+                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                              : "border-red-500/30 bg-red-500/10 text-red-300"
+                          )}
+                        >
+                          {profile.currentlyOpen ? "Open now" : "Closed now"}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-xs text-gray-400">
+                        Live check-ins and total capacity update in real time.
+                      </p>
+                    </>
+                  ) : (
+                    <div className="mt-4 flex flex-col items-center justify-between gap-4 rounded-2xl border border-dashed border-orange-500/20 bg-gradient-to-r from-orange-500/[0.04] to-transparent p-5 sm:flex-row sm:p-4">
+                      <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+                        <div className="flex shrink-0 -space-x-3">
+                          <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-[#121212] bg-orange-500/20">
+                            <Activity className="h-5 w-5 text-orange-400" />
+                          </div>
+                          <div className="relative z-0 flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-[#121212] bg-white/10">
+                            <Users className="h-5 w-5 text-gray-400" />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-tight text-white">
+                            Live Activity Tracking
+                          </h4>
+                          <p className="mt-1 text-xs text-gray-400 sm:mt-0.5">
+                            Join to see real-time check-ins & capacity.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={() => navigate("/signup")}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-[0_8px_24px_rgba(249,115,22,0.25)] transition-all hover:brightness-110 sm:w-auto"
+                      >
+                        Join to Unlock
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
                     </div>
-                    <div className="mb-1 text-3xl text-gray-700">/</div>
-                    <div>
-                      <p className="text-xl font-black text-gray-400">{profile.maxCapacity ?? "-"}</p>
-                      <p className="text-[10px] font-bold uppercase text-gray-500">Capacity</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-emerald-500/55">
-                    <div
-                      className="h-full bg-orange-600 transition-all duration-500"
-                      style={{ width: `${Math.max(0, Math.min(100, profile.occupancyPercent ?? 0))}%` }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-gray-400">
-                    {profile.occupancyPercent != null ? `${profile.occupancyPercent}%` : "-"}{" "}
-                    {profile.occupancyLabel ? `(${profile.occupancyLabel})` : ""}
-                  </p>
+                  )}
                 </div>
 
                 <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
@@ -962,21 +1012,21 @@ const GymProfile = () => {
                 </div>
 
                 <div className="rounded-[2rem] border border-white/10 user-surface-overlay p-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Gym Reviews</h3>
-                    <div className="flex items-center gap-4">
-                      <div className="inline-flex items-center gap-2 text-orange-400">
-                        <Star className="h-4 w-4 fill-current" />
-                        <span className="text-lg font-black">{profile.rating?.toFixed(1) ?? "-"}</span>
-                        <span className="text-xs font-bold text-gray-400">({profile.reviewCount})</span>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="inline-flex items-center gap-1.5 text-orange-400">
+                        <Star className="h-3.5 w-3.5 fill-current sm:h-4 sm:w-4" />
+                        <span className="text-base font-black sm:text-lg">{profile.rating?.toFixed(1) ?? "-"}</span>
+                        <span className="text-[10px] font-bold text-gray-400 sm:text-xs">({profile.reviewCount})</span>
                       </div>
                       {canWriteReview && !showReviewForm && !myReview && (
                         <button
                           type="button"
                           onClick={openCreateReviewForm}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-orange-300/40 bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-[0_12px_28px_rgba(249,115,22,0.24)] transition-all hover:scale-[1.01] hover:brightness-110"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-orange-300/40 bg-gradient-to-r from-orange-500 via-orange-400 to-amber-400 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-white shadow-[0_8px_16px_rgba(249,115,22,0.2)] transition-all hover:scale-[1.01] hover:brightness-110 sm:px-4 sm:py-2 sm:text-[10px] sm:shadow-[0_12px_28px_rgba(249,115,22,0.24)]"
                         >
-                          <Star className="h-3 w-3" />
+                          <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                           Write Review
                         </button>
                       )}
@@ -1051,10 +1101,12 @@ const GymProfile = () => {
                   )}
                   
                   <div className="mt-4 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">All Reviews</p>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <div className="relative w-[220px]">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="shrink-0 text-[10px] font-black uppercase tracking-[0.14em] text-gray-500">
+                        All Reviews
+                      </p>
+                      <div className="flex w-full items-center gap-2 sm:w-auto">
+                        <div className="relative flex-1 sm:w-[220px] sm:flex-none">
                           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                           <input
                             value={reviewsQuery}
@@ -1123,7 +1175,7 @@ const GymProfile = () => {
                         return (
                           <div
                             key={review.reviewId}
-                            className="rounded-2xl border border-white/[0.07] bg-[#111111] p-4 transition-colors hover:border-white/[0.1] hover:bg-[#0f0f0f]"
+                            className="rounded-2xl border border-white/8 user-surface-soft p-5 transition-colors hover:border-white/10"
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 items-center gap-3">
@@ -1147,7 +1199,7 @@ const GymProfile = () => {
                                       {review.reviewerName ?? "FitPal Member"}
                                     </p>
                                     {isOwnReview ? (
-                                      <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-300">
+                                      <span className="shrink-0 rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-300">
                                         My Review
                                       </span>
                                     ) : null}

@@ -1384,15 +1384,15 @@ export default function ManageGyms() {
   const colStyle = (i: number) => ({ width: COL_W[i] });
 
   return (
-      <div className="space-y-5 font-['Outfit',system-ui,sans-serif]">
+      <div className="dashboard-mobile-page space-y-5 font-['Outfit',system-ui,sans-serif]">
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="dashboard-mobile-toolbar flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-[32px] font-black tracking-tight text-white">
               Manage <span style={fireStyle}>Gyms</span>
             </h1>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="dashboard-mobile-actions flex items-center gap-2 flex-shrink-0">
           <span className="px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border border-orange-500/25 bg-orange-500/10 text-orange-400">
             {pendingCt} Pending
           </span>
@@ -1404,15 +1404,15 @@ export default function ManageGyms() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="relative flex-1 max-w-[300px]">
+        <div className="dashboard-mobile-toolbar flex items-center justify-between gap-2 flex-wrap">
+          <div className="dashboard-mobile-search relative flex-1 max-w-[300px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 table-text-muted pointer-events-none" />
             <input value={searchInput} onChange={e => setSearchInput(e.target.value)}
                    placeholder="Search gym, email, address…"
                    className="w-full pl-9 pr-4 py-2 table-bg table-border border rounded-full text-[13px] font-medium text-white placeholder:table-text-muted outline-none focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)] transition-all"
             />
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="dashboard-mobile-actions flex items-center gap-2 flex-shrink-0">
             <button type="button" onClick={() => setSortIdx(i => (i + 1) % SORTS.length)}
                     className={`flex items-center gap-1.5 px-3.5 py-[7px] rounded-full border text-[12px] font-bold transition-all ${sortIdx !== 0 ? "bg-orange-500/10 border-orange-500/30 text-orange-400" : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"}`}>
               <SortIcon className="w-3.5 h-3.5" />{sortMode.label}
@@ -1473,7 +1473,8 @@ export default function ManageGyms() {
         </div>
 
         <div className="table-bg table-border border rounded-[18px] overflow-hidden">
-          <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+          <div className="dashboard-mobile-table-scroll">
+            <table className="min-w-[1100px] w-full border-collapse" style={{ tableLayout: "fixed" }}>
             <thead>
             <tr className="table-header-bg table-border border-b">
               {["Gym","Type","Address","Email","Registered","Status","Documents","Payout",""].map((h, i) => (
@@ -1623,19 +1624,20 @@ export default function ManageGyms() {
               ].filter(Boolean) as React.ReactNode[];
             })}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t table-border-cell pt-4">
+        <div className="dashboard-mobile-pagination flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t table-border-cell pt-4">
           <p className="text-[11px] table-text-muted">
             {debounced ? `Search results for "${debounced}"` : `Showing ${activeStatus.toLowerCase().replace("_"," ")} gyms`}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="dashboard-mobile-pagination-actions flex items-center gap-2">
             <button type="button" disabled={page === 0 || gymsQ.isFetching} onClick={() => setPage(p => Math.max(0, p - 1))}
                     className="px-4 py-1.5 rounded-full border table-border table-bg text-[11px] font-bold table-text hover:text-white hover:border-white/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               Previous
             </button>
-            <span className="px-4 py-1.5 rounded-full border table-border table-bg-alt text-[11px] font-semibold text-white">
+            <span className="dashboard-mobile-page-pill px-4 py-1.5 rounded-full border table-border table-bg-alt text-[11px] font-semibold text-white">
             Page {page + 1} of {totalPages}
           </span>
             <button type="button" disabled={!gymsQ.data?.hasNext || gymsQ.isFetching} onClick={() => setPage(p => p + 1)}

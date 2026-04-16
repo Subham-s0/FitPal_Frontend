@@ -903,7 +903,7 @@ const UserDashboard = () => {
         description="All your widgets combined in one place."
         width="wide"
         className="fade-up"
-        bodyClassName="space-y-5"
+        bodyClassName="space-y-5 pb-[calc(110px+env(safe-area-inset-bottom))] md:pb-0"
       >
         {/* Top Row Grid - 3 columns on desktop, 1 on mobile */}
         <div className="top-sys mb-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -1428,7 +1428,7 @@ const UserDashboard = () => {
               </div>
 
               <div className="img-col order-1 flex flex-col xl:order-2">
-                <h3 className="mb-5 text-[clamp(18px,2vw,22px)] font-black uppercase tracking-[-0.03em]">
+                <h3 className="mb-5 text-2xl font-black uppercase tracking-[-0.03em]">
                   Workout <span className="text-gradient-fire">Summary</span>
                 </h3>
 
@@ -1528,7 +1528,7 @@ const UserDashboard = () => {
       contentMode={
         activeSection === "gyms" ||
         activeSection === "exercises" ||
-        (activeSection === "routines" && isRoutineDetailView && !isMobile)
+        (activeSection === "routines" && isRoutineDetailView)
           ? "immersive"
           : "default"
       }

@@ -495,7 +495,7 @@ const GymProfilePage: FC = () => {
   );
 
   return (
-    <div className="max-w-[1600px] animate-fade-in">
+    <div className="dashboard-mobile-page max-w-[1600px] animate-fade-in">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-black uppercase tracking-tight">
@@ -506,7 +506,7 @@ const GymProfilePage: FC = () => {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)} className="mb-5 sm:mb-6">
-        <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+        <TabsList className="dashboard-mobile-tablist flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
           {(
             [
               { id: "profile", label: "Profile" },

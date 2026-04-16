@@ -292,7 +292,7 @@ export default function GymAnnouncementsPage() {
   };
 
   return (
-    <div className="space-y-5 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page space-y-5 font-['Outfit',system-ui,sans-serif]">
       {/* ── Header ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -300,7 +300,7 @@ export default function GymAnnouncementsPage() {
             Gym <span style={fireStyle}>Announcements</span>
           </h1>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="dashboard-mobile-actions flex flex-shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => void Promise.all([listQuery.refetch(), statsQuery.refetch()])}
@@ -379,9 +379,9 @@ export default function GymAnnouncementsPage() {
       </div>
 
       {/* ── Toolbar ── */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b table-border pb-4">
+      <div className="dashboard-mobile-toolbar flex flex-wrap items-center justify-between gap-2 border-b table-border pb-4">
         {/* Search */}
-        <div className="relative max-w-[300px] flex-1">
+        <div className="dashboard-mobile-search relative max-w-[300px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 table-text-muted" />
           <input
             value={query}
@@ -394,7 +394,7 @@ export default function GymAnnouncementsPage() {
           />
         </div>
 
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+        <div className="dashboard-mobile-actions flex flex-shrink-0 flex-wrap items-center gap-2">
           {/* ── Filter panel ── */}
           <div ref={filterRef} className="relative">
             <button
@@ -524,7 +524,8 @@ export default function GymAnnouncementsPage() {
 
       {/* ── Table ── */}
       <div className="overflow-hidden rounded-[18px] border table-border table-bg">
-        <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <div className="dashboard-mobile-table-scroll">
+          <table className="min-w-[820px] w-full border-collapse" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr className="table-header-bg border-b table-border">
               {["Announcement", "Publish", "Review", "Scheduled", "Published", ""].map((h, i) => (
@@ -632,15 +633,16 @@ export default function GymAnnouncementsPage() {
               ))
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {/* ── Pagination ── */}
-      <div className="flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="dashboard-mobile-pagination flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[11px] table-text-muted">
           {query ? `Search: "${query}"` : "Filter by review or publish status above"}
         </p>
-        <div className="flex items-center gap-1.5">
+        <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
           <button
             type="button"
             disabled={!listQuery.data?.hasPrevious || listQuery.isFetching}
@@ -649,7 +651,7 @@ export default function GymAnnouncementsPage() {
           >
             Prev
           </button>
-          <span className="rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
+          <span className="dashboard-mobile-page-pill rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
             Page {currentPage + 1} of {totalPages}
           </span>
           <button

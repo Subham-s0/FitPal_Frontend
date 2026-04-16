@@ -14,16 +14,29 @@ interface SidebarProps {
   onChange: (section: string) => void;
   expanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  isMobileMenuOpen?: boolean;
+  setIsMobileMenuOpen?: (open: boolean) => void;
 }
 
-const DashboardSidebar = ({ role, active, onChange, expanded, onExpandedChange }: SidebarProps) => {
+const DashboardSidebar = ({ 
+  role, 
+  active, 
+  onChange, 
+  expanded, 
+  onExpandedChange,
+  isMobileMenuOpen,
+  setIsMobileMenuOpen
+}: SidebarProps) => {
   const navigate = useNavigate();
   const auth = useAuthState();
   const [internalExpanded, setInternalExpanded] = useState(false);
   const roleValue = role ?? auth.role;
   const navItems = getDashboardNavItems(roleValue);
   const dashboardRole = getDashboardRole(roleValue);
-  const isExpanded = expanded ?? internalExpanded;
+  
+  // On desktop we handle expansion via internal state or prop.
+  // On mobile, the "expanded" state relates strictly to the off-canvas menu being open.
+  const isExpanded = isMobileMenuOpen || (expanded ?? internalExpanded);
   const setExpanded = onExpandedChange ?? setInternalExpanded;
   const settingsActive = active === "settings" || active === "cms";
 
@@ -43,7 +56,11 @@ const DashboardSidebar = ({ role, active, onChange, expanded, onExpandedChange }
 
   return (
     <aside
-      className={`z-40 flex h-full shrink-0 flex-col overflow-hidden border-r border-[var(--border-default)] bg-[var(--surface-sidebar)] transition-[width,padding] duration-300 ${isExpanded ? "w-72 p-4" : "w-16 p-2"}`}
+      className={`z-40 flex h-full flex-col overflow-hidden border-r border-[#1f1f1f] bg-[#0a0a0a] transition-all duration-300 absolute md:relative ${
+        isMobileMenuOpen ? "w-72 p-4 translate-x-0" : "w-72 md:w-16 p-4 md:p-2 -translate-x-full md:translate-x-0" 
+      } ${
+        (!isMobileMenuOpen && isExpanded) ? "md:w-72 md:p-4" : ""
+      }`}
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       onFocusCapture={() => setExpanded(true)}

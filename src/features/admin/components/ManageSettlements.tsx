@@ -242,7 +242,7 @@ function sortByLabel(field: CheckinSortBy): string {
 
 function SettlementAdminStepStrip({ stepIndex, steps }: { stepIndex: 0 | 1; steps: readonly [string, string] }) {
   return (
-    <div className="mb-5 w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="dashboard-mobile-scroll-rail mb-5 w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <div className="mx-auto flex w-full max-w-md items-start justify-between px-2 pb-6 pt-1">
         {steps.map((label, index) => {
           const done = index < stepIndex;
@@ -324,11 +324,11 @@ function PaginationControls({
   if (end < totalPages - 1) pages.push(totalPages - 1);
 
   return (
-    <div className="flex items-center justify-between border-t table-border px-4 py-3">
+    <div className="dashboard-mobile-pagination flex items-center justify-between border-t table-border px-4 py-3">
       <p className="text-[12px] table-text-muted">
         Page {page + 1} of {Math.max(totalPages, 1)} • {totalItems} total
       </p>
-      <div className="flex items-center gap-1.5">
+      <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
         <Button
           type="button"
           variant="outline"
@@ -1052,13 +1052,13 @@ export default function ManageSettlements() {
   const gymOptions = useMemo(() => gymsQ.data ?? [], [gymsQ.data]);
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page mx-auto max-w-[1400px] space-y-6 font-['Outfit',system-ui,sans-serif]">
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AdminSettlementTab)}>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-5 sm:items-center">
           <h1 className="text-[32px] font-black tracking-tight text-white">
             Settlement <span style={fireStyle}>Center</span>
           </h1>
-          <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+          <TabsList className="dashboard-mobile-tablist flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
           <TabsTrigger
             value="checkins"
             className={cn(
@@ -1099,7 +1099,7 @@ export default function ManageSettlements() {
         </div>
 
         <TabsContent value="checkins" className="mt-0 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="dashboard-mobile-toolbar flex flex-wrap items-center gap-2">
             <button
               type="button"
               className={cn(
@@ -1353,7 +1353,7 @@ export default function ManageSettlements() {
           ) : null}
 
           {/* ── Cards with Pie Chart ──────────────────────────────────────── */}
-          <div className="grid grid-flow-col auto-cols-[minmax(180px,1fr)] gap-3 overflow-x-auto pb-1">
+          <div className="dashboard-mobile-scroll-rail grid grid-flow-col auto-cols-[minmax(180px,1fr)] gap-3 overflow-x-auto pb-1">
             <div className="flex flex-col rounded-xl border table-border table-bg p-3.5">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Paid amount</span>
@@ -1633,7 +1633,7 @@ export default function ManageSettlements() {
               <p className="px-4 py-6 text-sm text-red-300">{getApiErrorMessage(pendingQ.error, "Failed to load settlements")}</p>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="dashboard-mobile-table-scroll overflow-x-auto">
                   <table className="w-full border-collapse text-left">
                     <thead>
                       <tr className="table-header-bg border-b table-border">
@@ -1770,7 +1770,7 @@ export default function ManageSettlements() {
         </TabsContent>
 
         <TabsContent value="batches" className="mt-0 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="dashboard-mobile-toolbar flex flex-wrap items-center gap-2">
             <button
               type="button"
               className={cn(MG_TOOLBAR_BASE, batchFilterDialogOpen ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}
@@ -1918,7 +1918,7 @@ export default function ManageSettlements() {
               <p className="px-4 py-6 text-sm text-red-300">{getApiErrorMessage(batchesQ.error, "Failed to load payout batches")}</p>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="dashboard-mobile-table-scroll overflow-x-auto">
                   <table className="w-full min-w-[920px] table-fixed border-collapse text-left">
                     <thead>
                       <tr className="table-header-bg border-b table-border">

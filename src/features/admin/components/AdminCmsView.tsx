@@ -88,8 +88,8 @@ function Dots({ onEdit, onDelete, extra }: {
 function TableWrap({ children }: { children: React.ReactNode }) {
   return (
     <div className="overflow-hidden rounded-[18px] border table-border table-bg">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left">{children}</table>
+      <div className="dashboard-mobile-table-scroll overflow-x-auto">
+        <table className="min-w-[640px] w-full border-collapse text-left">{children}</table>
       </div>
     </div>
   );
@@ -925,9 +925,9 @@ export default function AdminCmsView({
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="dashboard-mobile-page space-y-6 animate-fade-in">
       {/* Back + breadcrumb */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={onBack}
@@ -948,41 +948,43 @@ export default function AdminCmsView({
       </div>
 
       {/* Sub-tab nav */}
-      <div className="flex flex-wrap gap-2 border-b table-border pb-4">
-        {CMS_TABS.map((t) => {
-          const Icon = t.icon;
-          const isActive = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.1em]",
-                "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform",
-                isActive
-                  ? "border-orange-500/40 bg-orange-500/15 text-orange-300 scale-100"
-                  : "table-border table-bg text-slate-400 hover:border-orange-500/20 hover:text-orange-300 hover:scale-[1.02] active:scale-[0.98]"
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" /> {t.label}
-            </button>
-          );
-        })}
+      <div className="dashboard-mobile-toolbar border-b table-border pb-4">
+        <div className="dashboard-mobile-tablist flex w-full flex-nowrap gap-2 overflow-x-auto">
+          {CMS_TABS.map((t) => {
+            const Icon = t.icon;
+            const isActive = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-bold uppercase tracking-[0.1em]",
+                  "transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] transform-gpu will-change-transform",
+                  isActive
+                    ? "border-orange-500/40 bg-orange-500/15 text-orange-300 scale-100"
+                    : "table-border table-bg text-slate-400 hover:border-orange-500/20 hover:text-orange-300 hover:scale-[1.02] active:scale-[0.98]"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" /> {t.label}
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
           onClick={() => {
             queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
             toast.success("Marketing home will refetch CMS");
           }}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/[0.08] px-3.5 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/12"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/[0.08] px-3.5 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/12 sm:ml-auto sm:w-auto"
         >
           <RefreshCcw className="h-3.5 w-3.5" /> Refresh marketing
         </button>
       </div>
 
       {/* Tab content */}
-      <div className="rounded-[22px] border table-border table-bg p-6">
+      <div className="rounded-[22px] border table-border table-bg p-4 sm:p-6">
         {renderTab()}
       </div>
     </div>

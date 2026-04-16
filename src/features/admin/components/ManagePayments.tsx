@@ -199,11 +199,11 @@ function PaginationControls({
   if (end < totalPages - 1) pages.push(totalPages - 1);
 
   return (
-    <div className="flex items-center justify-between border-t table-border px-4 py-3">
+    <div className="dashboard-mobile-pagination flex items-center justify-between border-t table-border px-4 py-3">
       <p className="text-[12px] table-text-muted">
         Page {page + 1} of {Math.max(totalPages, 1)} - {totalItems} total
       </p>
-      <div className="flex items-center gap-1.5">
+      <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
         <Button
           type="button"
           variant="outline"
@@ -423,7 +423,7 @@ export default function ManagePayments() {
   const colStyle = (i: number) => ({ width: COL_W[i] });
 
   return (
-    <div className="space-y-5 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page space-y-5 font-['Outfit',system-ui,sans-serif]">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -453,7 +453,7 @@ export default function ManagePayments() {
          */}
         <TabsContent value="subscriptions" className="mt-0 space-y-5">
           {/* Charts strip */}
-          <div className="flex w-full min-w-0 flex-nowrap items-stretch gap-3 overflow-x-auto pb-1">
+          <div className="dashboard-mobile-scroll-rail flex w-full min-w-0 flex-nowrap items-stretch gap-3 overflow-x-auto pb-1">
             {/* Revenue */}
             <div className="flex flex-1 min-w-[130px] flex-col rounded-xl border border-orange-500/25 bg-orange-500/[0.06] p-3">
               <div className="mb-2 flex w-full items-center justify-between gap-2 opacity-90">
@@ -614,14 +614,14 @@ export default function ManagePayments() {
           )}
 
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="relative max-w-[320px] flex-1">
+          <div className="dashboard-mobile-toolbar flex flex-wrap items-center justify-between gap-2">
+            <div className="dashboard-mobile-search relative max-w-[320px] flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 table-text-muted" />
               <input value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search email, invoice, gateway id"
                 className="w-full rounded-full border table-border table-bg py-2 pl-9 pr-4 text-[13px] font-medium text-white placeholder:table-text-muted outline-none transition-all focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)]" />
             </div>
-            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+            <div className="dashboard-mobile-actions flex flex-shrink-0 flex-wrap items-center gap-2">
               <button type="button" onClick={() => setSortDirection((d) => (d === "DESC" ? "ASC" : "DESC"))}
                 className={cn(MG_TOOLBAR_BASE, sortDirection === "ASC" ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}>
                 {sortDirection === "DESC" ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowUp className="h-3.5 w-3.5" />}
@@ -799,14 +799,14 @@ export default function ManagePayments() {
           </div>
 
           {/* Pagination */}
-          <div className="flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="dashboard-mobile-pagination flex flex-col gap-3 border-t table-border-cell pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[11px] table-text-muted">Filters apply to the payment history table above.</p>
-            <div className="flex items-center gap-2">
+            <div className="dashboard-mobile-pagination-actions flex items-center gap-2">
               <button type="button" disabled={page === 0 || historyQ.isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))}
                 className="rounded-full border table-border table-bg px-4 py-1.5 text-[11px] font-bold table-text transition-all hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-40">
                 Previous
               </button>
-              <span className="rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
+              <span className="dashboard-mobile-page-pill rounded-full border table-border table-bg-alt px-4 py-1.5 text-[11px] font-semibold text-white">
                 Page {page + 1} of {totalPages}
               </span>
               <button type="button" disabled={!historyQ.data?.hasNext || historyQ.isFetching} onClick={() => setPage((p) => p + 1)}
@@ -847,7 +847,7 @@ export default function ManagePayments() {
          */}
         <TabsContent value="payouts" className="mt-0 space-y-4">
           {/* Toolbar  mirrors ManageSettlements batches toolbar */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="dashboard-mobile-toolbar flex flex-wrap items-center gap-2">
             <button type="button"
               className={cn(MG_TOOLBAR_BASE, batchFilterDialogOpen ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}
               onClick={() => { syncBatchDraftFromApplied(); setBatchFilterDialogOpen(true); }}>

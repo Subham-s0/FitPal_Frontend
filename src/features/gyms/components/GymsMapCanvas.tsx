@@ -9,6 +9,7 @@ interface GymsMapCanvasProps {
   filteredGyms: GymRecommendationItem[];
   selectedGym: GymRecommendationItem | null;
   onSelectGym: (gym: GymRecommendationItem) => void;
+  showOccupancy?: boolean;
 }
 
 function createUserIcon(): L.DivIcon {
@@ -53,10 +54,10 @@ function createGymIcon(selected: boolean, open: boolean): L.DivIcon {
   });
 }
 
-function tooltipContent(gym: GymRecommendationItem): string {
+function tooltipContent(gym: GymRecommendationItem, showOccupancy: boolean): string {
   const distance = formatGymDistance(gym.distanceMeters);
   const status = gym.currentlyOpen ? "Open" : "Closed";
-  const occupancy = gym.occupancyPercent != null ? ` | ${gym.occupancyPercent}% full` : "";
+  const occupancy = showOccupancy && gym.occupancyPercent != null ? ` | ${gym.occupancyPercent}% full` : "";
 
   return [
     `<div style="font-weight:800;text-transform:uppercase;font-size:12px;margin-bottom:3px">${getGymDisplayName(gym)}</div>`,
@@ -69,6 +70,7 @@ const GymsMapCanvas = ({
   filteredGyms,
   selectedGym,
   onSelectGym,
+  showOccupancy = true,
 }: GymsMapCanvasProps) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -257,7 +259,7 @@ const GymsMapCanvas = ({
           existingMarker.setLatLng([gym.latitude, gym.longitude]);
         }
         existingMarker.setZIndexOffset(isSelected ? 1200 : 800);
-        existingMarker.setTooltipContent(tooltipContent(gym));
+        existingMarker.setTooltipContent(tooltipContent(gym, showOccupancy));
         return;
       }
 
@@ -270,7 +272,7 @@ const GymsMapCanvas = ({
         zIndexOffset: isSelected ? 1200 : 800,
       })
         .addTo(map)
-        .bindTooltip(tooltipContent(gym), {
+        .bindTooltip(tooltipContent(gym, showOccupancy), {
           className: "gym-tooltip",
           direction: "top",
           offset: [0, -20],
@@ -280,7 +282,7 @@ const GymsMapCanvas = ({
 
       existing.set(gym.gymId, marker);
     });
-  }, [filteredGyms, onSelectGym, selectedGym]);
+  }, [filteredGyms, onSelectGym, selectedGym, showOccupancy]);
 
   useEffect(() => {
     fitToVisiblePoints();

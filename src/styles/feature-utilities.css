@@ -135,4 +135,101 @@
   .page-subtitle {
     @apply mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-gray-500;
   }
+
+  .dashboard-mobile-page {
+    min-width: 0;
+  }
+
+  .dashboard-mobile-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .dashboard-mobile-pagination-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .dashboard-mobile-page h1 {
+    font-size: clamp(1.65rem, 6vw, 2rem) !important;
+    line-height: 1.05;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-search {
+    width: 100%;
+    max-width: none !important;
+    min-width: 0;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-actions {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-actions > * {
+    min-width: 0;
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-actions > .dashboard-mobile-action-wide {
+    flex-basis: 100%;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-scroll-rail,
+  .dashboard-mobile-page .dashboard-mobile-tablist {
+    margin-inline: -1rem;
+    overflow-x: auto;
+    padding-inline: 1rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-scroll-rail::-webkit-scrollbar,
+  .dashboard-mobile-page .dashboard-mobile-tablist::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-table-scroll {
+    padding-bottom: 0.25rem;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-pagination {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-pagination-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-pagination-actions > * {
+    min-width: 0;
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-pagination-actions > .dashboard-mobile-page-pill {
+    flex-basis: 100%;
+  }
+
+  .dashboard-mobile-page .dashboard-mobile-compact-grid {
+    gap: 0.625rem;
+  }
 }

@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bookmark, ChevronLeft, ChevronRight, MapPin, Search, Star } from "lucide-react";
+import {
+  ArrowRight,
+  Bookmark,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  QrCode,
+  Search,
+  Star,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import type { GymRecommendationItem } from "@/features/gyms/types";
 import DesktopSelectedGymCard from "@/features/gyms/components/DesktopSelectedGymCard";
@@ -25,22 +34,37 @@ interface GymsScreenProps {
 
 const ITEMS_PER_PAGE = 4;
 
-const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) => {
+const GymsScreen = ({
+  onSwitchToCheckIn,
+  variant = "member",
+}: GymsScreenProps) => {
   const isPublicVariant = variant === "public";
-  const state = useGymsRecommendation({ audience: isPublicVariant ? "public" : "member" });
+  const state = useGymsRecommendation({
+    audience: isPublicVariant ? "public" : "member",
+  });
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const locationEnabled = state.locationPermission === "granted" && !!state.userCoords;
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const locationEnabled =
+    state.locationPermission === "granted" && !!state.userCoords;
   const shouldShowLocationEnablePanel =
     !locationEnabled &&
     state.locationPermission !== "loading" &&
     state.locationPermission !== "granted";
   const selectedGymSaved = state.selectedGym?.isSaved ?? false;
   const allowSavedGyms = !isPublicVariant;
+  const showOccupancy = !isPublicVariant;
+  const showBestMatch = !isPublicVariant;
   const checkInActionLabel = isPublicVariant ? "Get Started" : "Check In";
+  const checkInActionIcon = isPublicVariant ? ArrowRight : QrCode;
   const canUseCheckInAction = (gym: GymRecommendationItem) =>
-    isPublicVariant ? gym.checkInEnabled : gym.checkInEnabled && gym.accessibleByCurrentUser;
-  const totalPages = Math.max(1, Math.ceil(state.filteredGyms.length / ITEMS_PER_PAGE));
+    isPublicVariant
+      ? gym.checkInEnabled
+      : gym.checkInEnabled && gym.accessibleByCurrentUser;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(state.filteredGyms.length / ITEMS_PER_PAGE),
+  );
   const pagedGyms = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return state.filteredGyms.slice(start, start + ITEMS_PER_PAGE);
@@ -66,7 +90,9 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
   useEffect(() => {
     if (!state.selectedGym) return;
 
-    const selectedIndex = state.filteredGyms.findIndex((gym) => gym.gymId === state.selectedGym?.gymId);
+    const selectedIndex = state.filteredGyms.findIndex(
+      (gym) => gym.gymId === state.selectedGym?.gymId,
+    );
     if (selectedIndex === -1) return;
 
     const selectedPage = Math.floor(selectedIndex / ITEMS_PER_PAGE) + 1;
@@ -100,8 +126,12 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
         currentPage={currentPage}
         totalPages={totalPages}
         onPreviousPage={() => setCurrentPage((page) => Math.max(1, page - 1))}
-        onNextPage={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+        onNextPage={() =>
+          setCurrentPage((page) => Math.min(totalPages, page + 1))
+        }
         allowSavedGyms={allowSavedGyms}
+        showOccupancy={showOccupancy}
+        showBestMatch={showBestMatch}
       />
 
       <div className="relative flex-1 overflow-hidden bg-[#0a0a0a]">
@@ -123,17 +153,27 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
               active={state.mode}
               onChange={state.setMode}
               locationEnabled={locationEnabled}
+              showBestMatch={showBestMatch}
             />
           </div>
 
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+              <Search
+                size={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500"
+              />
               <input
                 type="text"
-                placeholder={state.showSavedOnly ? "Search saved gyms..." : "Search gyms..."}
+                placeholder={
+                  state.showSavedOnly
+                    ? "Search saved gyms..."
+                    : "Search gyms..."
+                }
                 value={state.searchQuery}
                 onChange={(event) => state.setSearchQuery(event.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 className="w-full rounded-full border border-[#2a2a2a] bg-[#141414] py-3 pl-10 pr-4 text-sm font-medium text-white outline-none transition-colors placeholder:text-slate-500 focus:border-orange-600"
               />
             </div>
@@ -166,29 +206,55 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
           filteredGyms={state.filteredGyms}
           selectedGym={state.selectedGym}
           onSelectGym={state.selectGym}
+          showOccupancy={showOccupancy}
         />
 
         <DesktopSelectedGymCard
           gym={state.selectedGym}
           isSaved={selectedGymSaved}
           onClose={() => state.selectGym(null)}
-          onViewProfile={() => state.selectedGym && navigate(`/gym/${state.selectedGym.gymId}`)}
-          onCheckIn={() => state.selectedGym && onSwitchToCheckIn(state.selectedGym.gymId)}
-          onToggleSaved={() => state.selectedGym && state.toggleSavedGym(state.selectedGym.gymId)}
+          onViewProfile={() =>
+            state.selectedGym && navigate(`/gym/${state.selectedGym.gymId}`)
+          }
+          onCheckIn={() =>
+            state.selectedGym && onSwitchToCheckIn(state.selectedGym.gymId)
+          }
+          onToggleSaved={() =>
+            state.selectedGym && state.toggleSavedGym(state.selectedGym.gymId)
+          }
           showSaveAction={allowSavedGyms}
           checkInActionLabel={checkInActionLabel}
+          checkInActionIcon={checkInActionIcon}
           canUseCheckInAction={canUseCheckInAction}
+          showOccupancy={showOccupancy}
         />
 
         {!state.selectedGym && (
-          <div className="absolute bottom-[calc(var(--mobile-bottom-dock-height,52px)+env(safe-area-inset-bottom)+8px)] left-0 right-0 z-[1000] pb-4 pt-10 md:hidden">
-            <div className="flex gap-3 overflow-x-auto px-4 pb-2" style={{ scrollbarWidth: "none" }}>
+          <div
+            className={`absolute left-0 right-0 z-[1000] pb-4 md:hidden ${
+              isSearchFocused
+                ? "top-[135px] pt-4"
+                : "bottom-[calc(var(--mobile-bottom-dock-height,52px)+env(safe-area-inset-bottom)+16px)] pt-10"
+            }`}
+          >
+            <div
+              className="flex gap-3 overflow-x-auto px-4 pb-2"
+              style={{ scrollbarWidth: "none" }}
+            >
               {state.isDiscoverLoading && pagedGyms.length === 0 ? (
                 <MobileGymCardSkeleton />
               ) : state.filteredGyms.length === 0 ? (
                 <MobileGymStatusCard
-                  title={state.showSavedOnly ? "No saved gyms yet." : "No gyms found."}
-                  subtitle={state.showSavedOnly ? "Save a gym to see it here" : "Try a different search area"}
+                  title={
+                    state.showSavedOnly
+                      ? "No saved gyms yet."
+                      : "No gyms found."
+                  }
+                  subtitle={
+                    state.showSavedOnly
+                      ? "Save a gym to see it here"
+                      : "Try a different search area"
+                  }
                 />
               ) : (
                 pagedGyms.map((gym) => (
@@ -199,6 +265,7 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
                     onClick={() => state.selectGym(gym)}
                     onToggleSaved={() => state.toggleSavedGym(gym.gymId)}
                     showSaveAction={allowSavedGyms}
+                    showOccupancy={showOccupancy}
                   />
                 ))
               )}
@@ -206,8 +273,12 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
                 <MobilePaginationCard
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  onPreviousPage={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  onNextPage={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  onPreviousPage={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  onNextPage={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
                 />
               )}
             </div>
@@ -221,10 +292,14 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
           onClose={() => state.selectGym(null)}
           onCheckIn={(gymId) => onSwitchToCheckIn(gymId)}
           isSaved={selectedGymSaved}
-          onToggleSaved={() => state.selectedGym && state.toggleSavedGym(state.selectedGym.gymId)}
+          onToggleSaved={() =>
+            state.selectedGym && state.toggleSavedGym(state.selectedGym.gymId)
+          }
           showSaveAction={allowSavedGyms}
           checkInActionLabel={checkInActionLabel}
+          checkInActionIcon={checkInActionIcon}
           canUseCheckInAction={canUseCheckInAction}
+          showOccupancy={showOccupancy}
         />
       </div>
 
@@ -239,6 +314,7 @@ const GymsScreen = ({ onSwitchToCheckIn, variant = "member" }: GymsScreenProps) 
         onEnableLocation={async () => {
           await state.requestLocation();
         }}
+        allowBestMatch={showBestMatch}
       />
     </div>
   );
@@ -250,12 +326,14 @@ function MobileGymCard({
   onClick,
   onToggleSaved,
   showSaveAction,
+  showOccupancy,
 }: {
   gym: GymRecommendationItem;
   isSaved: boolean;
   onClick: () => void;
   onToggleSaved: () => void;
   showSaveAction: boolean;
+  showOccupancy: boolean;
 }) {
   const previewImageUrl = getGymPreviewImageUrl(gym);
 
@@ -278,7 +356,9 @@ function MobileGymCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h4 className="truncate text-xs font-extrabold uppercase tracking-tight">{getGymDisplayName(gym)}</h4>
+          <h4 className="truncate text-xs font-extrabold uppercase tracking-tight">
+            {getGymDisplayName(gym)}
+          </h4>
           <p className="mt-0.5 text-[8px] font-bold uppercase tracking-widest text-slate-500">
             {getGymCityLabel(gym)}
           </p>
@@ -301,7 +381,9 @@ function MobileGymCard({
         )}
       </div>
       <div className="flex items-center gap-2 text-[9px] font-bold">
-        <span className="text-orange-500">{formatGymDistance(gym.distanceMeters)}</span>
+        <span className="text-orange-500">
+          {formatGymDistance(gym.distanceMeters)}
+        </span>
         <span className={gym.currentlyOpen ? "text-green-400" : "text-red-400"}>
           {gym.currentlyOpen ? "Open" : "Closed"}
         </span>
@@ -311,7 +393,7 @@ function MobileGymCard({
             {gym.rating.toFixed(1)}
           </span>
         )}
-        {gym.occupancyPercent != null && (
+        {showOccupancy && gym.occupancyPercent != null && (
           <span className="text-slate-500">{gym.occupancyPercent}%</span>
         )}
       </div>
@@ -338,12 +420,20 @@ function MobileGymCardSkeleton() {
   );
 }
 
-function MobileGymStatusCard({ title, subtitle }: { title: string; subtitle: string }) {
+function MobileGymStatusCard({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div className="flex w-[248px] shrink-0 flex-col items-center justify-center rounded-2xl border border-white/10 user-surface p-4 text-center shadow-xl">
       <MapPin size={28} className="mb-3 text-orange-500" />
       <p className="text-sm font-bold text-white">{title}</p>
-      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">{subtitle}</p>
+      <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+        {subtitle}
+      </p>
     </div>
   );
 }

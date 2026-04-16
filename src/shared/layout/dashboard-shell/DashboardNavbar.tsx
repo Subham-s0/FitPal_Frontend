@@ -42,11 +42,12 @@ import {
 } from "./dashboard-shell-config";
 import { DashboardBrandLink, DashboardIdentityButton } from "./DashboardShellPrimitives";
 
-interface DashboardNavbarProps {
+export interface DashboardNavbarProps {
   role?: string | null;
   onPrimaryAction?: () => void;
   onProfileClick?: () => void;
   onPendingGymsClick?: () => void;
+  onMobileMenuClick?: () => void;
 }
 
 const DashboardNavbar = ({
@@ -54,6 +55,7 @@ const DashboardNavbar = ({
   onPrimaryAction,
   onProfileClick,
   onPendingGymsClick,
+  onMobileMenuClick,
 }: DashboardNavbarProps) => {
   const navigate = useNavigate();
   const auth = useAuthState();
@@ -296,8 +298,31 @@ const DashboardNavbar = ({
   };
 
   return (
-    <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-[#1f1f1f] bg-[#0f0f0f] px-8">
-      <div className="flex items-center gap-2">
+    <nav className="sticky top-0 z-50 flex h-16 w-full items-center justify-between border-b border-[#1f1f1f] bg-[#0f0f0f] px-4 md:h-20 md:px-8">
+      <div className="flex items-center gap-2 md:gap-4">
+        {onMobileMenuClick && (
+          <button
+            type="button"
+            onClick={onMobileMenuClick}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 user-surface-overlay text-white transition-colors hover:bg-white/10 md:hidden"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="4" x2="20" y1="12" y2="12" />
+              <line x1="4" x2="20" y1="6" y2="6" />
+              <line x1="4" x2="20" y1="18" y2="18" />
+            </svg>
+          </button>
+        )}
         <DashboardBrandLink href={logoHref} badgeLabel={roleBadgeLabel} showBadge={showRoleMeta} />
       </div>
 
@@ -309,18 +334,18 @@ const DashboardNavbar = ({
         />
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
         <NotificationBell />
 
         {isAdminDashboard ? (
           <button
             type="button"
             onClick={handlePendingGymsClick}
-            className="flex items-center gap-2 rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500 backdrop-blur-xl transition-all hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+            className="flex items-center gap-2 rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] p-2 md:px-4 md:py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500 backdrop-blur-xl transition-all hover:border-orange-500 hover:bg-orange-600 hover:text-white"
           >
-            <Building2 className="h-4 w-4" />
-            <span>Pending Gyms</span>
-            <span className="text-[10px] font-black text-orange-500">
+            <Building2 className="h-4 w-4 md:h-4 md:w-4" />
+            <span className="hidden md:inline">Pending Gyms</span>
+            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-orange-600 px-1 text-[9px] font-black text-white md:bg-transparent md:text-orange-500">
               {pendingGymsCount > 99 ? "99+" : pendingGymsCount}
             </span>
           </button>
@@ -328,11 +353,11 @@ const DashboardNavbar = ({
           <button
             type="button"
             onClick={handlePendingPayoutBatchesClick}
-            className="flex items-center gap-2 rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500 backdrop-blur-xl transition-all hover:border-orange-500 hover:bg-orange-600 hover:text-white"
+            className="flex items-center gap-2 rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] p-2 md:px-4 md:py-2.5 text-[11px] font-black uppercase tracking-[0.14em] text-orange-500 backdrop-blur-xl transition-all hover:border-orange-500 hover:bg-orange-600 hover:text-white"
           >
-            <Wallet className="h-4 w-4" />
-            <span>Pending</span>
-            <span className="text-[10px] font-black text-orange-500">
+            <Wallet className="h-4 w-4 md:h-4 md:w-4" />
+            <span className="hidden md:inline">Pending</span>
+            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-orange-600 px-1 text-[9px] font-black text-white md:bg-transparent md:text-orange-500">
               {pendingPayoutBatchesCount > 99 ? "99+" : pendingPayoutBatchesCount}
             </span>
           </button>
@@ -340,7 +365,7 @@ const DashboardNavbar = ({
           <button
             type="button"
             onClick={handlePrimaryAction}
-            className={`transition-all duration-300 ${
+            className={`transition-all duration-300 hidden md:block ${
               isUserDashboard
                 ? "rounded-full border border-[hsla(30,100%,50%,0.2)] bg-[hsla(30,100%,50%,0.1)] px-5 py-2.5 text-xs font-black uppercase tracking-widest text-orange-500 backdrop-blur-xl hover:border-orange-500 hover:bg-orange-600 hover:text-white"
                 : "rounded-lg border border-orange-500 bg-orange-600 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white hover:bg-orange-500"
@@ -350,16 +375,18 @@ const DashboardNavbar = ({
           </button>
         )}
 
-        <div className="h-10 w-px bg-[#252525]" />
+        <div className="hidden h-10 w-px bg-[#252525] md:block" />
 
-        <DashboardIdentityButton
-          displayName={displayName}
-          metaLabel={showRoleMeta ? roleLabel : undefined}
-          primaryImageUrl={profilePhotoUrl}
-          email={auth.email}
-          role={roleValue}
-          onClick={handleProfileClick}
-        />
+        <div className="hidden md:block">
+          <DashboardIdentityButton
+            displayName={displayName}
+            metaLabel={showRoleMeta ? roleLabel : undefined}
+            primaryImageUrl={profilePhotoUrl}
+            email={auth.email}
+            role={roleValue}
+            onClick={handleProfileClick}
+          />
+        </div>
       </div>
     </nav>
   );

@@ -6,7 +6,6 @@ import {
   ChevronUp,
   MapPin,
   Navigation,
-  QrCode,
   Star,
   X,
 } from "lucide-react";
@@ -31,7 +30,9 @@ interface GymDetailsSheetProps {
   onToggleSaved: () => void;
   showSaveAction?: boolean;
   checkInActionLabel?: string;
+  checkInActionIcon?: React.ElementType;
   canUseCheckInAction?: (gym: GymRecommendationItem) => boolean;
+  showOccupancy?: boolean;
 }
 
 const GymDetailsSheet = ({
@@ -44,7 +45,9 @@ const GymDetailsSheet = ({
   onToggleSaved,
   showSaveAction = true,
   checkInActionLabel = "Check In",
+  checkInActionIcon,
   canUseCheckInAction = canCheckInAtGym,
+  showOccupancy = true,
 }: GymDetailsSheetProps) => {
   const navigate = useNavigate();
   const touchStartYRef = useRef<number | null>(null);
@@ -91,7 +94,9 @@ const GymDetailsSheet = ({
             onToggleSaved={onToggleSaved}
             showSaveAction={showSaveAction}
             checkInActionLabel={checkInActionLabel}
+            checkInActionIcon={checkInActionIcon}
             canUseCheckInAction={canUseCheckInAction}
+            showOccupancy={showOccupancy}
           />
         </div>
       </div>
@@ -110,7 +115,9 @@ interface SheetContentProps {
   onToggleSaved: () => void;
   showSaveAction: boolean;
   checkInActionLabel: string;
+  checkInActionIcon?: React.ElementType;
   canUseCheckInAction: (gym: GymRecommendationItem) => boolean;
+  showOccupancy: boolean;
 }
 
 function SheetContent({
@@ -124,11 +131,16 @@ function SheetContent({
   onToggleSaved,
   showSaveAction,
   checkInActionLabel,
+  checkInActionIcon,
   canUseCheckInAction,
+  showOccupancy,
 }: SheetContentProps) {
   const isExpanded = snap === "expanded";
   const previewImageUrl = getGymPreviewImageUrl(gym);
   const showCheckInAction = canUseCheckInAction(gym);
+  const occupancyVisible = showOccupancy && gym.occupancyPercent != null;
+  const metricsVisible = occupancyVisible || Boolean(gym.minimumAccessTier);
+  const ActionIcon = checkInActionIcon;
 
   return (
     <div className="space-y-4">
@@ -241,10 +253,10 @@ function SheetContent({
         </div>
       </div>
 
-      {isExpanded && (
+      {isExpanded && metricsVisible && (
         <div className="animate-in slide-in-from-bottom-2 fade-in pt-2 duration-300">
           <div className="flex gap-3">
-            {gym.occupancyPercent != null && (
+            {occupancyVisible && (
               <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">
                   Occupancy
@@ -295,7 +307,7 @@ function SheetContent({
             className="flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-xs font-bold text-black shadow-[0_0_20px_rgba(234,88,12,0.3)] transition-all hover:opacity-90"
             style={{ background: "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)" }}
           >
-            <QrCode size={14} />
+            {ActionIcon ? <ActionIcon size={14} /> : null}
             {checkInActionLabel}
           </button>
         )}

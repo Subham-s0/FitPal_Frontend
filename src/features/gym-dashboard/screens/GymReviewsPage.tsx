@@ -373,7 +373,7 @@ const GymReviewsPage: FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-7">
+    <div className="dashboard-mobile-page mx-auto max-w-[1600px] space-y-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-[32px] font-black tracking-tight text-white">
@@ -518,13 +518,13 @@ const GymReviewsPage: FC = () => {
       </div>
 
       <section className={tableCard}>
-        <div className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="dashboard-mobile-toolbar flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-2">
             <MessageSquareReply className="h-4 w-4 text-orange-400" />
             <p className="text-[12px] font-bold uppercase tracking-[0.1em] text-zinc-400">All reviews</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative w-full sm:w-[260px]">
+          <div className="dashboard-mobile-actions flex flex-wrap items-center gap-2">
+            <div className="dashboard-mobile-search relative w-full sm:w-[260px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
               <Input
                 value={query}
@@ -631,7 +631,7 @@ const GymReviewsPage: FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-white/[0.08] px-5 py-3 text-[12px] table-text-muted">
+        <div className="dashboard-mobile-pagination flex items-center justify-between gap-2 border-t border-white/[0.08] px-5 py-3 text-[12px] table-text-muted">
           <p>
             Showing {reviews.length} of {reviewsQ.data?.totalItems ?? 0} reviews
           </p>
@@ -748,11 +748,11 @@ const GymReviewsPage: FC = () => {
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/[0.08] px-5 py-4">
+        <div className="dashboard-mobile-pagination flex items-center justify-between border-t border-white/[0.08] px-5 py-4">
           <p className="text-[12px] table-text-muted">
             Page {(reviewsQ.data?.page ?? 0) + 1} of {Math.max(reviewsQ.data?.totalPages ?? 1, 1)}
           </p>
-          <div className="flex items-center gap-1.5">
+          <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
             <button
               type="button"
               className={cn(toolbarButtonBase, toolbarButtonIdle, "h-auto px-3.5 py-1.5 text-[11px] disabled:cursor-not-allowed disabled:opacity-40")}
@@ -761,7 +761,7 @@ const GymReviewsPage: FC = () => {
             >
               Prev
             </button>
-            <span className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[11px] font-semibold text-white">
+            <span className="dashboard-mobile-page-pill rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[11px] font-semibold text-white">
               {(reviewsQ.data?.page ?? 0) + 1}
             </span>
             <button
@@ -789,7 +789,7 @@ const GymReviewsPage: FC = () => {
           }
         }}
       >
-        <DialogContent className="max-w-2xl border table-border bg-[#121212] text-white">
+        <DialogContent className="max-w-[calc(100vw-1.5rem)] border table-border bg-[#121212] text-white sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{replyTarget?.gymReply ? "Edit gym reply" : "Reply to review"}</DialogTitle>
             <DialogDescription className="table-text-muted">

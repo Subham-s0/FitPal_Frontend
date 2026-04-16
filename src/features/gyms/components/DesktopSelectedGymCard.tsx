@@ -1,4 +1,4 @@
-import { Bookmark, Navigation, QrCode, Star, X } from "lucide-react";
+import { Bookmark, Navigation, Star, X } from "lucide-react";
 import type { GymRecommendationItem } from "@/features/gyms/types";
 import {
   canCheckInAtGym,
@@ -18,7 +18,9 @@ interface DesktopSelectedGymCardProps {
   onToggleSaved: () => void;
   showSaveAction?: boolean;
   checkInActionLabel?: string;
+  checkInActionIcon?: React.ElementType;
   canUseCheckInAction?: (gym: GymRecommendationItem) => boolean;
+  showOccupancy?: boolean;
 }
 
 const DesktopSelectedGymCard = ({
@@ -30,11 +32,16 @@ const DesktopSelectedGymCard = ({
   onToggleSaved,
   showSaveAction = true,
   checkInActionLabel = "Check In",
+  checkInActionIcon: CheckInActionIcon,
   canUseCheckInAction = canCheckInAtGym,
+  showOccupancy = true,
 }: DesktopSelectedGymCardProps) => {
   if (!gym) return null;
   const previewImageUrl = getGymPreviewImageUrl(gym);
   const showCheckInAction = canUseCheckInAction(gym);
+  const occupancyVisible = showOccupancy && gym.occupancyPercent != null;
+  const metricsVisible = occupancyVisible || Boolean(gym.minimumAccessTier);
+  const ActionIcon = CheckInActionIcon;
 
   return (
     <div className="absolute bottom-6 right-6 z-[1001] hidden w-[360px] overflow-hidden rounded-2xl border border-border/50 user-surface shadow-2xl transition-all md:block">
@@ -107,27 +114,29 @@ const DesktopSelectedGymCard = ({
           </span>
         </div>
 
-        <div className="flex gap-3">
-          {gym.occupancyPercent != null && (
-            <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
-              <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Occupancy</p>
-              <div className="mt-1 flex items-end gap-2">
-                <span className="text-lg font-black">{gym.occupancyPercent}%</span>
-                {gym.occupancyLabel && (
-                  <span className="pb-0.5 text-[9px] font-bold text-slate-500">
-                    {gym.occupancyLabel}
-                  </span>
-                )}
+        {metricsVisible && (
+          <div className="flex gap-3">
+            {occupancyVisible && (
+              <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Occupancy</p>
+                <div className="mt-1 flex items-end gap-2">
+                  <span className="text-lg font-black">{gym.occupancyPercent}%</span>
+                  {gym.occupancyLabel && (
+                    <span className="pb-0.5 text-[9px] font-bold text-slate-500">
+                      {gym.occupancyLabel}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-          {gym.minimumAccessTier && (
-            <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
-              <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Min. Tier</p>
-              <p className="mt-1 text-lg font-black text-orange-500">{gym.minimumAccessTier}</p>
-            </div>
-          )}
-        </div>
+            )}
+            {gym.minimumAccessTier && (
+              <div className="flex-1 rounded-xl border border-white/5 user-surface-soft p-3">
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Min. Tier</p>
+                <p className="mt-1 text-lg font-black text-orange-500">{gym.minimumAccessTier}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-3 pt-1">
           <button
@@ -143,7 +152,7 @@ const DesktopSelectedGymCard = ({
               onClick={onCheckIn}
               className="btn-fire flex flex-1 items-center justify-center gap-1.5 rounded-xl py-3 text-[10px] text-white"
             >
-              <QrCode size={13} />
+              {ActionIcon ? <ActionIcon size={13} /> : null}
               {checkInActionLabel}
             </button>
           )}

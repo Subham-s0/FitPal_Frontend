@@ -2,7 +2,10 @@ import { useState, type ChangeEvent } from "react";
 import { Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/shared/api/client";
-import { uploadProfileImageApi, deleteProfileImageApi } from "@/features/profile/api";
+import {
+  uploadProfileImageApi,
+  deleteProfileImageApi,
+} from "@/features/profile/api";
 import { cn } from "@/shared/lib/utils";
 import type { UserProfileResponse } from "@/features/profile/model";
 import {
@@ -16,7 +19,10 @@ interface ProfileImageSectionProps {
   onUpdate: () => void;
 }
 
-const buildInitials = (profile?: UserProfileResponse | null, email?: string | null) => {
+const buildInitials = (
+  profile?: UserProfileResponse | null,
+  email?: string | null,
+) => {
   const candidate = [profile?.firstName, profile?.lastName]
     .filter((value): value is string => Boolean(value?.trim()))
     .join(" ")
@@ -31,7 +37,10 @@ const buildInitials = (profile?: UserProfileResponse | null, email?: string | nu
     .join("");
 };
 
-export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionProps) {
+export function ProfileImageSection({
+  profile,
+  onUpdate,
+}: ProfileImageSectionProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
@@ -91,9 +100,8 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
 
   return (
     <div className="rounded-[22px] border table-border user-surface p-6 shadow-sm transition-all duration-300 hover:border-white/10 sm:p-8">
-      <div className="relative mx-auto mb-5 h-28 w-28 sm:mb-6 sm:h-36 sm:w-36">
-        <div className="absolute inset-0 animate-pulse-slow rounded-full bg-gradient-to-br from-orange-500/20 to-orange-600/10" />
-        <div className="absolute inset-1 z-10 overflow-hidden rounded-full border-2 border-white/10 bg-[#0a0a0a]">
+      <div className="relative mx-auto mb-5 h-28 w-28 rounded-full bg-[linear-gradient(135deg,#FF6A00,#FF9500)] p-[3px] sm:mb-6 sm:h-36 sm:w-36">
+        <div className="h-full w-full overflow-hidden rounded-full border border-black/50 bg-[#0a0a0a]">
           {displayImageUrl ? (
             <img
               src={displayImageUrl}
@@ -106,16 +114,18 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
             </div>
           )}
         </div>
-        
+
         {displayImageUrl ? (
           <button
             type="button"
-            aria-label={isUploading ? "Removing profile image" : "Remove profile image"}
+            aria-label={
+              isUploading ? "Removing profile image" : "Remove profile image"
+            }
             onClick={handleRemoveImage}
             disabled={isUploading}
             className={cn(
               "absolute bottom-0 right-0 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/80 text-white transition-all duration-200 hover:scale-110 hover:border-red-500 hover:bg-red-500 hover:text-white active:scale-95 sm:h-10 sm:w-10",
-              isUploading && "pointer-events-none opacity-50"
+              isUploading && "pointer-events-none opacity-50",
             )}
           >
             {isUploading ? (
@@ -126,10 +136,12 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
           </button>
         ) : (
           <label
-            aria-label={isUploading ? "Uploading profile image" : "Upload profile image"}
+            aria-label={
+              isUploading ? "Uploading profile image" : "Upload profile image"
+            }
             className={cn(
               "absolute bottom-0 right-0 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/80 text-white transition-all duration-200 hover:scale-110 hover:border-orange-500 hover:bg-orange-600 active:scale-95 sm:h-10 sm:w-10",
-              isUploading && "pointer-events-none opacity-50"
+              isUploading && "pointer-events-none opacity-50",
             )}
           >
             {isUploading ? (
@@ -151,7 +163,10 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
 
       <div className="text-center">
         <h2 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
-          {[profile.firstName, profile.lastName].filter(Boolean).join(" ").trim() || profile.userName}
+          {[profile.firstName, profile.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() || profile.userName}
         </h2>
         <p className="mt-1 truncate text-xs font-semibold text-orange-500 sm:text-sm">
           {profile.email}
@@ -164,16 +179,6 @@ export function ProfileImageSection({ profile, onUpdate }: ProfileImageSectionPr
               : "Profile saved. No subscription yet"}
         </p>
       </div>
-
-      <style>{`
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 0.8; }
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow 3s ease-in-out infinite;
-        }
-      `}</style>
     </div>
   );
 }

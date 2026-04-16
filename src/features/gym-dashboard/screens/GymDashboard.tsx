@@ -47,6 +47,7 @@ const GymDashboard = () => {
       onSectionChange={(section) => setActiveSection(resolveSection(section))}
       onPrimaryAction={() => setActiveSection("gymProfile")}
       onProfileClick={() => setActiveSection("gymProfile")}
+      contentClassName="px-4 py-5 sm:px-6 sm:py-6 lg:px-8"
     >
       <Page />
     </DefaultLayout>

@@ -7,7 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
-import type { LocationPermissionState, RecommendationMode } from "@/features/gyms/types";
+import type {
+  LocationPermissionState,
+  RecommendationMode,
+} from "@/features/gyms/types";
 
 interface EnableLocationDialogProps {
   open: boolean;
@@ -15,9 +18,13 @@ interface EnableLocationDialogProps {
   requestedMode: Extract<RecommendationMode, "nearest" | "best-match"> | null;
   permissionState: LocationPermissionState;
   onEnableLocation: () => void | Promise<void>;
+  allowBestMatch?: boolean;
 }
 
-const modeLabels: Record<Extract<RecommendationMode, "nearest" | "best-match">, string> = {
+const modeLabels: Record<
+  Extract<RecommendationMode, "nearest" | "best-match">,
+  string
+> = {
   nearest: "Nearest",
   "best-match": "Best Match",
 };
@@ -25,7 +32,10 @@ const modeLabels: Record<Extract<RecommendationMode, "nearest" | "best-match">, 
 const modeIcons = {
   nearest: MapPin,
   "best-match": Sparkles,
-} satisfies Record<Extract<RecommendationMode, "nearest" | "best-match">, typeof MapPin>;
+} satisfies Record<
+  Extract<RecommendationMode, "nearest" | "best-match">,
+  typeof MapPin
+>;
 
 const EnableLocationDialog = ({
   open,
@@ -33,6 +43,7 @@ const EnableLocationDialog = ({
   requestedMode,
   permissionState,
   onEnableLocation,
+  allowBestMatch = true,
 }: EnableLocationDialogProps) => {
   const mode = requestedMode;
   const ModeIcon = mode ? modeIcons[mode] : LocateFixed;
@@ -53,7 +64,9 @@ const EnableLocationDialog = ({
               <DialogDescription className="text-sm leading-relaxed text-slate-400">
                 {mode
                   ? `${modeLabels[mode]} recommendations need your location to calculate distance and rank gyms around you.`
-                  : "Turn on location to unlock Nearest and Best Match recommendations around you."}
+                  : allowBestMatch
+                    ? "Turn on location to unlock Nearest and Best Match recommendations around you."
+                    : "Turn on location to unlock Nearest recommendations around you."}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -77,7 +90,8 @@ const EnableLocationDialog = ({
 
             {isDenied && (
               <p className="text-xs leading-relaxed text-slate-400">
-                Location is currently blocked. You can still use Show All without location, or allow access if your browser prompts again.
+                Location is currently blocked. You can still use Show All
+                without location, or allow access if your browser prompts again.
               </p>
             )}
           </div>
@@ -94,7 +108,10 @@ const EnableLocationDialog = ({
               type="button"
               onClick={() => void onEnableLocation()}
               className="flex-1 rounded-2xl px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-black transition-opacity hover:opacity-90 sm:flex-none"
-              style={{ background: "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)" }}
+              style={{
+                background:
+                  "linear-gradient(135deg, #FACC15 0%, #FF9900 45%, #FF6A00 100%)",
+              }}
             >
               Enable Location
             </button>

@@ -1,4 +1,11 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getMySavedGymCountApi,
@@ -7,7 +14,10 @@ import {
   saveMyGymApi,
   unsaveMyGymApi,
 } from "@/features/gyms/api";
-import type { UserGymDiscoverPageResponse, UserGymDiscoverRequest } from "@/features/gyms/model";
+import type {
+  UserGymDiscoverPageResponse,
+  UserGymDiscoverRequest,
+} from "@/features/gyms/model";
 import { gymsQueryKeys } from "@/features/gyms/queryKeys";
 import type {
   GymRecommendationItem,
@@ -21,7 +31,9 @@ import type {
 type RequestedLocationMode = Exclude<RecommendationMode, "show-all">;
 type Coordinates = { lat: number; lng: number };
 type GymsRecommendationAudience = "member" | "public";
-type DiscoverApi = (request: UserGymDiscoverRequest) => Promise<UserGymDiscoverPageResponse>;
+type DiscoverApi = (
+  request: UserGymDiscoverRequest,
+) => Promise<UserGymDiscoverPageResponse>;
 
 const DISCOVER_PAGE_SIZE = 100;
 const LOCATION_REFRESH_THRESHOLD_METERS = 50;
@@ -63,20 +75,27 @@ export interface GymsRecommendationActions {
   resetFilters: () => void;
 }
 
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function haversine(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
   const earthRadiusMeters = 6_371_000;
   const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
   const latitudeDelta = toRadians(lat2 - lat1);
   const longitudeDelta = toRadians(lon2 - lon1);
   const a =
     Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(longitudeDelta / 2) ** 2;
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(longitudeDelta / 2) ** 2;
   return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 async function fetchAllDiscoverGyms(
   request: UserGymDiscoverRequest,
-  discoverApi: DiscoverApi
+  discoverApi: DiscoverApi,
 ): Promise<GymRecommendationItem[]> {
   const firstPage = await discoverApi({
     ...request,
@@ -94,8 +113,8 @@ async function fetchAllDiscoverGyms(
         ...request,
         page: index + 1,
         size: DISCOVER_PAGE_SIZE,
-      })
-    )
+      }),
+    ),
   );
 
   return [firstPage, ...remainingPages].flatMap((page) => page.items);
@@ -105,7 +124,7 @@ function toggleSavedState(
   gyms: GymRecommendationItem[],
   gymId: number,
   isSaved: boolean,
-  removeWhenSavedOnly: boolean
+  removeWhenSavedOnly: boolean,
 ): GymRecommendationItem[] {
   if (removeWhenSavedOnly && !isSaved) {
     return gyms.filter((gym) => gym.gymId !== gymId);
@@ -117,12 +136,17 @@ function toggleSavedState(
 async function getPermissionState(): Promise<LocationPermissionState> {
   if (!navigator.geolocation) return "unsupported";
 
-  if (!("permissions" in navigator) || typeof navigator.permissions.query !== "function") {
+  if (
+    !("permissions" in navigator) ||
+    typeof navigator.permissions.query !== "function"
+  ) {
     return "prompt";
   }
 
   try {
-    const result = await navigator.permissions.query({ name: "geolocation" as PermissionName });
+    const result = await navigator.permissions.query({
+      name: "geolocation" as PermissionName,
+    });
     switch (result.state) {
       case "granted":
         return "granted";
@@ -146,21 +170,38 @@ function getCurrentPosition(): Promise<Coordinates> {
         });
       },
       (error) => reject(error),
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 }
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
     );
   });
 }
 
 function isPermissionDeniedError(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === 1;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === 1
+  );
+}
+
+function normalizeModeForAudience(
+  mode: RecommendationMode,
+  isPublicAudience: boolean,
+): RecommendationMode {
+  if (isPublicAudience && mode === "best-match") {
+    return "nearest";
+  }
+
+  return mode;
 }
 
 export function useGymsRecommendation(
-  options: UseGymsRecommendationOptions = {}
+  options: UseGymsRecommendationOptions = {},
 ): GymsRecommendationState & GymsRecommendationActions {
   const audience = options.audience ?? "member";
   const isPublicAudience = audience === "public";
-  const [locationPermission, setLocationPermission] = useState<LocationPermissionState>("loading");
+  const [locationPermission, setLocationPermission] =
+    useState<LocationPermissionState>("loading");
   const [userCoords, setUserCoords] = useState<Coordinates | null>(null);
   const [mode, setModeRaw] = useState<RecommendationMode>("show-all");
   const [gyms, setGyms] = useState<GymRecommendationItem[]>([]);
@@ -168,7 +209,8 @@ export function useGymsRecommendation(
   const [sheetSnap, setSheetSnap] = useState<SheetSnap>("closed");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLocationPopupOpen, setLocationPopupOpen] = useState(false);
-  const [requestedLocationMode, setRequestedLocationMode] = useState<RequestedLocationMode | null>(null);
+  const [requestedLocationMode, setRequestedLocationMode] =
+    useState<RequestedLocationMode | null>(null);
   const [savedGymCount, setSavedGymCount] = useState(0);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [statusFilter, setStatusFilter] = useState<GymStatusFilter>("all");
@@ -179,16 +221,26 @@ export function useGymsRecommendation(
 
   const discoverRequest = useMemo<UserGymDiscoverRequest>(() => {
     const query = deferredSearchQuery.trim();
+    const effectiveMode = normalizeModeForAudience(mode, isPublicAudience);
     return {
       query: query || undefined,
-      mode,
+      mode: effectiveMode,
       status: statusFilter,
       savedOnly: !isPublicAudience && showSavedOnly ? true : undefined,
       sort: sortMode,
       lat: userCoords?.lat,
       lng: userCoords?.lng,
     };
-  }, [deferredSearchQuery, isPublicAudience, mode, showSavedOnly, sortMode, statusFilter, userCoords?.lat, userCoords?.lng]);
+  }, [
+    deferredSearchQuery,
+    isPublicAudience,
+    mode,
+    showSavedOnly,
+    sortMode,
+    statusFilter,
+    userCoords?.lat,
+    userCoords?.lng,
+  ]);
 
   const savedCountQuery = useQuery({
     queryKey: gymsQueryKeys.savedCount(),
@@ -211,15 +263,22 @@ export function useGymsRecommendation(
     queryFn: () =>
       fetchAllDiscoverGyms(
         discoverRequest,
-        isPublicAudience ? getPublicGymDiscoverApi : getUserGymDiscoverApi
+        isPublicAudience ? getPublicGymDiscoverApi : getUserGymDiscoverApi,
       ),
     enabled: mode === "show-all" || Boolean(userCoords),
     staleTime: 30_000,
   });
-  const isDiscoverLoading = discoverQuery.isLoading || (discoverQuery.isFetching && gyms.length === 0);
+  const isDiscoverLoading =
+    discoverQuery.isLoading || (discoverQuery.isFetching && gyms.length === 0);
 
   const toggleSavedMutation = useMutation({
-    mutationFn: async ({ gymId, nextIsSaved }: { gymId: number; nextIsSaved: boolean }) => {
+    mutationFn: async ({
+      gymId,
+      nextIsSaved,
+    }: {
+      gymId: number;
+      nextIsSaved: boolean;
+    }) => {
       if (nextIsSaved) {
         await saveMyGymApi(gymId);
         return;
@@ -230,7 +289,9 @@ export function useGymsRecommendation(
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: gymsQueryKeys.savedCount() }),
-        queryClient.invalidateQueries({ queryKey: gymsQueryKeys.discoverLists() }),
+        queryClient.invalidateQueries({
+          queryKey: gymsQueryKeys.discoverLists(),
+        }),
       ]);
     },
   });
@@ -286,7 +347,12 @@ export function useGymsRecommendation(
         setUserCoords((current) => {
           if (
             current &&
-            haversine(current.lat, current.lng, nextCoords.lat, nextCoords.lng) < LOCATION_REFRESH_THRESHOLD_METERS
+            haversine(
+              current.lat,
+              current.lng,
+              nextCoords.lat,
+              nextCoords.lng,
+            ) < LOCATION_REFRESH_THRESHOLD_METERS
           ) {
             return current;
           }
@@ -299,7 +365,7 @@ export function useGymsRecommendation(
           setUserCoords(null);
         }
       },
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 }
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 30_000 },
     );
 
     return () => {
@@ -318,6 +384,14 @@ export function useGymsRecommendation(
       setSheetSnap("closed");
     }
   }, [gyms, selectedGymId]);
+
+  useEffect(() => {
+    if (!isPublicAudience || mode !== "best-match") return;
+
+    setModeRaw(
+      locationPermission === "granted" && userCoords ? "nearest" : "show-all",
+    );
+  }, [isPublicAudience, locationPermission, mode, userCoords]);
 
   useEffect(() => {
     const locationUnavailable = locationPermission !== "granted" || !userCoords;
@@ -359,7 +433,8 @@ export function useGymsRecommendation(
 
   useEffect(() => {
     if (mode === "show-all") return;
-    if (selectedGymId && gyms.some((gym) => gym.gymId === selectedGymId)) return;
+    if (selectedGymId && gyms.some((gym) => gym.gymId === selectedGymId))
+      return;
 
     const nextSelected = gyms[0] ?? null;
     setSelectedGymId(nextSelected?.gymId ?? null);
@@ -373,13 +448,16 @@ export function useGymsRecommendation(
     return filteredGyms.find((gym) => gym.gymId === selectedGymId) ?? null;
   }, [filteredGyms, selectedGymId]);
 
-  const applyRecommendedMode = useCallback((nextMode: RequestedLocationMode) => {
-    setModeRaw(nextMode);
-    setRequestedLocationMode(null);
-    setLocationPopupOpen(false);
-    setSelectedGymId(null);
-    setSheetSnap("closed");
-  }, []);
+  const applyRecommendedMode = useCallback(
+    (nextMode: RequestedLocationMode) => {
+      setModeRaw(nextMode);
+      setRequestedLocationMode(null);
+      setLocationPopupOpen(false);
+      setSelectedGymId(null);
+      setSheetSnap("closed");
+    },
+    [],
+  );
 
   const refreshGrantedLocation = useCallback(
     async (nextMode: RequestedLocationMode): Promise<boolean> => {
@@ -401,7 +479,7 @@ export function useGymsRecommendation(
         return false;
       }
     },
-    [applyRecommendedMode]
+    [applyRecommendedMode],
   );
 
   const requestLocation = useCallback(async (): Promise<boolean> => {
@@ -424,7 +502,9 @@ export function useGymsRecommendation(
       setRequestedLocationMode(null);
       return true;
     } catch (error) {
-      setLocationPermission(isPermissionDeniedError(error) ? "denied" : "prompt");
+      setLocationPermission(
+        isPermissionDeniedError(error) ? "denied" : "prompt",
+      );
       setUserCoords(null);
       setModeRaw("show-all");
       setSelectedGymId(null);
@@ -437,7 +517,9 @@ export function useGymsRecommendation(
 
   const setMode = useCallback(
     (next: RecommendationMode) => {
-      if (next === "show-all") {
+      const normalizedNext = normalizeModeForAudience(next, isPublicAudience);
+
+      if (normalizedNext === "show-all") {
         setModeRaw("show-all");
         setRequestedLocationMode(null);
         setLocationPopupOpen(false);
@@ -448,18 +530,24 @@ export function useGymsRecommendation(
 
       if (!userCoords || locationPermission !== "granted") {
         if (locationPermission === "granted") {
-          void refreshGrantedLocation(next);
+          void refreshGrantedLocation(normalizedNext);
           return;
         }
 
-        setRequestedLocationMode(next);
+        setRequestedLocationMode(normalizedNext);
         setLocationPopupOpen(true);
         return;
       }
 
-      applyRecommendedMode(next);
+      applyRecommendedMode(normalizedNext);
     },
-    [applyRecommendedMode, locationPermission, refreshGrantedLocation, userCoords]
+    [
+      applyRecommendedMode,
+      isPublicAudience,
+      locationPermission,
+      refreshGrantedLocation,
+      userCoords,
+    ],
   );
 
   const selectGym = useCallback((gym: GymRecommendationItem | null) => {
@@ -482,10 +570,17 @@ export function useGymsRecommendation(
       const nextIsSaved = !currentGym.isSaved;
       const previousGyms = gyms;
       const previousSavedGymCount = savedGymCount;
-      const nextGyms = toggleSavedState(previousGyms, gymId, nextIsSaved, showSavedOnly);
+      const nextGyms = toggleSavedState(
+        previousGyms,
+        gymId,
+        nextIsSaved,
+        showSavedOnly,
+      );
 
       setGyms(nextGyms);
-      setSavedGymCount(Math.max(0, previousSavedGymCount + (nextIsSaved ? 1 : -1)));
+      setSavedGymCount(
+        Math.max(0, previousSavedGymCount + (nextIsSaved ? 1 : -1)),
+      );
 
       toggleSavedMutation.mutate(
         { gymId, nextIsSaved },
@@ -495,10 +590,10 @@ export function useGymsRecommendation(
             setGyms(previousGyms);
             setSavedGymCount(previousSavedGymCount);
           },
-        }
+        },
       );
     },
-    [gyms, isPublicAudience, savedGymCount, showSavedOnly, toggleSavedMutation]
+    [gyms, isPublicAudience, savedGymCount, showSavedOnly, toggleSavedMutation],
   );
 
   const toggleSavedOnly = useCallback(() => {

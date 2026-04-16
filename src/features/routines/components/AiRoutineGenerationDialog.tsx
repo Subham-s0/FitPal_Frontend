@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -85,12 +91,37 @@ const GOAL_OPTIONS: Array<{ value: PrimaryFitnessFocus; label: string }> = [
   { value: "WEIGHT_LOSS", label: "Weight Loss" },
 ];
 
-const EQUIPMENT_OPTIONS: Array<{ value: EquipmentPreference; label: string; description: string }> = [
-  { value: "ALL", label: "All equipment", description: "Use every equipment type in your exercise library plus bodyweight." },
-  { value: "NONE", label: "No equipment", description: "Only bodyweight or no-equipment movements." },
-  { value: "DUMBBELL", label: "Dumbbell", description: "Allow dumbbell-based exercises." },
-  { value: "MACHINE", label: "Machine", description: "Allow selectorized or plate-loaded machines." },
-  { value: "BARBELL", label: "Barbell", description: "Allow barbell movements." },
+const EQUIPMENT_OPTIONS: Array<{
+  value: EquipmentPreference;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "ALL",
+    label: "All equipment",
+    description:
+      "Use every equipment type in your exercise library plus bodyweight.",
+  },
+  {
+    value: "NONE",
+    label: "No equipment",
+    description: "Only bodyweight or no-equipment movements.",
+  },
+  {
+    value: "DUMBBELL",
+    label: "Dumbbell",
+    description: "Allow dumbbell-based exercises.",
+  },
+  {
+    value: "MACHINE",
+    label: "Machine",
+    description: "Allow selectorized or plate-loaded machines.",
+  },
+  {
+    value: "BARBELL",
+    label: "Barbell",
+    description: "Allow barbell movements.",
+  },
 ];
 
 const LIFT_ORDER: AiCanonicalLift[] = [
@@ -100,7 +131,10 @@ const LIFT_ORDER: AiCanonicalLift[] = [
   "SHOULDER_PRESS",
 ];
 
-const LIFT_FIELD_MAP: Record<AiCanonicalLift, keyof GenerateRoutineSuggestionsRequest["strengthInputs"]> = {
+const LIFT_FIELD_MAP: Record<
+  AiCanonicalLift,
+  keyof GenerateRoutineSuggestionsRequest["strengthInputs"]
+> = {
   BENCH_PRESS: "benchPress",
   SQUAT: "squat",
   DEADLIFT: "deadlift",
@@ -129,7 +163,9 @@ function createInitialForm(): AiRoutineFormState {
   };
 }
 
-function createFormFromBootstrap(bootstrap: AiRoutineBootstrapResponse): AiRoutineFormState {
+function createFormFromBootstrap(
+  bootstrap: AiRoutineBootstrapResponse,
+): AiRoutineFormState {
   const form = createInitialForm();
 
   if (bootstrap.profileSummary.primaryFitnessFocus) {
@@ -202,14 +238,14 @@ function formatMissingProfileField(field: string): string {
 }
 
 function resolveProfileTabForMissingFields(
-  missingFields: string[] | undefined
+  missingFields: string[] | undefined,
 ): "profile" | "goals" {
   if (!missingFields || missingFields.length === 0) {
     return "goals";
   }
 
   const hasGoalsFieldMissing = missingFields.some((field) =>
-    ["weight", "height", "fitnessLevel", "primaryFitnessFocus"].includes(field)
+    ["weight", "height", "fitnessLevel", "primaryFitnessFocus"].includes(field),
   );
 
   if (hasGoalsFieldMissing) {
@@ -225,7 +261,7 @@ function resolveProfileTabForMissingFields(
 
 function getLiftSnapshot(
   bootstrap: AiRoutineBootstrapResponse | undefined,
-  lift: AiCanonicalLift
+  lift: AiCanonicalLift,
 ): AiLiftSnapshotResponse | null {
   if (!bootstrap) {
     return null;
@@ -245,12 +281,15 @@ function getLiftSnapshot(
   }
 }
 
-function formatSnapshotSummary(snapshot: AiLiftSnapshotResponse | null): string {
+function formatSnapshotSummary(
+  snapshot: AiLiftSnapshotResponse | null,
+): string {
   if (!snapshot) {
     return "No usable history yet";
   }
 
-  const sourceLabel = snapshot.source === "USER_INPUT" ? "Manual input" : "History";
+  const sourceLabel =
+    snapshot.source === "USER_INPUT" ? "Manual input" : "History";
   return `${snapshot.bestSetWeight} x ${snapshot.bestSetReps} (${sourceLabel})`;
 }
 
@@ -268,14 +307,22 @@ function QuestionCard({
           {number}
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
-          <h3 className="text-xs font-black uppercase tracking-[0.1em] text-white sm:text-sm">{title}</h3>
+          <h3 className="text-xs font-black uppercase tracking-[0.1em] text-white sm:text-sm">
+            {title}
+          </h3>
           {mobileDescription ? (
             <>
-              <p className="text-[11px] leading-snug text-slate-400 sm:hidden">{mobileDescription}</p>
-              <p className="hidden text-[11px] leading-snug text-slate-400 sm:block sm:text-xs">{description}</p>
+              <p className="text-[11px] leading-snug text-slate-400 sm:hidden">
+                {mobileDescription}
+              </p>
+              <p className="hidden text-[11px] leading-snug text-slate-400 sm:block sm:text-xs">
+                {description}
+              </p>
             </>
           ) : (
-            <p className="text-[11px] leading-snug text-slate-400 sm:text-xs">{description}</p>
+            <p className="text-[11px] leading-snug text-slate-400 sm:text-xs">
+              {description}
+            </p>
           )}
         </div>
       </div>
@@ -286,13 +333,20 @@ function QuestionCard({
 
 function validateDaysField(daysPerWeek: string): string | undefined {
   const dayCount = Number(daysPerWeek);
-  if (!daysPerWeek.trim() || Number.isNaN(dayCount) || dayCount < 2 || dayCount > 7) {
+  if (
+    !daysPerWeek.trim() ||
+    Number.isNaN(dayCount) ||
+    dayCount < 2 ||
+    dayCount > 7
+  ) {
     return "Enter a number from 2 to 7.";
   }
   return undefined;
 }
 
-function validateEquipmentField(prefs: EquipmentPreference[]): string | undefined {
+function validateEquipmentField(
+  prefs: EquipmentPreference[],
+): string | undefined {
   if (prefs.length === 0) {
     return "Choose at least one equipment option.";
   }
@@ -333,7 +387,9 @@ export default function AiRoutineGenerationDialog({
   const [form, setForm] = useState<AiRoutineFormState>(createInitialForm);
   const [errors, setErrors] = useState<AiRoutineFormErrors>({});
   const [wizardStep, setWizardStep] = useState(0);
-  const [mobileDialogStyle, setMobileDialogStyle] = useState<CSSProperties | undefined>();
+  const [mobileDialogStyle, setMobileDialogStyle] = useState<
+    CSSProperties | undefined
+  >();
   /** Profile/history summary before numbered questions (not counted as a step). */
   const [preambleSeen, setPreambleSeen] = useState(false);
 
@@ -352,7 +408,9 @@ export default function AiRoutineGenerationDialog({
 
   useEffect(() => {
     if (open) {
-      void queryClient.invalidateQueries({ queryKey: aiRoutineQueryKeys.bootstrap() });
+      void queryClient.invalidateQueries({
+        queryKey: aiRoutineQueryKeys.bootstrap(),
+      });
       hasUserEditedRef.current = false;
       hasHydratedFromBootstrapRef.current = false;
       setWizardStep(0);
@@ -385,10 +443,14 @@ export default function AiRoutineGenerationDialog({
   }, [bootstrapQuery.data, bootstrapQuery.isFetching, open]);
 
   const bootstrap = bootstrapQuery.data;
-  const isBootstrapRefreshing = bootstrapQuery.isLoading || bootstrapQuery.isFetching;
+  const isBootstrapRefreshing =
+    bootstrapQuery.isLoading || bootstrapQuery.isFetching;
   const missingManualLifts = useMemo(
-    () => LIFT_ORDER.filter((lift) => bootstrap?.liftsMissingSnapshot.includes(lift)),
-    [bootstrap]
+    () =>
+      LIFT_ORDER.filter((lift) =>
+        bootstrap?.liftsMissingSnapshot.includes(lift),
+      ),
+    [bootstrap],
   );
 
   const historyLifts = useMemo(
@@ -397,16 +459,22 @@ export default function AiRoutineGenerationDialog({
         if (!bootstrap) {
           return false;
         }
-        return !bootstrap.liftsMissingSnapshot.includes(lift) && getLiftSnapshot(bootstrap, lift);
+        return (
+          !bootstrap.liftsMissingSnapshot.includes(lift) &&
+          getLiftSnapshot(bootstrap, lift)
+        );
       }),
-    [bootstrap]
+    [bootstrap],
   );
 
   /** Last step index: 0=days, 1=equipment, 2=goal, 3..2+n=lifts, 3+n=submit (n = missing lifts). */
   const submitStepIndex = 3 + missingManualLifts.length;
   const totalQuestionSteps = submitStepIndex + 1;
 
-  const updateLiftField = (lift: AiCanonicalLift, patch: Partial<LiftFormState>) => {
+  const updateLiftField = (
+    lift: AiCanonicalLift,
+    patch: Partial<LiftFormState>,
+  ) => {
     markUserEdited();
     setForm((prev) => ({
       ...prev,
@@ -425,7 +493,10 @@ export default function AiRoutineGenerationDialog({
     }));
   };
 
-  const handleToggleEquipment = (equipment: EquipmentPreference, checked: boolean) => {
+  const handleToggleEquipment = (
+    equipment: EquipmentPreference,
+    checked: boolean,
+  ) => {
     markUserEdited();
     setForm((prev) => {
       const next = new Set(prev.equipmentPreferences);
@@ -437,9 +508,9 @@ export default function AiRoutineGenerationDialog({
 
       return {
         ...prev,
-        equipmentPreferences: EQUIPMENT_OPTIONS.map((option) => option.value).filter((value) =>
-          next.has(value)
-        ),
+        equipmentPreferences: EQUIPMENT_OPTIONS.map(
+          (option) => option.value,
+        ).filter((value) => next.has(value)),
       };
     });
 
@@ -502,7 +573,9 @@ export default function AiRoutineGenerationDialog({
     const hasErrors =
       Boolean(nextErrors.daysPerWeek) ||
       Boolean(nextErrors.equipmentPreferences) ||
-      Boolean(nextErrors.lifts && Object.values(nextErrors.lifts).some(Boolean));
+      Boolean(
+        nextErrors.lifts && Object.values(nextErrors.lifts).some(Boolean),
+      );
 
     if (hasErrors) {
       setErrors(nextErrors);
@@ -556,11 +629,15 @@ export default function AiRoutineGenerationDialog({
 
   const handleOpenProfile = () => {
     onOpenChange(false);
-    const targetTab = resolveProfileTabForMissingFields(bootstrap?.missingProfileFields);
+    const targetTab = resolveProfileTabForMissingFields(
+      bootstrap?.missingProfileFields,
+    );
     navigate(`/profile?tab=${targetTab}`);
   };
 
-  const profileGoalLabel = formatGoal(bootstrap?.profileSummary.primaryFitnessFocus);
+  const profileGoalLabel = formatGoal(
+    bootstrap?.profileSummary.primaryFitnessFocus,
+  );
 
   const showWizardNav =
     bootstrap &&
@@ -598,10 +675,18 @@ export default function AiRoutineGenerationDialog({
           ? bottomNav.getBoundingClientRect().top
           : viewportHeight - 16;
 
-      const availableHeight = Math.max(320, Math.floor(dockTop - topPadding - bottomGap));
+      const availableHeight = Math.max(
+        320,
+        Math.floor(dockTop - topPadding - bottomGap),
+      );
       const dialogHeight = Math.min(dialogEl.scrollHeight, availableHeight);
-      const centeredTop = Math.round(topPadding + (availableHeight - dialogHeight) / 2);
-      const maxTop = Math.max(topPadding, Math.round(dockTop - dialogHeight - bottomGap));
+      const centeredTop = Math.round(
+        topPadding + (availableHeight - dialogHeight) / 2,
+      );
+      const maxTop = Math.max(
+        topPadding,
+        Math.round(dockTop - dialogHeight - bottomGap),
+      );
       const top = Math.min(centeredTop, maxTop);
 
       setMobileDialogStyle({
@@ -621,7 +706,9 @@ export default function AiRoutineGenerationDialog({
     window.addEventListener("orientationchange", scheduleUpdate);
 
     const resizeObserver =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(scheduleUpdate) : null;
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(scheduleUpdate)
+        : null;
     const dialogEl = dialogContentRef.current;
     if (dialogEl && resizeObserver) {
       resizeObserver.observe(dialogEl);
@@ -712,55 +799,64 @@ export default function AiRoutineGenerationDialog({
             </div>
           ) : bootstrapQuery.isError ? (
             <div className="flex h-full flex-col justify-center space-y-4 rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10">
-                  <AlertTriangle className="h-4 w-4 text-red-300" />
-                </div>
-                <div className="min-w-0 space-y-1">
-                  <p className="text-xs font-black uppercase tracking-[0.1em] text-white">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10">
+                    <AlertTriangle className="h-4 w-4 text-red-300" />
+                  </div>
+                  <p className="min-w-0 flex-1 text-xs font-black uppercase tracking-[0.1em] text-white leading-tight">
                     AI routine setup failed
                   </p>
+                </div>
+                <div className="space-y-1">
                   <p className="text-xs leading-relaxed text-slate-300">
                     {getApiErrorMessage(
                       bootstrapQuery.error,
-                      "The AI bootstrap request could not be loaded."
+                      "The AI bootstrap request could not be loaded.",
                     )}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => void bootstrapQuery.refetch()}
-                  className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.1em] text-white"
-                >
-                  <Loader2 className={cn("h-3.5 w-3.5", bootstrapQuery.isRefetching && "animate-spin")} />
-                  Retry
-                </button>
+              <div className="flex flex-row items-stretch justify-between gap-3 w-full">
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
-                  className="inline-flex min-w-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.1em] text-slate-300"
+                  className="inline-flex flex-none items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-300 whitespace-nowrap"
                 >
                   Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void bootstrapQuery.refetch()}
+                  className="inline-flex flex-none items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-4 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-white whitespace-nowrap"
+                >
+                  <Loader2
+                    className={cn(
+                      "h-3.5 w-3.5",
+                      bootstrapQuery.isRefetching && "animate-spin",
+                    )}
+                  />
+                  Retry
                 </button>
               </div>
             </div>
           ) : bootstrap && !bootstrap.canGenerate ? (
             <div className="flex h-full flex-col justify-center">
               <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
-                    <AlertTriangle className="h-4 w-4 text-amber-300" />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <p className="text-xs font-black uppercase tracking-[0.1em] text-white">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
+                      <AlertTriangle className="h-4 w-4 text-amber-300" />
+                    </div>
+                    <p className="min-w-0 flex-1 text-xs font-black uppercase tracking-[0.1em] text-white leading-tight">
                       Profile incomplete for AI generation
                     </p>
+                  </div>
+                  <div className="space-y-2">
                     <p className="text-[11px] leading-relaxed text-slate-300">
-                      Complete the missing profile fields first. The backend will not open the AI
-                      question form until these are saved.
+                      Complete the missing profile fields first. The backend
+                      will not open the AI question form until these are saved.
                     </p>
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       {bootstrap.missingProfileFields.map((field) => (
@@ -778,27 +874,27 @@ export default function AiRoutineGenerationDialog({
                       ))}
                     </div>
                     <p className="text-[11px] leading-relaxed text-slate-400">
-                      Use the Profile tab for gender and the Goals tab for weight, height, fitness
-                      level, and primary fitness focus.
+                      Use the Profile tab for gender and the Goals tab for
+                      weight, height, fitness level, and primary fitness focus.
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleOpenProfile}
-                    className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.1em] text-white"
-                  >
-                    Complete profile
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+                <div className="mt-4 flex flex-row items-stretch justify-between gap-3 w-full">
                   <button
                     type="button"
                     onClick={() => onOpenChange(false)}
-                    className="inline-flex min-w-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.1em] text-slate-300"
+                    className="inline-flex flex-none items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-slate-300 whitespace-nowrap"
                   >
-                    Close
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenProfile}
+                    className="inline-flex flex-none items-center justify-center gap-1.5 rounded-xl bg-[linear-gradient(135deg,#FF6A00,#FF9500)] px-4 py-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.1em] text-white whitespace-nowrap"
+                  >
+                    Complete profile
+                    <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </button>
                 </div>
               </div>
@@ -809,7 +905,8 @@ export default function AiRoutineGenerationDialog({
                 {!preambleSeen && (
                   <div className="flex h-full max-h-full flex-col gap-3 overflow-y-auto overscroll-contain pr-0.5">
                     <p className="text-[11px] text-slate-400">
-                      Here is what we already know from your profile and workout history.
+                      Here is what we already know from your profile and workout
+                      history.
                     </p>
                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <div className="min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 sm:min-w-[7.5rem] sm:flex-none">
@@ -852,9 +949,13 @@ export default function AiRoutineGenerationDialog({
                               key={lift}
                               className="rounded-lg border border-white/[0.06] bg-black/20 px-2.5 py-2"
                             >
-                              <p className="text-xs font-semibold text-white">{formatLiftName(lift)}</p>
+                              <p className="text-xs font-semibold text-white">
+                                {formatLiftName(lift)}
+                              </p>
                               <p className="text-[10px] text-slate-400">
-                                {formatSnapshotSummary(getLiftSnapshot(bootstrap, lift))}
+                                {formatSnapshotSummary(
+                                  getLiftSnapshot(bootstrap, lift),
+                                )}
                               </p>
                             </div>
                           ))}
@@ -886,7 +987,10 @@ export default function AiRoutineGenerationDialog({
                           value={form.daysPerWeek}
                           onChange={(event) => {
                             markUserEdited();
-                            setForm((prev) => ({ ...prev, daysPerWeek: event.target.value }));
+                            setForm((prev) => ({
+                              ...prev,
+                              daysPerWeek: event.target.value,
+                            }));
                             setErrors((prev) => ({
                               ...prev,
                               daysPerWeek: undefined,
@@ -896,7 +1000,9 @@ export default function AiRoutineGenerationDialog({
                           placeholder="2"
                         />
                         {errors.daysPerWeek && (
-                          <p className="text-[11px] font-semibold text-red-300">{errors.daysPerWeek}</p>
+                          <p className="text-[11px] font-semibold text-red-300">
+                            {errors.daysPerWeek}
+                          </p>
                         )}
                       </div>
                     </QuestionCard>
@@ -913,7 +1019,9 @@ export default function AiRoutineGenerationDialog({
                     >
                       <div className="space-y-2">
                         {EQUIPMENT_OPTIONS.map((option) => {
-                          const checked = form.equipmentPreferences.includes(option.value);
+                          const checked = form.equipmentPreferences.includes(
+                            option.value,
+                          );
                           return (
                             <label
                               key={option.value}
@@ -921,18 +1029,23 @@ export default function AiRoutineGenerationDialog({
                                 "flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 transition-colors",
                                 checked
                                   ? "border-orange-500/35 bg-orange-500/10"
-                                  : "border-white/[0.08] bg-black/20 hover:border-white/15"
+                                  : "border-white/[0.08] bg-black/20 hover:border-white/15",
                               )}
                             >
                               <Checkbox
                                 checked={checked}
                                 onCheckedChange={(value) =>
-                                  handleToggleEquipment(option.value, value === true)
+                                  handleToggleEquipment(
+                                    option.value,
+                                    value === true,
+                                  )
                                 }
                                 className="mt-0.5 border-white/20 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:text-white"
                               />
                               <div className="min-w-0 space-y-0.5">
-                                <p className="text-xs font-semibold text-white">{option.label}</p>
+                                <p className="text-xs font-semibold text-white">
+                                  {option.label}
+                                </p>
                                 <p className="text-[10px] leading-snug text-slate-400">
                                   {option.description}
                                 </p>
@@ -968,7 +1081,9 @@ export default function AiRoutineGenerationDialog({
                             setForm((prev) => ({
                               ...prev,
                               routineGoal:
-                                value === PROFILE_DEFAULT_GOAL ? "" : (value as PrimaryFitnessFocus),
+                                value === PROFILE_DEFAULT_GOAL
+                                  ? ""
+                                  : (value as PrimaryFitnessFocus),
                             }));
                           }}
                         >
@@ -980,7 +1095,10 @@ export default function AiRoutineGenerationDialog({
                               Use profile goal ({profileGoalLabel})
                             </SelectItem>
                             {GOAL_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
                                 {option.label}
                               </SelectItem>
                             ))}
@@ -1004,7 +1122,7 @@ export default function AiRoutineGenerationDialog({
                             number={wizardStep + 1}
                             title={formatLiftName(lift)}
                             description={`Optional. Enable only if you know a current ${formatLiftName(
-                              lift
+                              lift,
                             )} working weight and reps.`}
                           >
                             <div className="space-y-3">
@@ -1012,7 +1130,9 @@ export default function AiRoutineGenerationDialog({
                                 <Checkbox
                                   checked={liftState.enabled}
                                   onCheckedChange={(value) =>
-                                    updateLiftField(lift, { enabled: value === true })
+                                    updateLiftField(lift, {
+                                      enabled: value === true,
+                                    })
                                   }
                                   className="mt-0.5 border-white/20 data-[state=checked]:border-orange-500 data-[state=checked]:bg-orange-500 data-[state=checked]:text-white"
                                 />
@@ -1021,7 +1141,8 @@ export default function AiRoutineGenerationDialog({
                                     I know my {formatLiftName(lift)} working set
                                   </p>
                                   <p className="text-[10px] text-slate-400">
-                                    Weight and reps are required together when enabled.
+                                    Weight and reps are required together when
+                                    enabled.
                                   </p>
                                 </div>
                               </label>
@@ -1038,7 +1159,9 @@ export default function AiRoutineGenerationDialog({
                                       step="0.5"
                                       value={liftState.weight}
                                       onChange={(event) =>
-                                        updateLiftField(lift, { weight: event.target.value })
+                                        updateLiftField(lift, {
+                                          weight: event.target.value,
+                                        })
                                       }
                                       className="h-10 rounded-xl border-white/10 bg-white/[0.03] px-3 text-center !text-[13px] font-semibold tabular-nums text-white"
                                       placeholder="80"
@@ -1054,7 +1177,9 @@ export default function AiRoutineGenerationDialog({
                                       max={20}
                                       value={liftState.reps}
                                       onChange={(event) =>
-                                        updateLiftField(lift, { reps: event.target.value })
+                                        updateLiftField(lift, {
+                                          reps: event.target.value,
+                                        })
                                       }
                                       className="h-10 rounded-xl border-white/10 bg-white/[0.03] px-3 text-center !text-[13px] font-semibold tabular-nums text-white"
                                       placeholder="5"
@@ -1086,15 +1211,16 @@ export default function AiRoutineGenerationDialog({
                               Main lifts covered
                             </p>
                             <p className="text-[11px] leading-relaxed text-slate-300">
-                              No extra strength questions needed. You can prepare the AI request now.
+                              No extra strength questions needed. You can
+                              prepare the AI request now.
                             </p>
                           </div>
                         </div>
                       </div>
                     ) : (
                       <p className="text-[11px] text-slate-400">
-                        Review your answers, then prepare the AI request. You can go back to change
-                        any step.
+                        Review your answers, then prepare the AI request. You
+                        can go back to change any step.
                       </p>
                     )}
                   </div>

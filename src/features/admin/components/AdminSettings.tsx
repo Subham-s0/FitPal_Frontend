@@ -562,7 +562,7 @@ export default function AdminSettings() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-mobile-page space-y-6">
       {/* Page header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -583,7 +583,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Main layout: sidebar + accordion */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px_1fr]">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-[280px_1fr]">
         {/* ── Sidebar (desktop only) ── */}
         <aside className="hidden space-y-4 xl:block">
           {/* Identity card */}
@@ -641,7 +641,7 @@ export default function AdminSettings() {
               <div
                 key={item.id}
                 className={cn(
-                  "overflow-hidden rounded-[22px] border shadow-sm transition-all",
+                  "overflow-hidden rounded-[18px] border shadow-sm transition-all sm:rounded-[22px]",
                   isActive ? "border-orange-500/25 table-bg" : "table-border table-bg hover:border-white/15"
                 )}
               >
@@ -653,16 +653,16 @@ export default function AdminSettings() {
                     setActiveTab(activeTab === item.id ? null : (item.id as AdminSettingsTab));
                   }}
                   className={cn(
-                    "flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors",
+                    "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition-colors sm:px-5 sm:py-4",
                     !isActive && "hover:bg-white/[0.02]"
                   )}
                 >
                   <div className="flex min-w-0 items-center gap-3.5">
                     <div className={cn(
-                      "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[12px] border transition-colors",
+                      "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] border transition-colors sm:h-11 sm:w-11",
                       isActive ? "border-orange-500/30 bg-orange-500/15 text-orange-300" : "table-border table-bg-alt text-slate-400"
                     )}>
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     </div>
                     <div className="min-w-0">
                       <p className={cn("text-[13px] font-black uppercase tracking-[0.12em]", isActive ? "text-white" : "text-slate-200")}>{item.label}</p>
@@ -700,7 +700,7 @@ export default function AdminSettings() {
                   <div
                     id={`admin-settings-section-${item.id}`}
                     role="region"
-                    className="border-t table-border-cell table-bg-alt px-5 py-6"
+                    className="border-t table-border-cell table-bg-alt px-4 py-4 sm:px-5 sm:py-6"
                   >
                     {renderContent(item.id as AdminSettingsTab)}
                   </div>

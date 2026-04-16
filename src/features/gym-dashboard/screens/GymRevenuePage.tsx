@@ -260,9 +260,9 @@ function PaginationControls({
   if (end < totalPages - 1) pages.push(totalPages - 1);
 
   return (
-    <div className="flex items-center justify-between border-t table-border px-4 py-3">
+    <div className="dashboard-mobile-pagination flex items-center justify-between border-t table-border px-4 py-3">
       <p className="text-[12px] table-text-muted">Page {page + 1} of {Math.max(totalPages, 1)} &bull; {totalItems} total</p>
-      <div className="flex items-center gap-1.5">
+      <div className="dashboard-mobile-pagination-actions flex items-center gap-1.5">
         <Button type="button" variant="outline"
           className="h-8 rounded-full border table-border table-bg px-3.5 text-[11px] table-text transition-all hover:border-orange-500/30 hover:text-orange-400 disabled:opacity-50"
           disabled={!hasPrevious} onClick={() => onPageChange(Math.max(page - 1, 0))}>
@@ -492,13 +492,13 @@ const GymRevenuePage: FC = () => {
   }, [dueTimelineData]);
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6 font-['Outfit',system-ui,sans-serif]">
+    <div className="dashboard-mobile-page mx-auto max-w-[1400px] space-y-6 font-['Outfit',system-ui,sans-serif]">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as GymSettlementTab)}>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-5 sm:items-center">
           <h1 className="text-[32px] font-black tracking-tight text-white">
             Revenue &amp; <span style={fireStyle}>Payouts</span>
           </h1>
-          <TabsList className="flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
+          <TabsList className="dashboard-mobile-tablist flex h-auto w-full max-w-full gap-0 overflow-x-auto border-b border-white/10 bg-transparent p-0 px-2 sm:w-fit sm:rounded-full sm:border sm:bg-black/40 sm:p-1 sm:backdrop-blur-sm">
           <TabsTrigger value="checkins"
             className={cn("group relative flex flex-1 items-center justify-center gap-1.5 py-3.5 text-[9px] font-bold uppercase tracking-wider",
               "text-slate-400 hover:text-white sm:flex-initial sm:rounded-full sm:px-5 sm:py-2.5 sm:text-[10px]",
@@ -517,7 +517,7 @@ const GymRevenuePage: FC = () => {
         {/* ═══════ RECEIVABLES TAB ═══════ */}
         <TabsContent value="checkins" className="space-y-4">
           {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="dashboard-mobile-toolbar flex flex-wrap items-center gap-2">
             <button type="button"
               className={cn(MG_TOOLBAR_BASE, checkinPills.length > 0 ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}
               onClick={() => { syncCheckinDraft(); setCheckinFilterDialogOpen(true); }}>
@@ -626,7 +626,7 @@ const GymRevenuePage: FC = () => {
           </div>
 
           {/* ── Cards with Pie Chart ──────────────────────────────────────── */}
-          <div className="grid grid-flow-col auto-cols-[minmax(160px,1fr)] gap-3 overflow-x-auto pb-1">
+          <div className="dashboard-mobile-scroll-rail grid grid-flow-col auto-cols-[minmax(160px,1fr)] gap-3 overflow-x-auto pb-1">
             <div className="flex flex-col rounded-xl border table-border table-bg p-3">
               <div className="mb-1.5 flex items-center justify-between gap-1.5 opacity-90">
                 <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Settlement Revenue</span>
@@ -846,7 +846,7 @@ const GymRevenuePage: FC = () => {
               <p className="px-4 py-6 text-sm text-red-300">{getApiErrorMessage(checkinsQ.error, "Failed to load receivables")}</p>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="dashboard-mobile-table-scroll overflow-x-auto">
                   <table className="w-full min-w-[860px] table-fixed border-collapse text-left">
                     <thead>
                       <tr className="table-header-bg border-b table-border">
@@ -911,7 +911,7 @@ const GymRevenuePage: FC = () => {
 
         {/* ═══════ BATCHES TAB ═══════ */}
         <TabsContent value="batches" className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="dashboard-mobile-toolbar flex flex-wrap items-center gap-2">
             <button type="button"
               className={cn(MG_TOOLBAR_BASE, batchPills.length > 0 ? MG_FILTER_ACTIVE : MG_FILTER_IDLE)}
               onClick={() => { syncBatchDraft(); setBatchFilterDialogOpen(true); }}>
@@ -1000,7 +1000,7 @@ const GymRevenuePage: FC = () => {
               <p className="px-4 py-6 text-sm text-red-300">{getApiErrorMessage(batchesQ.error, "Failed to load batches")}</p>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="dashboard-mobile-table-scroll overflow-x-auto">
                   <table className="w-full min-w-[960px] table-fixed border-collapse text-left">
                     <thead>
                       <tr className="table-header-bg border-b table-border">

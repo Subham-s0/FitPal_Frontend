@@ -129,7 +129,7 @@ export default function ExerciseDetailSheet({
           </div>
         </div>
 
-        <div className="max-h-[min(86vh,860px)] overflow-y-auto px-4 py-3 sm:px-5 sm:py-4">
+        <div className="max-h-[calc(100dvh-12rem)] overflow-y-auto px-4 py-3 pb-10 sm:max-h-[min(86vh,860px)] sm:px-5 sm:py-4 sm:pb-6">
           {activeTab === "summary" ? (
             <div className="space-y-3">
               <div className="relative overflow-hidden rounded-[1.5rem] bg-black shadow-2xl">

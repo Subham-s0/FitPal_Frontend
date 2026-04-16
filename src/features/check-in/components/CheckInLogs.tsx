@@ -272,87 +272,83 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
         </div>
 
         <div className="table-bg table-border overflow-hidden rounded-[18px] border">
-          <div className="table-border border-b px-5 py-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-1 items-center gap-2">
-                <label className="relative flex-1 max-w-[300px]">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 table-text-muted" />
-                  <input
-                    value={searchTerm}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search gym name..."
-                    className="table-bg table-border w-full rounded-full border py-2 pl-9 pr-4 text-[13px] font-medium text-white outline-none transition-all placeholder:table-text-muted focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)]"
-                  />
-                </label>
+          <div className="table-border flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+            <div className="relative flex-1 min-w-[200px] max-w-[320px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 table-text-muted" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search gym name..."
+                className="table-bg table-border w-full rounded-full border py-2 pl-9 pr-4 text-[13px] font-medium text-white outline-none transition-all placeholder:table-text-muted focus:border-orange-500/40 focus:shadow-[0_0_0_3px_rgba(255,106,0,0.15)]"
+              />
+            </div>
 
+            <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+              <button
+                onClick={toggleDateSort}
+                className="table-bg table-border table-text flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all hover:border-white/20 hover:text-white"
+              >
+                <ArrowUpDown className="h-4 w-4" />
+                {sortDirection === "DESC" ? "Newest First" : "Oldest First"}
+              </button>
+
+              <div ref={filterMenuRef} className="relative">
                 <button
-                  onClick={clearFilters}
-                  className={`table-bg table-border flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all hover:border-orange-500/30 hover:text-orange-400 ${
-                    hasActiveControls
-                      ? "border-orange-500/30 text-orange-400"
-                      : "table-text opacity-50"
+                  onClick={() => setIsFilterMenuOpen((current) => !current)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all ${
+                    isFilterMenuOpen || filterStatus !== "all"
+                      ? "border-orange-500/30 bg-orange-500/10 text-orange-400"
+                      : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"
                   }`}
                 >
-                  <X className="h-3.5 w-3.5" />
-                  Clear
-                </button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 self-start lg:flex-shrink-0 lg:self-auto">
-                <button
-                  onClick={toggleDateSort}
-                  className="table-bg table-border table-text flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all hover:border-white/20 hover:text-white"
-                >
-                  <ArrowUpDown className="h-4 w-4" />
-                  {sortDirection === "DESC" ? "Newest First" : "Oldest First"}
+                  <Filter className="h-4 w-4" />
+                  Filter
                 </button>
 
-                <div ref={filterMenuRef} className="relative">
-                  <button
-                    onClick={() => setIsFilterMenuOpen((current) => !current)}
-                    className={`flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all ${
-                      isFilterMenuOpen || filterStatus !== "all"
-                        ? "border-orange-500/30 bg-orange-500/10 text-orange-400"
-                        : "table-bg table-border table-text hover:border-orange-500/30 hover:text-orange-400"
-                    }`}
-                  >
-                    <Filter className="h-4 w-4" />
-                    Filter
-                  </button>
-
-                  {isFilterMenuOpen ? (
-                    <div className="table-bg table-border absolute right-0 top-[calc(100%+8px)] z-20 min-w-[200px] rounded-2xl border p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
-                      <div className="px-2.5 py-2 text-[8px] font-black uppercase tracking-widest table-text-muted">
-                        Filter by status
-                      </div>
-                      {FILTER_OPTIONS.map(({ label, value }) => {
-                        const active = filterStatus === value;
-
-                        return (
-                          <button
-                            key={value}
-                            onClick={() => setFilter(value)}
-                            className={`w-full flex items-center justify-between rounded-lg px-2.5 py-2 text-left transition-colors ${
-                              active ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
-                            }`}
-                          >
-                            <span className="table-text text-[12px] font-semibold">{label}</span>
-                            {active ? (
-                              <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-black table-text-muted">
-                                Active
-                              </span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
+                {isFilterMenuOpen ? (
+                  <div className="table-bg table-border absolute right-0 top-[calc(100%+8px)] z-20 min-w-[200px] rounded-2xl border p-1.5 shadow-[0_16px_48px_rgba(0,0,0,0.6)]">
+                    <div className="px-2.5 py-2 text-[8px] font-black uppercase tracking-widest table-text-muted">
+                      Filter by status
                     </div>
-                  ) : null}
-                </div>
+                    {FILTER_OPTIONS.map(({ label, value }) => {
+                      const active = filterStatus === value;
+
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => setFilter(value)}
+                          className={`w-full flex items-center justify-between rounded-lg px-2.5 py-2 text-left transition-colors ${
+                            active ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+                          }`}
+                        >
+                          <span className="table-text text-[12px] font-semibold">{label}</span>
+                          {active ? (
+                            <span className="rounded-full bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-black table-text-muted">
+                              Active
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
+
+              <button
+                onClick={clearFilters}
+                className={`table-bg table-border flex items-center gap-1.5 rounded-full border px-3.5 py-[7px] text-[12px] font-bold transition-all hover:border-orange-500/30 hover:text-orange-400 ${
+                  hasActiveControls
+                    ? "border-orange-500/30 text-orange-400"
+                    : "table-text opacity-50"
+                }`}
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear
+              </button>
             </div>
           </div>
 
-          <div className="overflow-x-auto w-full">
+          <div className="overflow-x-auto w-full hidden md:block">
             <table className="w-full min-w-[700px] whitespace-nowrap border-collapse">
               <thead>
                 <tr className="table-header-bg table-border border-b">
@@ -502,6 +498,98 @@ const CheckInLogs: React.FC<CheckInLogsProps> = ({ onBack }) => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="flex flex-col gap-3 p-4 md:hidden">
+            {historyQuery.isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-12 text-[13px] table-text-muted">
+                <History className="h-5 w-5 animate-pulse text-white/20" /> Loading...
+              </div>
+            ) : history.length === 0 ? (
+              <div className="rounded-2xl border table-border table-bg px-4 py-10 text-center text-[13px] table-text-muted">
+                <History className="mx-auto mb-3 h-8 w-8 text-white/20" />
+                <p className="text-sm font-semibold text-white/40">No records found</p>
+              </div>
+            ) : (
+              history.map((entry) => {
+                const statusConfig = STATUS_CONFIG[entry.status];
+                const tierKey = entry.membershipTierAtCheckIn ?? "BASIC";
+                const tierConfig = TIER[tierKey];
+
+                return (
+                  <div key={entry.checkInId} className="w-full rounded-2xl border table-border table-bg p-4 flex flex-col gap-3 transition-colors hover:table-bg-hover">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex items-center gap-2.5">
+                        {entry.gymLogoUrl ? (
+                          <img
+                            src={entry.gymLogoUrl}
+                            alt={entry.gymName ?? "Gym logo"}
+                            className="h-10 w-10 flex-shrink-0 rounded-[10px] border border-white/8 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[10px] border border-white/8 bg-white/5">
+                            <Building2 className="h-4 w-4 text-orange-600/70" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="truncate text-[13px] font-bold text-white">
+                            {entry.gymName ?? "Unknown Gym"}
+                          </p>
+                          <p className="table-text-muted mt-0.5 text-[11px]">
+                            {entry.gymId ? `#${entry.gymId}` : "Unknown location"}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className="inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wider"
+                        style={{
+                          color: statusConfig.color,
+                          borderColor: statusConfig.border,
+                          backgroundColor: statusConfig.bg,
+                        }}
+                      >
+                        {statusConfig.label}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1">
+                      <div className="flex items-center gap-1.5 text-white/70">
+                        <Calendar className="h-3 w-3 text-white/40" />
+                        <span className="text-[11px] font-semibold">{formatDate(entry.checkInAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-white/70">
+                        <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        <span className="text-[11px] font-bold">{formatTime(entry.checkInAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-white/70">
+                        <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                        <span className="text-[11px] font-bold">{entry.checkOutAt ? formatTime(entry.checkOutAt) : "--"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t table-border-cell pt-3 mt-1">
+                      <div className="flex items-center gap-1.5 text-white/70">
+                        <Clock className="h-3 w-3 text-white/40" />
+                        <span className="font-mono text-[11px] font-bold text-white/70">
+                          {typeof entry.durationSeconds === "number" ? formatDuration(entry.durationSeconds) : "N/A"}
+                        </span>
+                      </div>
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider"
+                        style={{
+                          color: tierConfig.color,
+                          borderColor: tierConfig.border,
+                          backgroundColor: tierConfig.bg,
+                        }}
+                      >
+                        {tierConfig.label}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           <div className="table-border flex flex-col gap-3 border-t px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

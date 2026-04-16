@@ -540,7 +540,7 @@ export default function GymDashboardHome() {
   }, [deviceQ.data]);
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-7">
+    <div className="dashboard-mobile-page mx-auto max-w-[1600px] space-y-7">
       {/* Header */}
       <div>
         <h1 className="text-[32px] font-black tracking-tight text-white">
@@ -567,7 +567,7 @@ export default function GymDashboardHome() {
       {/* ── SECTION 1: GYM SNAPSHOT ───────────────────────────── */}
       <div>
         <SectionLabel>Gym snapshot</SectionLabel>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="dashboard-mobile-compact-grid grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
           {overviewQ.isError ? (
             <div className="sm:col-span-2 lg:col-span-3 xl:col-span-5">
               <CardShell className="min-h-[112px]">
