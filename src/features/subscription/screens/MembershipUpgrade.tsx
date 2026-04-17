@@ -2080,28 +2080,30 @@ const MembershipUpgrade = () => {
                       }}
                       disabled={!method.isAvailable}
                       className={cn(
-                        "flex w-full items-center gap-4 rounded-[18px] border p-4 text-left transition-all",
+                        "w-full rounded-[18px] border p-4 text-left transition-all block",
                         !method.isAvailable && "cursor-not-allowed opacity-60",
                         isSelected
                           ? "border-orange-500/40 bg-orange-500/10"
                           : "table-border user-surface-soft hover:border-orange-500/30 hover:bg-orange-500/[0.04]"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "flex h-16 w-24 shrink-0 items-center justify-center rounded-[14px]",
-                          method.colorClass
-                        )}
-                      >
-                        {method.logoUrl ? (
-                          <img src={method.logoUrl} alt={method.name} className="h-10 w-20 object-contain" />
-                        ) : (
-                          <span className="text-2xl font-black">{method.badge}</span>
-                        )}
-                      </div>
+                      <div className="grid w-full grid-cols-[auto_1fr_auto] gap-x-3 gap-y-1 sm:flex sm:items-center sm:gap-4">
+                        {/* 1. Logo */}
+                        <div
+                          className={cn(
+                            "col-start-1 col-end-2 row-start-1 row-end-2 flex h-11 w-16 shrink-0 items-center justify-center rounded-[12px] sm:h-16 sm:w-24 sm:rounded-[14px]",
+                            method.colorClass
+                          )}
+                        >
+                          {method.logoUrl ? (
+                            <img src={method.logoUrl} alt={method.name} className="h-7 w-12 object-contain sm:h-10 sm:w-20" />
+                          ) : (
+                            <span className="text-xl font-black sm:text-2xl">{method.badge}</span>
+                          )}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        {/* 2. Mobile Title */}
+                        <div className="col-start-2 col-end-3 row-start-1 row-end-2 flex items-center gap-2 self-center sm:hidden">
                           <p className="text-sm font-black uppercase text-white">{method.name}</p>
                           {isSelected ? (
                             <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-200">
@@ -2109,18 +2111,33 @@ const MembershipUpgrade = () => {
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-1 text-sm leading-relaxed table-text-muted">
-                          {method.subtitle}
-                        </p>
-                      </div>
 
-                      <div
-                        className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                          isSelected ? "border-orange-500 bg-orange-500/15" : "border-white/20"
-                        )}
-                      >
-                        {isSelected ? <div className="h-2.5 w-2.5 rounded-full bg-orange-400" /> : null}
+                        {/* 3. Checkbox */}
+                        <div className="col-start-3 col-end-4 row-start-1 row-end-2 flex items-center justify-end sm:shrink-0">
+                          <div
+                            className={cn(
+                              "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                              isSelected ? "border-orange-500 bg-orange-500/15" : "border-white/20"
+                            )}
+                          >
+                            {isSelected ? <div className="h-2.5 w-2.5 rounded-full bg-orange-400" /> : null}
+                          </div>
+                        </div>
+
+                        {/* 4. Subtitle + Desktop Title */}
+                        <div className="col-start-1 col-end-4 row-start-2 row-end-3 mt-1 min-w-0 sm:mt-0 sm:flex-1">
+                          <div className="hidden items-center gap-2 sm:flex">
+                            <p className="text-sm font-black uppercase text-white">{method.name}</p>
+                            {isSelected ? (
+                              <span className="rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-orange-200">
+                                Selected
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-[13px] leading-relaxed table-text-muted sm:text-sm">
+                            {method.subtitle}
+                          </p>
+                        </div>
                       </div>
                     </button>
                   );
