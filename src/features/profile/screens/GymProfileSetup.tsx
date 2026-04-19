@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ChangeEvent,
+  DragEvent as ReactDragEvent,
   FC,
   KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -291,7 +292,13 @@ const KHALTI_LOGO_URL = "https://khaltibyime.khalti.com/wp-content/uploads/2025/
 const ESEWA_LOGO_URL  = "https://esewa.com.np/common/images/esewa_logo.png";
 const MAX_GYM_PHOTOS  = 12;
 const MAX_GYM_DOCS    = 6;
+const MAX_GYM_PHOTO_BYTES = 5 * 1024 * 1024;
 const LOCATION_SEARCH_MIN_CHARS = 3;
+const GYM_DOCUMENT_ACCEPT = ".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp";
+const GYM_PHOTO_ACCEPT = ".jpg,.jpeg,.png,.webp,image/jpeg,image/jpg,image/png,image/webp";
+const SUPPORTED_GYM_DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg", "webp"]);
+const SUPPORTED_GYM_PHOTO_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+const SUPPORTED_GYM_PHOTO_CONTENT_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 
 const STEP1_FIELD_KEYS: readonly GymFieldKey[] = [
   "gymEmailVerified",
@@ -337,6 +344,39 @@ const isSingletonDocType = (type: DocTypeValue) => type !== "OTHER";
 
 const hasPhotoId = (photoId: number | null | undefined): photoId is number =>
   typeof photoId === "number" && photoId > 0;
+
+const getFileExtension = (fileName: string): string | null => {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex < 0 || dotIndex === fileName.length - 1) {
+    return null;
+  }
+  return fileName.slice(dotIndex + 1).trim().toLowerCase();
+};
+
+const validateGymDocumentFile = (file: File): string | null => {
+  const extension = getFileExtension(file.name);
+  if (!extension || !SUPPORTED_GYM_DOCUMENT_EXTENSIONS.has(extension)) {
+    return "Invalid document format. Upload PDF, DOC, DOCX, JPG, PNG, or WEBP files only.";
+  }
+  return null;
+};
+
+const validateGymPhotoFile = (file: File): string | null => {
+  const extension = getFileExtension(file.name);
+  const normalizedType = file.type.trim().toLowerCase();
+  const hasSupportedType = normalizedType.length > 0 && SUPPORTED_GYM_PHOTO_CONTENT_TYPES.has(normalizedType);
+  const hasSupportedExtension = Boolean(extension && SUPPORTED_GYM_PHOTO_EXTENSIONS.has(extension));
+
+  if (!hasSupportedType && !hasSupportedExtension) {
+    return "Invalid image format. Upload JPG, PNG, or WEBP files only.";
+  }
+
+  if (file.size > MAX_GYM_PHOTO_BYTES) {
+    return "Invalid image size. Upload an image that is 5MB or smaller.";
+  }
+
+  return null;
+};
 
 // Helper: Validate wallet provider (reduces duplicate eSewa/Khalti validation)
 const validateWalletProvider = (
@@ -1427,6 +1467,7 @@ const FitPalGymSetup: FC = () => {
   }, [step, step1Complete, step2Complete, step3Complete, step4Complete, isGymPendingReview, isGymApproved, isGymRejected]);
 
   const isBusy = isSavingStep || isUploadingLogo || isRemovingLogo || uploadingDocIndex !== null || isUploadingPhotos || activePhotoId !== null;
+  const canQueuePhotoUploads = !isUploadingPhotos && activePhotoId === null && photos.length < MAX_GYM_PHOTOS;
 
   // ── Step save handlers ─────────────────────────────────────────────────────
 
@@ -1655,8 +1696,15 @@ const FitPalGymSetup: FC = () => {
     if (!file || targetIndex === null) return;
     const doc = docs[targetIndex];
     if (!doc) return;
+    const validationError = validateGymDocumentFile(file);
+    if (validationError) {
+      setStepError(validationError);
+      setActiveDocumentIndex(null);
+      return;
+    }
     const previousOtherDocumentId = doc.type === "OTHER" ? doc.documentId : undefined;
     setUploadingDocIndex(targetIndex);
+    setStepError(null);
     let asset: DocumentUploadResponse | null = null;
     try {
       asset = await uploadDocumentFileApi(file, "fitpal/gym-documents");
@@ -1681,13 +1729,11 @@ const FitPalGymSetup: FC = () => {
   // ── Photo handlers ─────────────────────────────────────────────────────────
 
   const openPhotoPicker = () => {
-    if (isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS) return;
+    if (!canQueuePhotoUploads) return;
     photoInputRef.current?.click();
   };
 
-  const handlePhotoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files ?? []);
-    e.target.value = "";
+  const processPhotoFiles = async (selectedFiles: File[]) => {
     if (!selectedFiles.length) return;
     const slots = Math.max(MAX_GYM_PHOTOS - photos.length, 0);
     if (slots <= 0) { setStepError(`You can upload at most ${MAX_GYM_PHOTOS} photos.`); return; }
@@ -1695,11 +1741,16 @@ const FitPalGymSetup: FC = () => {
     if (filesToUpload.length < selectedFiles.length)
       toast.info(`Only ${slots} photo(s) were queued. Maximum is ${MAX_GYM_PHOTOS}.`);
     setIsUploadingPhotos(true);
+    setStepError(null);
     let nextPhotos = [...photos];
     let uploadCount = 0;
     try {
       for (const file of filesToUpload) {
-        if (!file.type.startsWith("image/")) { setStepError(`${file.name} is not an image file.`); continue; }
+        const validationError = validateGymPhotoFile(file);
+        if (validationError) {
+          setStepError(validationError);
+          continue;
+        }
         let asset: DocumentUploadResponse | null = null;
         try {
           asset = await uploadImageFileApi(file, "fitpal/gym-photos");
@@ -1721,13 +1772,31 @@ const FitPalGymSetup: FC = () => {
           setStepError(getApiErrorMessage(error, `Failed to upload photo: ${file.name}`));
         }
       }
-      setPhotos(nextPhotos);
       if (uploadCount > 0) {
+        setPhotos(nextPhotos);
         void invalidateGymSetupQueries();
       }
       if (uploadCount > 0) clearFieldError("photos");
       if (uploadCount > 0) toast.success(`${uploadCount} photo${uploadCount > 1 ? "s" : ""} uploaded`);
     } finally { setIsUploadingPhotos(false); }
+  };
+
+  const handlePhotoSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    await processPhotoFiles(selectedFiles);
+  };
+
+  const handlePhotoDrop = (e: ReactDragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!canQueuePhotoUploads) return;
+    void processPhotoFiles(Array.from(e.dataTransfer.files ?? []));
+  };
+
+  const handlePhotoDragOver = (e: ReactDragEvent<HTMLDivElement>) => {
+    if (!canQueuePhotoUploads) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
   };
 
   // Helper: Check if photo is synced (reduces duplicate photo sync checks)
@@ -2388,8 +2457,8 @@ const FitPalGymSetup: FC = () => {
   const renderDocsScreen = () => (
     <div className="screen">
       {stepError && <StepErrorBanner message={stepError} />}
-      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" style={{ display: "none" }} onChange={handleDocumentSelected} />
-      <input ref={photoInputRef}    type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePhotoSelected} />
+      <input ref={documentInputRef} type="file" accept={GYM_DOCUMENT_ACCEPT} style={{ display: "none" }} onChange={handleDocumentSelected} />
+      <input ref={photoInputRef}    type="file" accept={GYM_PHOTO_ACCEPT} multiple style={{ display: "none" }} onChange={handlePhotoSelected} />
 
       <div className="sec-label">Verification Documents</div>
       <p style={{ fontSize: 12, color: "var(--text-m)", marginBottom: 18, lineHeight: 1.6 }}>All documents are reviewed by our team and never shared publicly. Uploads are encrypted.</p>
@@ -2501,11 +2570,28 @@ const FitPalGymSetup: FC = () => {
         At least 1 photo is required. You can upload up to {MAX_GYM_PHOTOS} photos.
       </div>
 
-      <button type="button" onClick={openPhotoPicker} disabled={isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS}
-        style={{ width: "100%", marginTop: 12, padding: "16px 14px", borderRadius: 12, border: "1.5px dashed rgba(249,115,22,.25)", background: "rgba(249,115,22,.03)", color: "var(--text-m)", cursor: isUploadingPhotos || activePhotoId !== null || photos.length >= MAX_GYM_PHOTOS ? "not-allowed" : "pointer", fontFamily: "var(--font)", textAlign: "center" }}>
+      <div
+        role="button"
+        tabIndex={canQueuePhotoUploads ? 0 : -1}
+        aria-disabled={!canQueuePhotoUploads}
+        onClick={() => {
+          if (!canQueuePhotoUploads) return;
+          openPhotoPicker();
+        }}
+        onKeyDown={e => {
+          if (!canQueuePhotoUploads) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openPhotoPicker();
+          }
+        }}
+        onDrop={handlePhotoDrop}
+        onDragOver={handlePhotoDragOver}
+        style={{ width: "100%", marginTop: 12, padding: "16px 14px", borderRadius: 12, border: "1.5px dashed rgba(249,115,22,.25)", background: "rgba(249,115,22,.03)", color: "var(--text-m)", cursor: canQueuePhotoUploads ? "pointer" : "not-allowed", fontFamily: "var(--font)", textAlign: "center" }}
+      >
         <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{isUploadingPhotos ? "Uploading photos..." : "Drop photos here or click to browse"}</div>
         <div style={{ fontSize: 11, marginTop: 4, color: "#4b5563" }}>JPG, PNG, WEBP - first photo becomes cover</div>
-      </button>
+      </div>
 
       {photos.length > 0 && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))", gap: 10, marginTop: 12 }}>

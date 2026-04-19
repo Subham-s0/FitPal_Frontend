@@ -167,7 +167,7 @@ function statusBadge(status: GymCheckInStatus) {
 
 /** Generates a QR code image URL using the free QR Server API */
 function qrImageUrl(token: string, size = 200) {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(token)}&bgcolor=0a0a0a&color=ffffff&margin=8`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(token)}&bgcolor=ffffff&color=111111&margin=8`;
 }
 
 type IssuedDoorSecret = {

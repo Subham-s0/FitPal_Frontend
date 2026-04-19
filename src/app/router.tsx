@@ -131,7 +131,7 @@ const GymsRoute = () => {
   );
 };
 
-const resolveDocumentTitle = (pathname: string) => {
+export const resolveDocumentTitle = (pathname: string) => {
   if (pathname === "/") {
     return "FitPal";
   }

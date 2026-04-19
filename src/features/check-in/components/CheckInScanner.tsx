@@ -1,7 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { BrowserMultiFormatReader } from "@zxing/library";
+import {
+  BarcodeFormat,
+  BinaryBitmap,
+  BrowserQRCodeReader,
+  DecodeHintType,
+  HTMLCanvasElementLuminanceSource,
+  HybridBinarizer,
+  LuminanceSource,
+} from "@zxing/library";
 import {
   AlertCircle,
   Camera,
@@ -202,20 +210,90 @@ async function getCurrentCoordinates() {
 }
 
 async function decodeQrTokenFromImage(file: File) {
-  if (!file.type.startsWith("image/")) {
+  const isImageFile = file.type
+    ? file.type.startsWith("image/")
+    : /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+
+  if (!isImageFile) {
     throw new Error("Only QR image files are supported right now.");
   }
 
   const objectUrl = URL.createObjectURL(file);
-  const reader = new BrowserMultiFormatReader();
+  const hints = new Map<DecodeHintType, unknown>([
+    [DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]],
+    [DecodeHintType.TRY_HARDER, true],
+  ]);
+  const reader = new BrowserQRCodeReader();
+  reader.hints = hints;
 
   try {
-    const result = await reader.decodeFromImageUrl(objectUrl);
-    return result.getText();
+    try {
+      const result = await reader.decodeFromImageUrl(objectUrl);
+      return result.getText().trim();
+    } catch {
+      const image = await loadImageElement(objectUrl);
+      const luminanceSource = createLuminanceSourceFromImage(image);
+      return decodeQrTokenFromLuminanceSources(reader, [
+        luminanceSource,
+        luminanceSource.invert(),
+      ]);
+    }
   } finally {
     reader.reset();
     URL.revokeObjectURL(objectUrl);
   }
+}
+
+async function loadImageElement(objectUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("The selected file could not be loaded as an image."));
+    image.src = objectUrl;
+  });
+}
+
+function createLuminanceSourceFromImage(image: HTMLImageElement): LuminanceSource {
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+
+  let context: CanvasRenderingContext2D | null = null;
+  try {
+    context = canvas.getContext("2d", { willReadFrequently: true });
+  } catch {
+    context = canvas.getContext("2d");
+  }
+
+  if (!context) {
+    throw new Error("QR image could not be prepared for scanning.");
+  }
+
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return new HTMLCanvasElementLuminanceSource(canvas);
+}
+
+function decodeQrTokenFromLuminanceSources(
+  reader: BrowserQRCodeReader,
+  luminanceSources: LuminanceSource[],
+) {
+  let lastError: unknown = null;
+
+  for (const luminanceSource of luminanceSources) {
+    try {
+      const bitmap = new BinaryBitmap(new HybridBinarizer(luminanceSource));
+      return reader.decodeBitmap(bitmap).getText().trim();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new Error("Unable to read a QR code from that image.");
 }
 
 function toFeedback(response: GymCheckInResponse): ActionFeedback {

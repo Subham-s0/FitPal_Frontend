@@ -8,7 +8,7 @@ import { notificationQueryKeys } from "./queryKeys";
 
 const RECONNECT_DELAY_MS = 3_000;
 
-function parseEventBlock(block: string) {
+export function parseEventBlock(block: string) {
   const lines = block.split("\n");
   let event = "message";
   const dataLines: string[] = [];
