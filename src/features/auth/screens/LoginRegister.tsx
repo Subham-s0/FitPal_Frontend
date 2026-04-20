@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
-import { Dumbbell, Activity, Timer, Trophy, Heart, Zap, Flame, BicepsFlexed } from "lucide-react";
+import {
+  Dumbbell,
+  Activity,
+  Timer,
+  Trophy,
+  Heart,
+  Zap,
+  Flame,
+  BicepsFlexed,
+  Eye,
+  EyeOff,
+  Loader2,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +24,6 @@ import { useLogin, useRegisterUser, useRegisterGym, useAuthState } from "@/featu
 import { authStore } from "@/features/auth/store";
 import { getPostAuthRoute } from "@/features/auth/auth-routing";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import ProfileSecurityModal from "@/features/profile/components/ProfileSecurityModal";
 
 type Mode = "login" | "register";
@@ -27,6 +38,9 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [userType, setUserType] = useState<UserType>("user");
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const auth = useAuthState();
   const isLoginMode = mode === "login";
@@ -428,12 +442,26 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">Password</label>
-                        <input
-                          {...(userType === "user" ? registerUserForm.register("password") : registerGymForm.register("password"))}
-                          type="password"
-                          className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password) ? "border-red-500" : "border-border"}`} 
-                          placeholder="••••••••"
-                        />
+                        <div className="relative">
+                          <input
+                            {...(userType === "user" ? registerUserForm.register("password") : registerGymForm.register("password"))}
+                            type={showRegisterPassword ? "text" : "password"}
+                            className={`w-full px-3 py-2 pr-10 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password) ? "border-red-500" : "border-border"}`} 
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegisterPassword((current) => !current)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground transition-colors hover:text-foreground"
+                            aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                          >
+                            {showRegisterPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                         {(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password) && (
                            <p className="text-[10px] text-red-500 mt-1 pl-3">{(userType === "user" ? registerUserForm.formState.errors.password : registerGymForm.formState.errors.password)?.message}</p>
                         )}
@@ -441,12 +469,26 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       
                       <div>
                         <label className="block text-xs font-medium text-foreground mb-1.5">Confirm Password</label>
-                        <input
-                          {...(userType === "user" ? registerUserForm.register("confirmPassword") : registerGymForm.register("confirmPassword"))}
-                          type="password"
-                          className={`w-full px-3 py-2 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword) ? "border-red-500" : "border-border"}`} 
-                          placeholder="••••••••"
-                        />
+                        <div className="relative">
+                          <input
+                            {...(userType === "user" ? registerUserForm.register("confirmPassword") : registerGymForm.register("confirmPassword"))}
+                            type={showRegisterConfirmPassword ? "text" : "password"}
+                            className={`w-full px-3 py-2 pr-10 bg-input border rounded-full text-foreground text-sm ${(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword) ? "border-red-500" : "border-border"}`} 
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegisterConfirmPassword((current) => !current)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground transition-colors hover:text-foreground"
+                            aria-label={showRegisterConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                          >
+                            {showRegisterConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                         {(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword) && (
                            <p className="text-[10px] text-red-500 mt-1 pl-3">{(userType === "user" ? registerUserForm.formState.errors.confirmPassword : registerGymForm.formState.errors.confirmPassword)?.message}</p>
                         )}
@@ -553,12 +595,26 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-foreground sm:mb-2">Password</label>
-                        <input 
-                          {...loginForm.register("password")}
-                          type="password" 
-                          className={`w-full rounded-full border bg-input px-4 py-2.5 text-sm text-foreground sm:py-3 sm:text-base ${loginForm.formState.errors.password ? "border-red-500" : "border-border"}`} 
-                          placeholder="••••••••" 
-                        />
+                        <div className="relative">
+                          <input 
+                            {...loginForm.register("password")}
+                            type={showLoginPassword ? "text" : "password"}
+                            className={`w-full rounded-full border bg-input px-4 py-2.5 pr-10 text-sm text-foreground sm:py-3 sm:text-base ${loginForm.formState.errors.password ? "border-red-500" : "border-border"}`} 
+                            placeholder="••••••••" 
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowLoginPassword((current) => !current)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground transition-colors hover:text-foreground"
+                            aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                          >
+                            {showLoginPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                         {loginForm.formState.errors.password && (
                           <p className="text-xs text-red-500 mt-1 pl-4">{loginForm.formState.errors.password.message}</p>
                         )}

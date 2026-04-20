@@ -16,7 +16,6 @@ import { toast } from "sonner";
 
 import {
   getAdminGymReviewApi,
-  patchAdminGymCheckInAccessModeApi,
   getAdminGymStatusCountsApi,
   getAdminGymsApi,
   patchAdminGymAccessApi,
@@ -65,7 +64,6 @@ import type {
 } from "@/features/admin/admin-gym.model";
 import type {
   AccessTier,
-  CheckInAccessMode,
   GymApprovalStatus,
   GymDocumentResponse,
   GymDocumentStatus,
@@ -116,12 +114,6 @@ const parseNum = (v: string): number | null => {
 
 const parseOptionalNum = (v: string): number | null =>
     v.trim() === "" ? null : parseNum(v);
-
-const normalizeCheckInAccessMode = (mode?: CheckInAccessMode | null): CheckInAccessMode =>
-  mode === "DOOR_ACK_REQUIRED" ? "DOOR_ACK_REQUIRED" : "MANUAL";
-
-const formatCheckInAccessModeLabel = (mode?: CheckInAccessMode | null): string =>
-  normalizeCheckInAccessMode(mode) === "DOOR_ACK_REQUIRED" ? "Wait for door ACK" : "Direct check-in";
 
 const hasCoordinates = (lat?: number | null, lng?: number | null): lat is number =>
     typeof lat === "number" && Number.isFinite(lat) && typeof lng === "number" && Number.isFinite(lng);
@@ -231,19 +223,6 @@ const TIERS: Record<string, { label: string; desc: string; color: string; bg: st
   ELITE: { label: "Elite", desc: "Elite only",       color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/25",   Icon: Shield },
 };
 
-const CHECK_IN_ACCESS_MODES: Record<
-  CheckInAccessMode,
-  { label: string; desc: string }
-> = {
-  MANUAL: {
-    label: "Direct",
-    desc: "Marks check-in complete instantly. Unlock may still be queued based on global door rules.",
-  },
-  DOOR_ACK_REQUIRED: {
-    label: "Door ACK",
-    desc: "Sets check-in to pending until door hardware acknowledgement is received.",
-  },
-};
 
 // ─── Tiny atoms ───────────────────────────────────────────────────────────────
 function ApprovalPill({ status }: { status: GymApprovalStatus }) {
@@ -506,8 +485,6 @@ function DetailPanel({
 
   const tierKey = p.minimumAccessTier ?? "BASIC";
   const tier    = TIERS[tierKey] ?? TIERS.BASIC;
-  const checkInAccessMode = normalizeCheckInAccessMode(p.checkInAccessMode);
-  const checkInAccessMeta = CHECK_IN_ACCESS_MODES[checkInAccessMode];
 
   const readOnlyApproved = isApproved && !editMode;
 
@@ -633,36 +610,6 @@ function DetailPanel({
                 <div className="flex justify-between text-[8.5px] text-[hsl(0,0%,35%)] mt-[5px]">
                   {["10m","250m","500m","750m","1km+"].map(l => <span key={l}>{l}</span>)}
                 </div>
-              </div>
-
-              <p className="text-[8.5px] font-black uppercase tracking-[0.15em] text-orange-500 mt-3 mb-[7px]">Check-in completion mode</p>
-              <div className="grid grid-cols-2 gap-[7px]">
-                {(["MANUAL", "DOOR_ACK_REQUIRED"] as CheckInAccessMode[]).map(mode => {
-                  const active = checkInAccessMode === mode;
-                  return (
-                    <button
-                      key={mode}
-                      type="button"
-                      disabled={readOnlyApproved}
-                      onClick={() => onUpdateProfile("checkInAccessMode", mode)}
-                      className={`px-3 py-[10px] rounded-[10px] border text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                        active
-                          ? "bg-orange-500/10 border-orange-500/30 text-orange-400"
-                          : "bg-[hsl(0,0%,9%)] border-[hsl(0,0%,18%)] text-[hsl(0,0%,55%)] hover:border-white/20 hover:text-white"
-                      }`}
-                    >
-                      <div className="text-[10px] font-black uppercase tracking-[0.08em]">
-                        {CHECK_IN_ACCESS_MODES[mode].label}
-                      </div>
-                      <div className="text-[9px] mt-1 leading-tight opacity-85">
-                        {mode === "MANUAL" ? "Directly CHECKED_IN" : "ACCESS_PENDING first"}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="mt-2 px-3 py-[8px] rounded-[10px] bg-[hsl(0,0%,9%)] border border-[hsl(0,0%,18%)] text-[10px] text-[hsl(0,0%,55%)] leading-relaxed">
-                {checkInAccessMeta.desc}
               </div>
 
               {!readOnlyApproved && <SaveBtn onClick={onSaveAccess} label="Save Access Settings" />}
@@ -1195,25 +1142,12 @@ export default function ManageGyms() {
   });
 
   const accMut = useMutation({
-    mutationFn: async ({ gymId, profile }: { gymId: number; profile: GymProfileResponse }) => {
-      const updatedReview = await patchAdminGymAccessApi(gymId, {
+    mutationFn: ({ gymId, profile }: { gymId: number; profile: GymProfileResponse }) =>
+      patchAdminGymAccessApi(gymId, {
         minimumAccessTier: profile.minimumAccessTier,
         checkInEnabled: profile.checkInEnabled,
         allowedCheckInRadiusMeters: profile.allowedCheckInRadiusMeters,
-      });
-
-      const requestedMode = normalizeCheckInAccessMode(profile.checkInAccessMode);
-      const persistedMode = normalizeCheckInAccessMode(updatedReview.profile.checkInAccessMode);
-
-      if (requestedMode === persistedMode) {
-        return updatedReview;
-      }
-
-      await patchAdminGymCheckInAccessModeApi(gymId, {
-        checkInAccessMode: requestedMode,
-      });
-      return getAdminGymReviewApi(gymId);
-    },
+      }),
     onSuccess: r => syncMutation(r, "Access settings updated"),
     onError:   e => toast.error(getApiErrorMessage(e, "Failed to update access settings")),
   });
@@ -1876,7 +1810,6 @@ export default function ManageGyms() {
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                           {[
                             ["Enabled", viewQ.data.profile.checkInEnabled ? "Yes" : "No"],
-                            ["Access mode", formatCheckInAccessModeLabel(viewQ.data.profile.checkInAccessMode)],
                             ["Minimum tier", viewQ.data.profile.minimumAccessTier],
                             ["Radius (m)", viewQ.data.profile.allowedCheckInRadiusMeters?.toString()],
                           ].map(([k, v]) => (

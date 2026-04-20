@@ -166,6 +166,19 @@
     -moz-appearance: textfield;
   }
 
+  /* Hide native password reveal controls so only the custom toggle icon is visible */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear {
+    display: none;
+  }
+
+  input[type="password"]::-webkit-credentials-auto-fill-button,
+  input[type="password"]::-webkit-password-reveal-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   /* Keep browser autofill consistent with dark theme */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,

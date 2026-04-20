@@ -1,6 +1,5 @@
 import type {
   AccessTier,
-  CheckInAccessMode,
   GymApprovalStatus,
   GymDocumentResponse,
   GymDocumentStatus,
@@ -135,10 +134,6 @@ export interface UpdateGymApprovalResponse {
   profile: GymProfileResponse;
   emailSent: boolean;
   warningMessage: string | null;
-}
-
-export interface UpdateGymCheckInAccessModeRequest {
-  checkInAccessMode: CheckInAccessMode;
 }
 
 export interface AdminGymStatusCounts {

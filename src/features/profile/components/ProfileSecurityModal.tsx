@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { requestForgotPasswordOtpApi, resetForgotPasswordApi } from "@/features/auth/api";
 import { getApiErrorMessage } from "@/shared/api/client";
@@ -83,6 +83,11 @@ export default function ProfileSecurityModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotEmail, setForgotEmail] = useState(email);
   const [forgotEmailError, setForgotEmailError] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showVerifyPassword, setShowVerifyPassword] = useState(false);
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [showForgotVerifyPassword, setShowForgotVerifyPassword] = useState(false);
 
   const changeForm = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
@@ -110,6 +115,11 @@ export default function ProfileSecurityModal({
       setIsSubmitting(false);
       setForgotEmail(email);
       setForgotEmailError("");
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowVerifyPassword(false);
+      setShowForgotNewPassword(false);
+      setShowForgotVerifyPassword(false);
     }
   }, [changeForm, email, forgotForm, open]);
 
@@ -120,6 +130,11 @@ export default function ProfileSecurityModal({
     setIsSubmitting(false);
     setForgotEmail(email);
     setForgotEmailError("");
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowVerifyPassword(false);
+    setShowForgotNewPassword(false);
+    setShowForgotVerifyPassword(false);
   }, [changeForm, email, forgotForm, mode]);
 
   const inputClass =
@@ -127,6 +142,9 @@ export default function ProfileSecurityModal({
   const labelClass =
     "ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500";
   const errorClass = "ml-1 mt-1 text-[10px] font-medium text-red-500";
+  const passwordInputClass = `${inputClass} pr-14`;
+  const passwordToggleClass =
+    "absolute inset-y-0 right-4 flex items-center text-slate-500 transition-colors hover:text-slate-200";
   const primaryBtnClass =
     "w-full rounded-2xl bg-button-gradient px-8 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:shadow-[0_0_30px_rgba(234,88,12,0.3)] disabled:cursor-not-allowed disabled:opacity-60";
   const secondaryBtnClass =
@@ -236,12 +254,22 @@ export default function ProfileSecurityModal({
     >
       <div className="space-y-2">
         <label className={labelClass}>Current Password</label>
-        <input
-          type="password"
-          {...changeForm.register("currentPassword")}
-          className={inputClass}
-          placeholder="Enter current password"
-        />
+        <div className="relative">
+          <input
+            type={showCurrentPassword ? "text" : "password"}
+            {...changeForm.register("currentPassword")}
+            className={passwordInputClass}
+            placeholder="Enter current password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowCurrentPassword((current) => !current)}
+            className={passwordToggleClass}
+            aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+          >
+            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {changeForm.formState.errors.currentPassword && (
           <p className={errorClass}>
             {changeForm.formState.errors.currentPassword.message}
@@ -251,12 +279,22 @@ export default function ProfileSecurityModal({
 
       <div className="space-y-2">
         <label className={labelClass}>New Password</label>
-        <input
-          type="password"
-          {...changeForm.register("newPassword")}
-          className={inputClass}
-          placeholder="Enter new password"
-        />
+        <div className="relative">
+          <input
+            type={showNewPassword ? "text" : "password"}
+            {...changeForm.register("newPassword")}
+            className={passwordInputClass}
+            placeholder="Enter new password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowNewPassword((current) => !current)}
+            className={passwordToggleClass}
+            aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+          >
+            {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {changeForm.formState.errors.newPassword && (
           <p className={errorClass}>
             {changeForm.formState.errors.newPassword.message}
@@ -266,12 +304,22 @@ export default function ProfileSecurityModal({
 
       <div className="space-y-2">
         <label className={labelClass}>Verify Password</label>
-        <input
-          type="password"
-          {...changeForm.register("verifyPassword")}
-          className={inputClass}
-          placeholder="Re-enter new password"
-        />
+        <div className="relative">
+          <input
+            type={showVerifyPassword ? "text" : "password"}
+            {...changeForm.register("verifyPassword")}
+            className={passwordInputClass}
+            placeholder="Re-enter new password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowVerifyPassword((current) => !current)}
+            className={passwordToggleClass}
+            aria-label={showVerifyPassword ? "Hide verify password" : "Show verify password"}
+          >
+            {showVerifyPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {changeForm.formState.errors.verifyPassword && (
           <p className={errorClass}>
             {changeForm.formState.errors.verifyPassword.message}
@@ -382,12 +430,22 @@ export default function ProfileSecurityModal({
 
           <div className="space-y-2">
             <label className={labelClass}>New Password</label>
-            <input
-              type="password"
-              {...forgotForm.register("newPassword")}
-              className={inputClass}
-              placeholder="Enter new password"
-            />
+            <div className="relative">
+              <input
+                type={showForgotNewPassword ? "text" : "password"}
+                {...forgotForm.register("newPassword")}
+                className={passwordInputClass}
+                placeholder="Enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowForgotNewPassword((current) => !current)}
+                className={passwordToggleClass}
+                aria-label={showForgotNewPassword ? "Hide new password" : "Show new password"}
+              >
+                {showForgotNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {forgotForm.formState.errors.newPassword && (
               <p className={errorClass}>
                 {forgotForm.formState.errors.newPassword.message}
@@ -397,12 +455,22 @@ export default function ProfileSecurityModal({
 
           <div className="space-y-2">
             <label className={labelClass}>Verify Password</label>
-            <input
-              type="password"
-              {...forgotForm.register("verifyPassword")}
-              className={inputClass}
-              placeholder="Re-enter new password"
-            />
+            <div className="relative">
+              <input
+                type={showForgotVerifyPassword ? "text" : "password"}
+                {...forgotForm.register("verifyPassword")}
+                className={passwordInputClass}
+                placeholder="Re-enter new password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowForgotVerifyPassword((current) => !current)}
+                className={passwordToggleClass}
+                aria-label={showForgotVerifyPassword ? "Hide verify password" : "Show verify password"}
+              >
+                {showForgotVerifyPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {forgotForm.formState.errors.verifyPassword && (
               <p className={errorClass}>
                 {forgotForm.formState.errors.verifyPassword.message}
