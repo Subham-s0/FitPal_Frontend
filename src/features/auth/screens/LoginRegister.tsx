@@ -620,15 +620,11 @@ const LoginRegister = ({ initialMode = "login" }: Props) => {
                         )}
                       </div>
                       
-                      <div className="mt-2 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <input type="checkbox" className="w-4 h-4 rounded border-border bg-input" />
-                          <span className="text-muted-foreground">Remember me</span>
-                        </label>
+                      <div className="mt-2 flex justify-start text-sm sm:justify-end">
                         <button
                           type="button"
                           onClick={() => setIsForgotPasswordOpen(true)}
-                          className="self-start text-primary hover:underline sm:self-auto"
+                          className="text-primary hover:underline"
                         >
                           Forgot password?
                         </button>

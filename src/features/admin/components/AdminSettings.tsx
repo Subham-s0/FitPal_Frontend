@@ -257,6 +257,7 @@ function AppRulesContent() {
         doorAckTimeoutSeconds: d.doorAckTimeoutSeconds,
         doorDeviceOnlineWindowSeconds: d.doorDeviceOnlineWindowSeconds,
         doorAccessMode: d.doorAccessMode,
+        checkInAccessMode: d.checkInAccessMode,
         doorAutoLockEnabled: d.doorAutoLockEnabled,
         doorManualOverrideAllowed: d.doorManualOverrideAllowed,
         doorFailsafeMode: d.doorFailsafeMode,
