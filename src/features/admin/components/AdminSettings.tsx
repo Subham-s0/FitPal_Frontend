@@ -236,11 +236,37 @@ function pct(v: number | undefined): string {
   return v !== undefined ? `${(v * 100).toFixed(2)}%` : "—";
 }
 
+function toPercentInput(v: number | undefined): string {
+  if (v === undefined || Number.isNaN(v)) {
+    return "";
+  }
+  return (v * 100).toString();
+}
+
+function parsePercentInput(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+
+  return parsed / 100;
+}
+
 function AppRulesContent() {
   const queryClient = useQueryClient();
   const rulesQ = useQuery({ queryKey: ["admin", "application-rules", "summary"], queryFn: getApplicationRulesApi });
   const [editOpen, setEditOpen] = useState(false);
   const [formData, setFormData] = useState<ApplicationRuleUpdateRequest>({});
+  const [rateInputs, setRateInputs] = useState({
+    taxRate: "",
+    serviceChargeRate: "",
+    appCommissionRate: "",
+  });
   const d = rulesQ.data;
 
   useEffect(() => {
@@ -261,6 +287,11 @@ function AppRulesContent() {
         doorAutoLockEnabled: d.doorAutoLockEnabled,
         doorManualOverrideAllowed: d.doorManualOverrideAllowed,
         doorFailsafeMode: d.doorFailsafeMode,
+      });
+      setRateInputs({
+        taxRate: toPercentInput(d.taxRate),
+        serviceChargeRate: toPercentInput(d.serviceChargeRate),
+        appCommissionRate: toPercentInput(d.appCommissionRate),
       });
     }
   }, [d]);
@@ -393,15 +424,54 @@ function AppRulesContent() {
                 </div>
                 <div>
                   <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Tax Rate (%)</label>
-                  <input type="number" step="0.01" min="0" max="100" value={formData.taxRate !== undefined ? (formData.taxRate * 100).toFixed(2) : ""} onChange={(e) => setFormData(p => ({ ...p, taxRate: parseFloat(e.target.value) / 100 }))} placeholder="13.00" className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={rateInputs.taxRate}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setRateInputs((p) => ({ ...p, taxRate: next }));
+                      setFormData((p) => ({ ...p, taxRate: parsePercentInput(next) }));
+                    }}
+                    placeholder="13.00"
+                    className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none"
+                  />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Service Charge (%)</label>
-                  <input type="number" step="0.01" min="0" max="100" value={formData.serviceChargeRate !== undefined ? (formData.serviceChargeRate * 100).toFixed(2) : ""} onChange={(e) => setFormData(p => ({ ...p, serviceChargeRate: parseFloat(e.target.value) / 100 }))} placeholder="2.00" className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={rateInputs.serviceChargeRate}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setRateInputs((p) => ({ ...p, serviceChargeRate: next }));
+                      setFormData((p) => ({ ...p, serviceChargeRate: parsePercentInput(next) }));
+                    }}
+                    placeholder="2.00"
+                    className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none"
+                  />
                 </div>
                 <div>
                   <label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">App Commission (%)</label>
-                  <input type="number" step="0.01" min="0" max="100" value={formData.appCommissionRate !== undefined ? (formData.appCommissionRate * 100).toFixed(2) : ""} onChange={(e) => setFormData(p => ({ ...p, appCommissionRate: parseFloat(e.target.value) / 100 }))} placeholder="10.00" className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none" />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={rateInputs.appCommissionRate}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setRateInputs((p) => ({ ...p, appCommissionRate: next }));
+                      setFormData((p) => ({ ...p, appCommissionRate: parsePercentInput(next) }));
+                    }}
+                    placeholder="10.00"
+                    className="h-9 w-full rounded-[10px] border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:outline-none"
+                  />
                 </div>
               </div>
             </div>
