@@ -1007,8 +1007,8 @@ export default function AdminCmsView({
       </div>
 
       {/* Sub-tab nav */}
-      <div className="dashboard-mobile-toolbar border-b table-border pb-4">
-        <div className="dashboard-mobile-tablist flex w-full flex-nowrap gap-2 overflow-x-auto">
+      <div className="dashboard-mobile-toolbar flex flex-col gap-3 border-b table-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="dashboard-mobile-tablist flex w-full flex-nowrap gap-2 overflow-x-auto sm:flex-1">
           {CMS_TABS.map((t) => {
             const Icon = t.icon;
             const isActive = tab === t.id;
@@ -1030,16 +1030,18 @@ export default function AdminCmsView({
             );
           })}
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
-            toast.success("Marketing home will refetch CMS");
-          }}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/[0.08] px-3.5 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/12 sm:ml-auto sm:w-auto"
-        >
-          <RefreshCcw className="h-3.5 w-3.5" /> Refresh marketing
-        </button>
+        <div className="dashboard-mobile-actions flex items-center justify-end sm:w-auto sm:flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: publicCmsHomeQueryKey });
+              toast.success("Marketing home will refetch CMS");
+            }}
+            className="dashboard-mobile-action-wide inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/[0.08] px-3.5 py-2 text-[11px] font-bold text-orange-300 transition hover:bg-orange-500/12 sm:w-auto"
+          >
+            <RefreshCcw className="h-3.5 w-3.5" /> Refresh marketing
+          </button>
+        </div>
       </div>
 
       {/* Tab content */}
