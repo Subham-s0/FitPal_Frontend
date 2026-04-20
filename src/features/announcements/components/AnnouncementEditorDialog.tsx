@@ -139,10 +139,13 @@ function isAdminEditor(
 export function AnnouncementEditorDialog(props: AnnouncementEditorDialogProps) {
   const { mode, open, editing, value, onOpenChange, onChange, onSubmit, isSubmitting } = props;
   const adminProps = isAdminEditor(props) ? props : null;
+  const dialogWidthClass =
+    mode === "admin" ? "max-w-[min(900px,94vw)]" : "max-w-[min(680px,92vw)]";
+  const messageRows = mode === "admin" ? 10 : 7;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(900px,94vw)] border-white/10 bg-[#0f0f0f] text-white">
+      <DialogContent className={cn(dialogWidthClass, "border-white/10 bg-[#0f0f0f] text-white")}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-black">
             {editing ? "Edit announcement" : "Create announcement"}
@@ -171,7 +174,7 @@ export function AnnouncementEditorDialog(props: AnnouncementEditorDialogProps) {
               <textarea
                 value={value.content}
                 onChange={(event) => onChange({ ...value, content: event.target.value })}
-                rows={10}
+                rows={messageRows}
                 className="w-full rounded-3xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-7 text-white outline-none"
                 placeholder="Write the full announcement body"
               />

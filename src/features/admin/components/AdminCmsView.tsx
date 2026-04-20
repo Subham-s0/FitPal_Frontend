@@ -320,6 +320,44 @@ function emptyTestimonial(): TestimonialForm {
   return { name: "", role: "", avatar: "", content: "", rating: 5, approved: false, active: true, order: 99 };
 }
 
+function TestimonialAvatar({
+  name,
+  avatar,
+  className,
+}: {
+  name?: string | null;
+  avatar?: string | null;
+  className?: string;
+}) {
+  const [imageUnavailable, setImageUnavailable] = useState(false);
+
+  useEffect(() => {
+    setImageUnavailable(false);
+  }, [avatar]);
+
+  if (avatar && !imageUnavailable) {
+    return (
+      <img
+        src={avatar}
+        alt={name || "Testimonial avatar"}
+        className={cn("rounded-full object-cover", className)}
+        onError={() => setImageUnavailable(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center rounded-full border border-amber-500/25 bg-amber-500/10 font-black text-amber-400",
+        className
+      )}
+    >
+      {name ? name[0] : "?"}
+    </div>
+  );
+}
+
 function TestimonialsTab() {
   const queryClient = useQueryClient();
   const testimonialsQ = useQuery({ queryKey: ["admin", "cms", "testimonials"], queryFn: getCmsTestimonialsApi });
@@ -410,9 +448,11 @@ function TestimonialsTab() {
                 />
               </div>
               <div className="mb-3 flex items-center gap-2.5">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-amber-500/25 bg-amber-500/10 text-[13px] font-black text-amber-400">
-                  {t.name ? t.name[0] : "?"}
-                </div>
+                <TestimonialAvatar
+                  name={t.name}
+                  avatar={t.avatar}
+                  className="h-9 w-9 flex-shrink-0 border text-[13px]"
+                />
                 <div>
                   <p className="text-[13px] font-black text-white">{t.name || <span className="italic text-slate-500">No name</span>}</p>
                   <p className="text-[10px] text-slate-500">{t.role}</p>
@@ -444,7 +484,26 @@ function TestimonialsTab() {
                 <FieldRow label="Name"><input className={inputCls} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} placeholder="Arun Sharma" /></FieldRow>
                 <FieldRow label="Role"><input className={inputCls} value={editing.role ?? ""} onChange={(e) => setEditing({ ...editing, role: e.target.value })} placeholder="Fitness Enthusiast" /></FieldRow>
               </div>
-              <FieldRow label="Avatar URL (optional)"><input className={inputCls} value={editing.avatar ?? ""} onChange={(e) => setEditing({ ...editing, avatar: e.target.value })} placeholder="https://example.com/avatar.jpg" /></FieldRow>
+              <FieldRow label="Avatar URL (optional)">
+                <div className="space-y-3">
+                  <input className={inputCls} value={editing.avatar ?? ""} onChange={(e) => setEditing({ ...editing, avatar: e.target.value })} placeholder="https://example.com/avatar.jpg" />
+                  <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+                    <TestimonialAvatar
+                      name={editing.name}
+                      avatar={editing.avatar}
+                      className="h-12 w-12 flex-shrink-0 border-2 text-base"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-black text-white">
+                        {editing.name.trim() || "Preview name"}
+                      </p>
+                      <p className="truncate text-[11px] text-slate-500">
+                        {editing.avatar?.trim() ? "Image preview loaded from URL when available." : "Add a URL to preview the avatar image here."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </FieldRow>
               <FieldRow label="Testimonial">
                 <textarea className={textareaCls} rows={3} value={editing.content ?? ""} onChange={(e) => setEditing({ ...editing, content: e.target.value })} placeholder="What did they say?" />
               </FieldRow>
